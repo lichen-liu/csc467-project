@@ -43,11 +43,11 @@ void  sourceDump(void);
 
 /* Phase 1: Scanner Interface. For phase 2 and after these declarations
  * are removed */
-/*
+
 extern int   yylex(void);
 extern char *yytext;
 extern int   yyline;
- */
+
 
 /* Phase 2: Parser Interface. Merely uncomment the following line */
 extern int yyparse(void);
@@ -75,11 +75,11 @@ int main (int argc, char *argv[]) {
 
 /* Phase 1: Scanner. In phase 2 and after the following code should be
  * removed */
-/*
+
   while (yylex())
     if (errorOccurred)
       break;
- */
+ 
 
 /* Phase 2: Parser -- should allocate an AST, storing the reference in the
  * global variable "ast", and build the AST there. */

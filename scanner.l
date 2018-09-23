@@ -21,10 +21,15 @@ int yyline = 1;
 %option noyywrap
 
 WS          [ \t]
+DIGIT       [0-9]
 
 %%
 "/*"        { yERROR("Change this - comment unimplemented."); }
 
 .           { yERROR("Unknown token"); }
+
+if          { yTRACE(IF); return IF; }
+else        { yTRACE(ELSE); return ELSE; }
+
 
 %%
