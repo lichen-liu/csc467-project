@@ -14,8 +14,10 @@
 #define yTRACE(x)    { if (traceScanner) fprintf(traceFile, "TOKEN %3d : %s\n", x, yytext); }
 #define yERROR(x)    { fprintf(errorFile, "\nLEXICAL ERROR, LINE %d: %s\n", yyline, x); errorOccurred = TRUE; yyterminate(); }
 
-int CheckInt(void);
 int yyline = 1;
+
+int CheckInt(void);
+float CheckFloat(void);
 
 int inCommentBlock = FALSE;
 int CheckCommentHead(void);
@@ -39,10 +41,13 @@ SIGN                        [\+\-]
 "else"                      { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
 
 {SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ yTRACE(INT_C); yylval.as_int = CheckInt(); printf("%d\n", yylval.as_int); return INT_C;               } }
+{SIGN}?{DIGIT}+\.{DIGIT}+   { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
+{SIGN}?{DIGIT}+\.           { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
+{SIGN}?\.{DIGIT}+           { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
 
 {WS}                        /* skip whitespace */
 \n                          { yyline++;                                                                                                                        }
-.                           { if(!CheckCommentBody()){ yERROR("Unknown token");                                                                              } }
+.                           { if(!CheckCommentBody()){ printf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                  } }
 %%
 
 
@@ -88,5 +93,13 @@ int CheckInt(void) {
     long int integer_value = strtol(yytext, &pend, 10);
 
     /* @todo bound-check */
-    return integer_value;
+    return integer_value; // cast from long to int
+}
+
+float CheckFloat(void) {
+    char *pend;
+    double float_value = strtod(yytext, &pend);
+
+    /* @todo bound-check */
+    return float_value; // cast from double to float
 }
