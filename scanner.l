@@ -26,23 +26,23 @@ int CheckCommentBody(void);
 %}
 %option noyywrap
 
-WS                      [ \t]
-DIGIT                   [0-9]
-SIGN                    [\+\-]
+WS                          [ \t]
+DIGIT                       [0-9]
+SIGN                        [\+\-]
 
 %%
-"/*".*"*/"              { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext); }}
-"/*".*                  { CheckCommentHead(); }
-.*"*/"                  { CheckCommentTail(); }
+"/*".*"*/"                  { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                             } }
+"/*".*                      { CheckCommentHead();                                                                                                              }
+.*"*/"                      { CheckCommentTail();                                                                                                              }
 
-"if"                    { if(!CheckCommentBody()){ yTRACE(IF); return IF; }}
-"else"                  { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE; }}
+"if"                        { if(!CheckCommentBody()){ yTRACE(IF); return IF; } }
+"else"                      { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
 
-{SIGN}?{DIGIT}+         { if(!CheckCommentBody()){ yTRACE(INT_C); return INT_C; }}
+{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ yTRACE(INT_C); yylval.as_int = atoi(yytext); printf("  %d\n", yylval.as_int); return INT_C;           } }
 
-{WS}                    /* skip whitespace */
-\n                      { yyline++; }
-.                       { if(!CheckCommentBody()){ yERROR("Unknown token"); }}
+{WS}                        /* skip whitespace */
+\n                          { yyline++;                                                                                                                        }
+.                           { if(!CheckCommentBody()){ yERROR("Unknown token");                                                                              } }
 %%
 
 
@@ -52,7 +52,9 @@ int CheckCommentHead(void) {
     }
 
     inCommentBlock = TRUE;
+    //
     fprintf(traceFile, "MULTILINE COMMENT HEAD, LINE %d : %s\n", yyline, yytext);
+    //
     // '/*' is captured
 
     return 0;
@@ -63,7 +65,9 @@ int CheckCommentTail(void) {
         yERROR("Cannot find the beginning of this comment block with /*");
     }
 
+    //
     fprintf(traceFile, "MULTILINE COMMENT TAIL, LINE %d : %s\n", yyline, yytext);
+    //
     inCommentBlock = FALSE;
     // '*/' is captured
 
@@ -72,7 +76,9 @@ int CheckCommentTail(void) {
 
 int CheckCommentBody(void) {
     if(inCommentBlock == TRUE) {
+        //
         fprintf(traceFile, "MULTI LINE COMMENT BODY, LINE %d : %s\n", yyline, yytext);
+        //
     }
     return inCommentBlock;
 }
