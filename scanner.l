@@ -38,7 +38,7 @@ SIGN                        [\+\-]
 "if"                        { if(!CheckCommentBody()){ yTRACE(IF); return IF; } }
 "else"                      { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
 
-{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ yTRACE(INT_C); yylval.as_int = atoi(yytext); printf("  %d\n", yylval.as_int); return INT_C;           } }
+{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ yTRACE(INT_C); yylval.as_int = CheckInt(); printf("%d\n", yylval.as_int); return INT_C;               } }
 
 {WS}                        /* skip whitespace */
 \n                          { yyline++;                                                                                                                        }
@@ -81,4 +81,12 @@ int CheckCommentBody(void) {
         //
     }
     return inCommentBlock;
+}
+
+int CheckInt(void) {
+    char *pend;
+    long int integer_value = strtol(yytext, &pend, 10);
+
+    /* @todo bound-check */
+    return integer_value;
 }
