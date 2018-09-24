@@ -23,6 +23,8 @@
 #define MAX_IDENTIFIER 32
 #define MAX_TEXT       256
 #define MAX_INTEGER    32767
+#define MAX_FLOAT      1E+37
+#define MIN_FLOAT      1E-37
 
 /********************************************************************** 
  * External declarations for variables declared in globalvars.c.

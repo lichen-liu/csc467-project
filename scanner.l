@@ -43,10 +43,10 @@ SIGN                                    [\+\-]
 
 
 
-{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
-\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
 
 {DIGIT}+                                { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); printf("%d\n", yylval.as_int); return INT_C;           } } }
 {DIGIT}+\.{DIGIT}+                      { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
@@ -70,7 +70,7 @@ int CheckCommentHead(void) {
     //
     // '/*' is captured
 
-    return 0;
+    return TRUE;
 }
 
 int CheckCommentTail(void) {
@@ -84,7 +84,7 @@ int CheckCommentTail(void) {
     inCommentBlock = FALSE;
     // '*/' is captured
 
-    return 0;
+    return TRUE;
 }
 
 int CheckCommentBody(void) {
@@ -100,7 +100,12 @@ int CheckInt(int *int_value) {
     char *pend;
     long int integer_value = strtol(yytext, &pend, 10);
 
-    /* @todo bound-check */
+    /* bound-check */
+    if(integer_value > MAX_INTEGER) {
+        yERROR("Integer literal is not within the legal range");
+        *int_value = MAX_INTEGER;
+        return FALSE;
+    }
     
     *int_value = integer_value; // cast from long to int
     return TRUE;
@@ -110,7 +115,16 @@ int CheckFloat(float *float_value) {
     char *pend;
     double double_value = strtod(yytext, &pend);
 
-    /* @todo bound-check */
+    /* bound-check */
+    if(double_value < MIN_FLOAT) {
+        yERROR("Float literal is not within the legal range");
+        *float_value = MIN_FLOAT;
+        return FALSE;
+    } else if(double_value > MAX_FLOAT) {
+        yERROR("Float literal is not within the legal range");
+        *float_value = MAX_FLOAT;
+        return FALSE;
+    }
 
     *float_value = double_value; // cast from double to float
     return TRUE;
