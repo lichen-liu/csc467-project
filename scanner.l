@@ -19,6 +19,7 @@ int yyline = 1;
 /* TRUE if valid */
 int CheckInt(int *int_value);
 int CheckFloat(float *float_value);
+int CheckID(char *id_value);
 
 int inCommentBlock = FALSE;
 int CheckCommentHead(void);
@@ -41,7 +42,7 @@ SIGN                                    [\+\-]
 "if"                                    { if(!CheckCommentBody()){ yTRACE(IF); return IF;                                                                                } }
 "else"                                  { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
 
-
+[A-Za-z_][A-Za-z0-9_]*                  { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); printf("%s\n", yylval.as_id); return ID;                     } } }
 
 {DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
 {DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
@@ -90,7 +91,7 @@ int CheckCommentTail(void) {
 int CheckCommentBody(void) {
     if(inCommentBlock == TRUE) {
         //
-        fprintf(traceFile, "MULTI LINE COMMENT BODY, LINE %d : %s\n", yyline, yytext);
+        fprintf(traceFile, "MULTILINE COMMENT BODY, LINE %d : %s\n", yyline, yytext);
         //
     }
     return inCommentBlock;
@@ -127,5 +128,18 @@ int CheckFloat(float *float_value) {
     }
 
     *float_value = double_value; // cast from double to float
+    return TRUE;
+}
+
+int CheckID(char *id_value) {
+    /* identifier length check */
+    if(strlen(yytext) >= MAX_IDENTIFIER) {
+        /* identifier + '\0' <= MAX_IDENTIFIER */
+        yERROR("Identifier has a illegal length");
+        strcpy(id_value, "");
+        return FALSE;
+    }
+
+    strcpy(id_value, yytext);
     return TRUE;
 }

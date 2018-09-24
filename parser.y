@@ -56,7 +56,7 @@ extern int yyline;        /* variable holding current line number   */
   int as_int;
   float as_float;
   
-  char *as_id;
+  char as_id[MAX_IDENTIFIER];
 }
 // TODO:Replace myToken with your tokens, you can use these tokens in flex
 %token           IF ELSE
