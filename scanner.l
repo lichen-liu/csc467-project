@@ -16,8 +16,9 @@
 
 int yyline = 1;
 
-int CheckInt(void);
-float CheckFloat(void);
+/* TRUE if valid */
+int CheckInt(int *int_value);
+int CheckFloat(float *float_value);
 
 int inCommentBlock = FALSE;
 int CheckCommentHead(void);
@@ -28,26 +29,33 @@ int CheckCommentBody(void);
 %}
 %option noyywrap
 
-WS                          [ \t]
-DIGIT                       [0-9]
-SIGN                        [\+\-]
+WS                                      [ \t]
+DIGIT                                   [0-9]
+SIGN                                    [\+\-]
 
 %%
-"/*".*"*/"                  { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                             } }
-"/*".*                      { CheckCommentHead();                                                                                                              }
-.*"*/"                      { CheckCommentTail();                                                                                                              }
+"/*".*"*/"                              { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                             } }
+"/*".*                                  { CheckCommentHead();                                                                                                              }
+.*"*/"                                  { CheckCommentTail();                                                                                                              }
 
-"if"                        { if(!CheckCommentBody()){ yTRACE(IF); return IF; } }
-"else"                      { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
+"if"                                    { if(!CheckCommentBody()){ yTRACE(IF); return IF;                                                                                } }
+"else"                                  { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
 
-{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ yTRACE(INT_C); yylval.as_int = CheckInt(); printf("%d\n", yylval.as_int); return INT_C;               } }
-{SIGN}?{DIGIT}+\.{DIGIT}+   { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
-{SIGN}?{DIGIT}+\.           { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
-{SIGN}?\.{DIGIT}+           { if(!CheckCommentBody()){ yTRACE(FLOAT_C); yylval.as_float = CheckFloat(); printf("%f\n", yylval.as_float); return FLOAT_C;     } }
 
-{WS}                        /* skip whitespace */
-\n                          { yyline++;                                                                                                                        }
-.                           { if(!CheckCommentBody()){ printf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                  } }
+
+{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+
+{DIGIT}+                                { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); printf("%d\n", yylval.as_int); return INT_C;           } } }
+{DIGIT}+\.{DIGIT}+                      { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+\.{DIGIT}+                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+
+{WS}                                    /* skip whitespace */
+\n                                      { yyline++;                                                                                                                        }
+.                                       { if(!CheckCommentBody()){ printf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
 %%
 
 
@@ -88,18 +96,22 @@ int CheckCommentBody(void) {
     return inCommentBlock;
 }
 
-int CheckInt(void) {
+int CheckInt(int *int_value) {
     char *pend;
     long int integer_value = strtol(yytext, &pend, 10);
 
     /* @todo bound-check */
-    return integer_value; // cast from long to int
+    
+    *int_value = integer_value; // cast from long to int
+    return TRUE;
 }
 
-float CheckFloat(void) {
+int CheckFloat(float *float_value) {
     char *pend;
-    double float_value = strtod(yytext, &pend);
+    double double_value = strtod(yytext, &pend);
 
     /* @todo bound-check */
-    return float_value; // cast from double to float
+
+    *float_value = double_value; // cast from double to float
+    return TRUE;
 }
