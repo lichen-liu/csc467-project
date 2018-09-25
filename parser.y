@@ -59,11 +59,28 @@ extern int yyline;        /* variable holding current line number   */
   char as_id[MAX_IDENTIFIER];
 }
 // TODO:Replace myToken with your tokens, you can use these tokens in flex
-%token           IF ELSE
+// String keywords
+%token           IF_SYM ELSE_SYM
+%token           WHILE_SYM
+%token           TRUE_SYM FALSE_SYM
+%token           CONST_SYM
 
+// Symbols
+%token           NOT AND OR XOR
+%token           PLUS MINUS TIMES SLASH
+%token           EQL NEQ LSS LEQ GTR GEQ
+%token           LPAREN RPAREN
+%token           LBRACE RBRACE
+%token           LBRACKET RBRACKET
+%token           ASSGNMT
+%token           SEMICOLON
+%token           COMMA
+
+// Literals
 %token           INT_C
 %token           FLOAT_C
 
+// Identifier
 %token           ID
 
 
@@ -89,8 +106,35 @@ tokens
   ;
 // TODO: replace myToken with the token the you defined. I don't know what the fuck to do with it now.
 token
-  :     IF
-  |     ELSE
+  :     IF_SYM
+  |     ELSE_SYM
+  |     WHILE_SYM
+  |     TRUE_SYM
+  |     FALSE_SYM
+  |     CONST_SYM
+  |     NOT
+  |     AND
+  |     OR
+  |     XOR
+  |     PLUS
+  |     MINUS
+  |     TIMES
+  |     SLASH
+  |     EQL
+  |     NEQ
+  |     LSS
+  |     LEQ
+  |     GTR
+  |     GEQ
+  |     LPAREN
+  |     RPAREN
+  |     LBRACE
+  |     RBRACE
+  |     LBRACKET
+  |     RBRACKET
+  |     ASSGNMT
+  |     SEMICOLON
+  |     COMMA
   |     INT_C
   |     FLOAT_C
   |     ID

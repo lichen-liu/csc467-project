@@ -34,13 +34,42 @@ WS                                      [ \t]
 DIGIT                                   [0-9]
 SIGN                                    [\+\-]
 
+
 %%
 "/*".*"*/"                              { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                             } }
 "/*".*                                  { CheckCommentHead();                                                                                                              }
 .*"*/"                                  { CheckCommentTail();                                                                                                              }
 
-"if"                                    { if(!CheckCommentBody()){ yTRACE(IF); return IF;                                                                                } }
-"else"                                  { if(!CheckCommentBody()){ yTRACE(ELSE); return ELSE;                                                                            } }
+"if"                                    { if(!CheckCommentBody()){ yTRACE(IF_SYM); return IF_SYM;                                                                        } }
+"else"                                  { if(!CheckCommentBody()){ yTRACE(ELSE_SYM); return ELSE_SYM;                                                                    } }
+"while"                                 { if(!CheckCommentBody()){ yTRACE(WHILE_SYM); return WHILE_SYM;                                                                  } }
+"true"                                  { if(!CheckCommentBody()){ yTRACE(TRUE_SYM); return TRUE_SYM;                                                                    } }
+"false"                                 { if(!CheckCommentBody()){ yTRACE(FALSE_SYM); return FALSE_SYM;                                                                  } }
+"const"                                 { if(!CheckCommentBody()){ yTRACE(CONST_SYM); return CONST_SYM;                                                                  } }
+
+"=="                                    { if(!CheckCommentBody()){ yTRACE(EQL); return EQL;                                                                              } }
+"!="                                    { if(!CheckCommentBody()){ yTRACE(NEQ); return NEQ;                                                                              } }
+"<="                                    { if(!CheckCommentBody()){ yTRACE(LEQ); return LEQ;                                                                              } }
+"<"                                     { if(!CheckCommentBody()){ yTRACE(LSS); return LSS;                                                                              } }
+">="                                    { if(!CheckCommentBody()){ yTRACE(GEQ); return GEQ;                                                                              } }
+">"                                     { if(!CheckCommentBody()){ yTRACE(GTR); return GTR;                                                                              } }
+"&&"                                    { if(!CheckCommentBody()){ yTRACE(AND); return AND;                                                                              } }
+"||"                                    { if(!CheckCommentBody()){ yTRACE(OR); return OR;                                                                                } }
+"!"                                     { if(!CheckCommentBody()){ yTRACE(NOT); return NOT;                                                                              } }
+"^"                                     { if(!CheckCommentBody()){ yTRACE(XOR); return XOR;                                                                              } }
+"+"                                     { if(!CheckCommentBody()){ yTRACE(PLUS); return PLUS;                                                                            } }
+"-"                                     { if(!CheckCommentBody()){ yTRACE(MINUS); return MINUS;                                                                          } }
+"*"                                     { if(!CheckCommentBody()){ yTRACE(TIMES); return TIMES;                                                                          } }
+"/"                                     { if(!CheckCommentBody()){ yTRACE(SLASH); return SLASH;                                                                          } }
+"("                                     { if(!CheckCommentBody()){ yTRACE(LPAREN); return LPAREN;                                                                        } }
+")"                                     { if(!CheckCommentBody()){ yTRACE(RPAREN); return RPAREN;                                                                        } }
+"{"                                     { if(!CheckCommentBody()){ yTRACE(LBRACE); return LBRACE;                                                                        } }
+"}"                                     { if(!CheckCommentBody()){ yTRACE(RBRACE); return RBRACE;                                                                        } }
+"["                                     { if(!CheckCommentBody()){ yTRACE(LBRACKET); return LBRACKET;                                                                    } }
+"]"                                     { if(!CheckCommentBody()){ yTRACE(RBRACKET); return RBRACKET;                                                                    } }
+"="                                     { if(!CheckCommentBody()){ yTRACE(ASSGNMT); return ASSGNMT;                                                                      } }
+";"                                     { if(!CheckCommentBody()){ yTRACE(SEMICOLON); return SEMICOLON;                                                                  } }
+","                                     { if(!CheckCommentBody()){ yTRACE(COMMA); return COMMA;                                                                          } }
 
 [A-Za-z_][A-Za-z0-9_]*                  { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); printf("%s\n", yylval.as_id); return ID;                     } } }
 
