@@ -17,7 +17,7 @@
 
 int yyline = 1;
 
-#define SCANNER_DEBUG
+// #define SCANNER_DEBUG
 /* Debug output when debug flag is defined */
 void dbprtf(const char* fmt, ...);
 
