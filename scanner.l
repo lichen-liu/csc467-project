@@ -17,7 +17,7 @@
 
 int yyline = 1;
 
-// #define SCANNER_DEBUG
+#define SCANNER_DEBUG
 /* Debug output when debug flag is defined */
 void dbprtf(const char* fmt, ...);
 
@@ -157,7 +157,10 @@ int CheckFloat(float *float_value) {
     double double_value = strtod(yytext, &pend);
 
     /* bound-check */
-    if(double_value < MIN_FLOAT) {
+    if(double_value == 0.0) {
+        *float_value = double_value; // cast from double to float
+        return TRUE;
+    } else if(double_value < MIN_FLOAT) {
         yERROR("Float literal is not within the legal range");
         *float_value = MIN_FLOAT;
         return FALSE;
