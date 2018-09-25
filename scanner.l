@@ -8,6 +8,7 @@
 #include "parser.tab.h"
 #include "string.h"
 
+#include <stdarg.h>
 
 #define YY_USER_INIT { yyin = inputFile; }
 #define	yyinput      input
@@ -15,6 +16,10 @@
 #define yERROR(x)    { fprintf(errorFile, "\nLEXICAL ERROR, LINE %d: %s\n", yyline, x); errorOccurred = TRUE; yyterminate(); }
 
 int yyline = 1;
+
+// #define SCANNER_DEBUG
+/* Debug output when debug flag is defined */
+void dbprtf(const char* fmt, ...);
 
 /* TRUE if valid */
 int CheckInt(int *int_value);
@@ -36,7 +41,7 @@ SIGN                                    [\+\-]
 
 
 %%
-"/*".*"*/"                              { if(!CheckCommentBody()){ fprintf(traceFile, "SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                             } }
+"/*".*"*/"                              { if(!CheckCommentBody()){ dbprtf("SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                                         } }
 "/*".*                                  { CheckCommentHead();                                                                                                              }
 .*"*/"                                  { CheckCommentTail();                                                                                                              }
 
@@ -71,23 +76,35 @@ SIGN                                    [\+\-]
 ";"                                     { if(!CheckCommentBody()){ yTRACE(SEMICOLON); return SEMICOLON;                                                                  } }
 ","                                     { if(!CheckCommentBody()){ yTRACE(COMMA); return COMMA;                                                                          } }
 
-[A-Za-z_][A-Za-z0-9_]*                  { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); printf("%s\n", yylval.as_id); return ID;                     } } }
+[A-Za-z_][A-Za-z0-9_]*                  { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); dbprtf("%s\n", yylval.as_id); return ID;                     } } }
 
-{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
-\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
 
-{DIGIT}+                                { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); printf("%d\n", yylval.as_int); return INT_C;           } } }
-{DIGIT}+\.{DIGIT}+                      { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
-\.{DIGIT}+                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); printf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+                                { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); dbprtf("%d\n", yylval.as_int); return INT_C;           } } }
+{DIGIT}+\.{DIGIT}+                      { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{DIGIT}+\.                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
+\.{DIGIT}+                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
 
 {WS}                                    /* skip whitespace */
 \n                                      { yyline++;                                                                                                                        }
-.                                       { if(!CheckCommentBody()){ printf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
+.                                       { if(!CheckCommentBody()){ dbprtf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
 %%
 
+
+void dbprtf(const char* fmt, ...) {
+#ifdef SCANNER_DEBUG
+    va_list args;
+    va_start(args, fmt);
+
+    // Forward to vprintf()
+    vprintf(fmt, args);
+
+    va_end(args);
+#endif
+}
 
 int CheckCommentHead(void) {
     if(inCommentBlock == TRUE) {
@@ -95,9 +112,7 @@ int CheckCommentHead(void) {
     }
 
     inCommentBlock = TRUE;
-    //
-    fprintf(traceFile, "MULTILINE COMMENT HEAD, LINE %d : %s\n", yyline, yytext);
-    //
+    dbprtf("MULTILINE COMMENT HEAD, LINE %d : %s\n", yyline, yytext);
     // '/*' is captured
 
     return TRUE;
@@ -108,9 +123,7 @@ int CheckCommentTail(void) {
         yERROR("Cannot find the beginning of this comment block with /*");
     }
 
-    //
-    fprintf(traceFile, "MULTILINE COMMENT TAIL, LINE %d : %s\n", yyline, yytext);
-    //
+    dbprtf("MULTILINE COMMENT TAIL, LINE %d : %s\n", yyline, yytext);
     inCommentBlock = FALSE;
     // '*/' is captured
 
@@ -119,9 +132,7 @@ int CheckCommentTail(void) {
 
 int CheckCommentBody(void) {
     if(inCommentBlock == TRUE) {
-        //
-        fprintf(traceFile, "MULTILINE COMMENT BODY, LINE %d : %s\n", yyline, yytext);
-        //
+        dbprtf("MULTILINE COMMENT BODY, LINE %d : %s\n", yyline, yytext);
     }
     return inCommentBlock;
 }
