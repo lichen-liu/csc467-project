@@ -57,6 +57,8 @@ extern int yyline;        /* variable holding current line number   */
   float as_float;
   
   char as_id[MAX_IDENTIFIER];
+  char as_d_type[MAX_IDENTIFIER];
+  char as_func[MAX_IDENTIFIER];
 }
 // TODO:Replace myToken with your tokens, you can use these tokens in flex
 // String keywords
@@ -64,6 +66,10 @@ extern int yyline;        /* variable holding current line number   */
 %token           WHILE_SYM
 %token           TRUE_SYM FALSE_SYM
 %token           CONST_SYM
+
+// Predefined
+%token           DATA_TYPE
+%token           FUNC
 
 // Symbols
 %token           NOT AND OR XOR
@@ -112,6 +118,8 @@ token
   |     TRUE_SYM
   |     FALSE_SYM
   |     CONST_SYM
+  |     DATA_TYPE
+  |     FUNC
   |     NOT
   |     AND
   |     OR

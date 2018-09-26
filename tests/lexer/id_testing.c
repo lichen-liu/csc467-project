@@ -24,4 +24,7 @@ thisidentifierhasthirty_twochars
 .ab_0
 +b_0
 ab_.0
-ab._0
+
+lit
+bvec2
+bvec2lit

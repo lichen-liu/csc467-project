@@ -26,6 +26,10 @@ int CheckInt(int *int_value);
 int CheckFloat(float *float_value);
 int CheckID(char *id_value);
 
+/* Return nothing */
+void ToDataType(char *data_type_value);
+void ToFunc(char *func_value);
+
 int inCommentBlock = FALSE;
 int CheckCommentHead(void);
 int CheckCommentTail(void);
@@ -51,6 +55,12 @@ SIGN                                    [\+\-]
 "true"                                  { if(!CheckCommentBody()){ yTRACE(TRUE_SYM); return TRUE_SYM;                                                                    } }
 "false"                                 { if(!CheckCommentBody()){ yTRACE(FALSE_SYM); return FALSE_SYM;                                                                  } }
 "const"                                 { if(!CheckCommentBody()){ yTRACE(CONST_SYM); return CONST_SYM;                                                                  } }
+
+"bool"|"bvec2"|"bvec3"|"bvec4"          { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
+"int"|"ivec2"|"ivec3"|"ivec4"           { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }                         
+"float"|"vec2"|"vec3"|"vec4"            { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
+
+"lit"|"dp3"|"rsq"                       { if(!CheckCommentBody()){ ToFunc(yylval.as_func); yTRACE(FUNC); dbprtf("%s\n", yylval.as_func); return FUNC;                    } }
 
 "=="                                    { if(!CheckCommentBody()){ yTRACE(EQL); return EQL;                                                                              } }
 "!="                                    { if(!CheckCommentBody()){ yTRACE(NEQ); return NEQ;                                                                              } }
@@ -184,4 +194,14 @@ int CheckID(char *id_value) {
 
     strcpy(id_value, yytext);
     return TRUE;
+}
+
+void ToDataType(char *data_type_value) {
+    /* predefined data types have known length */
+    strcpy(data_type_value, yytext);
+}
+
+void ToFunc(char *func_value) {
+    /* predefined functions have known length */
+    strcpy(func_value, yytext);
 }
