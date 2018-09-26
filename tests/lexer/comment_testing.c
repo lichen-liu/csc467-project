@@ -15,3 +15,16 @@ comment tail*/
 Comment
 */
 */
+
+/*
+/*
+Comment
+*/
+*/
+
+
+/* comment head
+comment body
+comment tail*//* comment head
+comment body
+comment tail*/

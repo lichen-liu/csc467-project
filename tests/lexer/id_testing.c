@@ -20,3 +20,8 @@ ifelse
 
 thisidentifieristhirtyonelength
 thisidentifierhasthirty_twochars
+
+.ab_0
++b_0
+ab_.0
+ab._0
