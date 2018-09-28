@@ -59,6 +59,8 @@ R_FLOAT_LIT                     \.{DIGIT}+
 EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 
 
+%s                              IN_MULTILINE_COMMENT
+
 %%
 "/*".*"*/"                      { if(!CheckCommentBody()){ dbprtf("SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                                         } }
 "/*".*                          { CheckCommentHead();                                                                                                              }
@@ -124,6 +126,8 @@ EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 {WS}                            /* skip whitespace */
 \n                              { yyline++;                                                                                                                        }
 .                               { if(!CheckCommentBody()){ dbprtf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
+
+<IN_MULTILINE_COMMENT><<EOF>>   { BEGIN(INITIAL); yERROR("Comment block is not closed by */ until EOF"); errorOccurred = TRUE; yyterminate();                      }
 %%
 
 /* <<EOF>> TODO:check comment closing */
@@ -147,6 +151,7 @@ int CheckCommentHead(void) {
     }
 
     inCommentBlock = TRUE;
+    BEGIN(IN_MULTILINE_COMMENT);
     dbprtf("MULTILINE COMMENT HEAD, LINE %d : %s\n", yyline, yytext);
     // '/*' is captured
 
@@ -160,6 +165,7 @@ int CheckCommentTail(void) {
     }
 
     dbprtf("MULTILINE COMMENT TAIL, LINE %d : %s\n", yyline, yytext);
+    BEGIN(INITIAL);
     inCommentBlock = FALSE;
     // '*/' is captured
 
