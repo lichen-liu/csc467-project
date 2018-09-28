@@ -72,8 +72,8 @@ extern int yyline;        /* variable holding current line number   */
 %token           FUNC
 
 // Symbols
-%token           NOT AND OR XOR
-%token           PLUS MINUS TIMES SLASH
+%token           NOT AND OR
+%token           PLUS MINUS TIMES SLASH EXP
 %token           EQL NEQ LSS LEQ GTR GEQ
 %token           LPAREN RPAREN
 %token           LBRACE RBRACE
@@ -123,11 +123,11 @@ token
   |     NOT
   |     AND
   |     OR
-  |     XOR
   |     PLUS
   |     MINUS
   |     TIMES
   |     SLASH
+  |     EXP
   |     EQL
   |     NEQ
   |     LSS

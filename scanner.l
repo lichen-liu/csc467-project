@@ -86,11 +86,11 @@ EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 "&&"                            { if(!CheckCommentBody()){ yTRACE(AND); return AND;                                                                              } }
 "||"                            { if(!CheckCommentBody()){ yTRACE(OR); return OR;                                                                                } }
 "!"                             { if(!CheckCommentBody()){ yTRACE(NOT); return NOT;                                                                              } }
-"^"                             { if(!CheckCommentBody()){ yTRACE(XOR); return XOR;                                                                              } }
 "+"                             { if(!CheckCommentBody()){ yTRACE(PLUS); return PLUS;                                                                            } }
 "-"                             { if(!CheckCommentBody()){ yTRACE(MINUS); return MINUS;                                                                          } }
 "*"                             { if(!CheckCommentBody()){ yTRACE(TIMES); return TIMES;                                                                          } }
 "/"                             { if(!CheckCommentBody()){ yTRACE(SLASH); return SLASH;                                                                          } }
+"^"                             { if(!CheckCommentBody()){ yTRACE(EXP); return EXP;                                                                              } }
 "("                             { if(!CheckCommentBody()){ yTRACE(LPAREN); return LPAREN;                                                                        } }
 ")"                             { if(!CheckCommentBody()){ yTRACE(RPAREN); return RPAREN;                                                                        } }
 "{"                             { if(!CheckCommentBody()){ yTRACE(LBRACE); return LBRACE;                                                                        } }
