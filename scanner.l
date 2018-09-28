@@ -33,7 +33,6 @@ int CheckFloat(float *float_value);
 int CheckID(char *id_value);
 
 /* Return nothing */
-void ToDataType(char *data_type_value);
 void ToFunc(char *func_value);
 
 int inCommentBlock = FALSE;
@@ -73,9 +72,18 @@ EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 "false"                         { if(!CheckCommentBody()){ yTRACE(FALSE_SYM); return FALSE_SYM;                                                                  } }
 "const"                         { if(!CheckCommentBody()){ yTRACE(CONST_SYM); return CONST_SYM;                                                                  } }
 
-"bool"|"bvec2"|"bvec3"|"bvec4"  { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
-"int"|"ivec2"|"ivec3"|"ivec4"   { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }                         
-"float"|"vec2"|"vec3"|"vec4"    { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
+"bool"                          { if(!CheckCommentBody()){ yTRACE(BOOL_T); return BOOL_T;                                                                        } }
+"bvec2"                         { if(!CheckCommentBody()){ yTRACE(BVEC2_T); return BVEC2_T;                                                                      } }
+"bvec3"                         { if(!CheckCommentBody()){ yTRACE(BVEC3_T); return BVEC3_T;                                                                      } }
+"bvec4"                         { if(!CheckCommentBody()){ yTRACE(BVEC4_T); return BVEC4_T;                                                                      } }
+"int"                           { if(!CheckCommentBody()){ yTRACE(INT_T); return INT_T;                                                                          } }
+"ivec2"                         { if(!CheckCommentBody()){ yTRACE(IVEC2_T); return IVEC2_T;                                                                      } }
+"ivec3"                         { if(!CheckCommentBody()){ yTRACE(IVEC3_T); return IVEC3_T;                                                                      } }
+"ivec4"                         { if(!CheckCommentBody()){ yTRACE(IVEC4_T); return IVEC4_T;                                                                      } }
+"float"                         { if(!CheckCommentBody()){ yTRACE(FLOAT_T); return FLOAT_T;                                                                      } }
+"vec2"                          { if(!CheckCommentBody()){ yTRACE(VEC2_T); return VEC2_T;                                                                        } }
+"vec3"                          { if(!CheckCommentBody()){ yTRACE(VEC3_T); return VEC3_T;                                                                        } }
+"vec4"                          { if(!CheckCommentBody()){ yTRACE(VEC4_T); return VEC4_T;                                                                        } }
 
 "lit"|"dp3"|"rsq"               { if(!CheckCommentBody()){ ToFunc(yylval.as_func); yTRACE(FUNC); dbprtf("%s\n", yylval.as_func); return FUNC;                    } }
 
@@ -234,11 +242,6 @@ int CheckID(char *id_value) {
 
     strcpy(id_value, yytext);
     return TRUE;
-}
-
-void ToDataType(char *data_type_value) {
-    /* predefined data types have known length */
-    strcpy(data_type_value, yytext);
 }
 
 void ToFunc(char *func_value) {

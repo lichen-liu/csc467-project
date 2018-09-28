@@ -57,8 +57,7 @@ extern int yyline;        /* variable holding current line number   */
   float as_float;
   
   char as_id[MAX_IDENTIFIER + 1];
-  char as_d_type[MAX_IDENTIFIER];
-  char as_func[MAX_IDENTIFIER];
+  char as_func[MAX_IDENTIFIER + 1];
 }
 // TODO:Replace myToken with your tokens, you can use these tokens in flex
 // String keywords
@@ -68,7 +67,9 @@ extern int yyline;        /* variable holding current line number   */
 %token           CONST_SYM
 
 // Predefined
-%token           DATA_TYPE
+%token           BOOL_T BVEC2_T BVEC3_T BVEC4_T
+%token           INT_T IVEC2_T IVEC3_T IVEC4_T
+%token           FLOAT_T VEC2_T VEC3_T VEC4_T
 %token           FUNC
 
 // Symbols
@@ -118,7 +119,18 @@ token
   |     TRUE_SYM
   |     FALSE_SYM
   |     CONST_SYM
-  |     DATA_TYPE
+  |     BOOL_T
+  |     BVEC2_T
+  |     BVEC3_T
+  |     BVEC4_T
+  |     INT_T
+  |     IVEC2_T
+  |     IVEC3_T
+  |     IVEC4_T
+  |     FLOAT_T
+  |     VEC2_T
+  |     VEC3_T
+  |     VEC4_T
   |     FUNC
   |     NOT
   |     AND
