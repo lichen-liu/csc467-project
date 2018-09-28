@@ -51,3 +51,7 @@ TOKEN 288 : ,
 LEXICAL ERROR, LINE 29: Unknown token
 
 LEXICAL ERROR, LINE 39: Unknown token
+
+LEXICAL ERROR, LINE 40: Unknown token
+
+LEXICAL ERROR, LINE 41: Unknown token

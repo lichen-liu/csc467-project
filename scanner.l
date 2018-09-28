@@ -13,7 +13,13 @@
 #define YY_USER_INIT { yyin = inputFile; }
 #define	yyinput      input
 #define yTRACE(x)    { if (traceScanner) fprintf(traceFile, "TOKEN %3d : %s\n", x, yytext); }
+
+#ifdef TEST_SCANNER
+#define yERROR(x)    { fprintf(errorFile, "\nLEXICAL ERROR, LINE %d: %s\n", yyline, x); }
+#else
 #define yERROR(x)    { fprintf(errorFile, "\nLEXICAL ERROR, LINE %d: %s\n", yyline, x); errorOccurred = TRUE; yyterminate(); }
+#endif
+
 
 int yyline = 1;
 
@@ -39,70 +45,88 @@ int CheckCommentBody(void);
 %}
 %option noyywrap
 
-WS                                      [ \t]
-DIGIT                                   [0-9]
-SIGN                                    [\+\-]
+WS                              [ \t]
+
+DIGIT                           [0-9]
+SIGN                            [\+\-]
+
+ID                              [A-Za-z_][A-Za-z0-9_]*
+
+INT_LIT                         {DIGIT}+
+LR_FLOAT_LIT                    {DIGIT}+\.{DIGIT}+
+L_FLOAT_LIT                     {DIGIT}+\.
+R_FLOAT_LIT                     \.{DIGIT}+
+EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 
 
 %%
-"/*".*"*/"                              { if(!CheckCommentBody()){ dbprtf("SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                                         } }
-"/*".*                                  { CheckCommentHead();                                                                                                              }
-.*"*/"                                  { CheckCommentTail();                                                                                                              }
+"/*".*"*/"                      { if(!CheckCommentBody()){ dbprtf("SINGLELINE COMMENT, LINE %d : %s\n", yyline, yytext);                                         } }
+"/*".*                          { CheckCommentHead();                                                                                                              }
+.*"*/"                          { CheckCommentTail();                                                                                                              }
 
-"if"                                    { if(!CheckCommentBody()){ yTRACE(IF_SYM); return IF_SYM;                                                                        } }
-"else"                                  { if(!CheckCommentBody()){ yTRACE(ELSE_SYM); return ELSE_SYM;                                                                    } }
-"while"                                 { if(!CheckCommentBody()){ yTRACE(WHILE_SYM); return WHILE_SYM;                                                                  } }
-"true"                                  { if(!CheckCommentBody()){ yTRACE(TRUE_SYM); return TRUE_SYM;                                                                    } }
-"false"                                 { if(!CheckCommentBody()){ yTRACE(FALSE_SYM); return FALSE_SYM;                                                                  } }
-"const"                                 { if(!CheckCommentBody()){ yTRACE(CONST_SYM); return CONST_SYM;                                                                  } }
+"if"                            { if(!CheckCommentBody()){ yTRACE(IF_SYM); return IF_SYM;                                                                        } }
+"else"                          { if(!CheckCommentBody()){ yTRACE(ELSE_SYM); return ELSE_SYM;                                                                    } }
+"while"                         { if(!CheckCommentBody()){ yTRACE(WHILE_SYM); return WHILE_SYM;                                                                  } }
+"true"                          { if(!CheckCommentBody()){ yTRACE(TRUE_SYM); return TRUE_SYM;                                                                    } }
+"false"                         { if(!CheckCommentBody()){ yTRACE(FALSE_SYM); return FALSE_SYM;                                                                  } }
+"const"                         { if(!CheckCommentBody()){ yTRACE(CONST_SYM); return CONST_SYM;                                                                  } }
 
-"bool"|"bvec2"|"bvec3"|"bvec4"          { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
-"int"|"ivec2"|"ivec3"|"ivec4"           { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }                         
-"float"|"vec2"|"vec3"|"vec4"            { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
+"bool"|"bvec2"|"bvec3"|"bvec4"  { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
+"int"|"ivec2"|"ivec3"|"ivec4"   { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }                         
+"float"|"vec2"|"vec3"|"vec4"    { if(!CheckCommentBody()){ ToDataType(yylval.as_d_type); yTRACE(DATA_TYPE); dbprtf("%s\n", yylval.as_d_type); return DATA_TYPE;  } }
 
-"lit"|"dp3"|"rsq"                       { if(!CheckCommentBody()){ ToFunc(yylval.as_func); yTRACE(FUNC); dbprtf("%s\n", yylval.as_func); return FUNC;                    } }
+"lit"|"dp3"|"rsq"               { if(!CheckCommentBody()){ ToFunc(yylval.as_func); yTRACE(FUNC); dbprtf("%s\n", yylval.as_func); return FUNC;                    } }
 
-"=="                                    { if(!CheckCommentBody()){ yTRACE(EQL); return EQL;                                                                              } }
-"!="                                    { if(!CheckCommentBody()){ yTRACE(NEQ); return NEQ;                                                                              } }
-"<="                                    { if(!CheckCommentBody()){ yTRACE(LEQ); return LEQ;                                                                              } }
-"<"                                     { if(!CheckCommentBody()){ yTRACE(LSS); return LSS;                                                                              } }
-">="                                    { if(!CheckCommentBody()){ yTRACE(GEQ); return GEQ;                                                                              } }
-">"                                     { if(!CheckCommentBody()){ yTRACE(GTR); return GTR;                                                                              } }
-"&&"                                    { if(!CheckCommentBody()){ yTRACE(AND); return AND;                                                                              } }
-"||"                                    { if(!CheckCommentBody()){ yTRACE(OR); return OR;                                                                                } }
-"!"                                     { if(!CheckCommentBody()){ yTRACE(NOT); return NOT;                                                                              } }
-"^"                                     { if(!CheckCommentBody()){ yTRACE(XOR); return XOR;                                                                              } }
-"+"                                     { if(!CheckCommentBody()){ yTRACE(PLUS); return PLUS;                                                                            } }
-"-"                                     { if(!CheckCommentBody()){ yTRACE(MINUS); return MINUS;                                                                          } }
-"*"                                     { if(!CheckCommentBody()){ yTRACE(TIMES); return TIMES;                                                                          } }
-"/"                                     { if(!CheckCommentBody()){ yTRACE(SLASH); return SLASH;                                                                          } }
-"("                                     { if(!CheckCommentBody()){ yTRACE(LPAREN); return LPAREN;                                                                        } }
-")"                                     { if(!CheckCommentBody()){ yTRACE(RPAREN); return RPAREN;                                                                        } }
-"{"                                     { if(!CheckCommentBody()){ yTRACE(LBRACE); return LBRACE;                                                                        } }
-"}"                                     { if(!CheckCommentBody()){ yTRACE(RBRACE); return RBRACE;                                                                        } }
-"["                                     { if(!CheckCommentBody()){ yTRACE(LBRACKET); return LBRACKET;                                                                    } }
-"]"                                     { if(!CheckCommentBody()){ yTRACE(RBRACKET); return RBRACKET;                                                                    } }
-"="                                     { if(!CheckCommentBody()){ yTRACE(ASSGNMT); return ASSGNMT;                                                                      } }
-";"                                     { if(!CheckCommentBody()){ yTRACE(SEMICOLON); return SEMICOLON;                                                                  } }
-","                                     { if(!CheckCommentBody()){ yTRACE(COMMA); return COMMA;                                                                          } }
+"=="                            { if(!CheckCommentBody()){ yTRACE(EQL); return EQL;                                                                              } }
+"!="                            { if(!CheckCommentBody()){ yTRACE(NEQ); return NEQ;                                                                              } }
+"<="                            { if(!CheckCommentBody()){ yTRACE(LEQ); return LEQ;                                                                              } }
+"<"                             { if(!CheckCommentBody()){ yTRACE(LSS); return LSS;                                                                              } }
+">="                            { if(!CheckCommentBody()){ yTRACE(GEQ); return GEQ;                                                                              } }
+">"                             { if(!CheckCommentBody()){ yTRACE(GTR); return GTR;                                                                              } }
+"&&"                            { if(!CheckCommentBody()){ yTRACE(AND); return AND;                                                                              } }
+"||"                            { if(!CheckCommentBody()){ yTRACE(OR); return OR;                                                                                } }
+"!"                             { if(!CheckCommentBody()){ yTRACE(NOT); return NOT;                                                                              } }
+"^"                             { if(!CheckCommentBody()){ yTRACE(XOR); return XOR;                                                                              } }
+"+"                             { if(!CheckCommentBody()){ yTRACE(PLUS); return PLUS;                                                                            } }
+"-"                             { if(!CheckCommentBody()){ yTRACE(MINUS); return MINUS;                                                                          } }
+"*"                             { if(!CheckCommentBody()){ yTRACE(TIMES); return TIMES;                                                                          } }
+"/"                             { if(!CheckCommentBody()){ yTRACE(SLASH); return SLASH;                                                                          } }
+"("                             { if(!CheckCommentBody()){ yTRACE(LPAREN); return LPAREN;                                                                        } }
+")"                             { if(!CheckCommentBody()){ yTRACE(RPAREN); return RPAREN;                                                                        } }
+"{"                             { if(!CheckCommentBody()){ yTRACE(LBRACE); return LBRACE;                                                                        } }
+"}"                             { if(!CheckCommentBody()){ yTRACE(RBRACE); return RBRACE;                                                                        } }
+"["                             { if(!CheckCommentBody()){ yTRACE(LBRACKET); return LBRACKET;                                                                    } }
+"]"                             { if(!CheckCommentBody()){ yTRACE(RBRACKET); return RBRACKET;                                                                    } }
+"="                             { if(!CheckCommentBody()){ yTRACE(ASSGNMT); return ASSGNMT;                                                                      } }
+";"                             { if(!CheckCommentBody()){ yTRACE(SEMICOLON); return SEMICOLON;                                                                  } }
+","                             { if(!CheckCommentBody()){ yTRACE(COMMA); return COMMA;                                                                          } }
 
-[A-Za-z_][A-Za-z0-9_]*                  { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); dbprtf("%s\n", yylval.as_id); return ID;                     } } }
+{ID}                            { if(!CheckCommentBody()){ if(CheckID(yylval.as_id)){ yTRACE(ID); dbprtf("%s\n", yylval.as_id); return ID;                     } } }
 
-{DIGIT}+[eE]{SIGN}?{DIGIT}+             { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.{DIGIT}+[eE]{SIGN}?{DIGIT}+   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
-\.{DIGIT}+[eE]{SIGN}?{DIGIT}+           { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{INT_LIT}{EXP_LIT}              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{LR_FLOAT_LIT}{EXP_LIT}         { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{L_FLOAT_LIT}{EXP_LIT}          { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{R_FLOAT_LIT}{EXP_LIT}          { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%e\n", yylval.as_float); return FLOAT_C; } } }
+{INT_LIT}                       { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); dbprtf("%d\n", yylval.as_int); return INT_C;           } } }
+{LR_FLOAT_LIT}                  { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{L_FLOAT_LIT}                   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{R_FLOAT_LIT}                   { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
 
-{DIGIT}+                                { if(!CheckCommentBody()){ if(CheckInt(&yylval.as_int)){ yTRACE(INT_C); dbprtf("%d\n", yylval.as_int); return INT_C;           } } }
-{DIGIT}+\.{DIGIT}+                      { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
-{DIGIT}+\.                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
-\.{DIGIT}+                              { if(!CheckCommentBody()){ if(CheckFloat(&yylval.as_float)){ yTRACE(FLOAT_C); dbprtf("%f\n", yylval.as_float); return FLOAT_C; } } }
+{INT_LIT}{EXP_LIT}{ID}          { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{LR_FLOAT_LIT}{EXP_LIT}{ID}     { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{L_FLOAT_LIT}{EXP_LIT}{ID}      { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{R_FLOAT_LIT}{EXP_LIT}{ID}      { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{INT_LIT}{ID}                   { if(!CheckCommentBody()){ yERROR("Integer literal should not be followed by identifier");                                       } }
+{LR_FLOAT_LIT}{ID}              { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{L_FLOAT_LIT}{ID}               { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
+{R_FLOAT_LIT}{ID}               { if(!CheckCommentBody()){ yERROR("Float literal should not be followed by identifier");                                         } }
 
-{WS}                                    /* skip whitespace */
-\n                                      { yyline++;                                                                                                                        }
-.                                       { if(!CheckCommentBody()){ dbprtf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
+{WS}                            /* skip whitespace */
+\n                              { yyline++;                                                                                                                        }
+.                               { if(!CheckCommentBody()){ dbprtf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                 } }
 %%
 
+/* <<EOF>> TODO:check comment closing */
 
 void dbprtf(const char* fmt, ...) {
 #ifdef SCANNER_DEBUG
@@ -119,6 +143,7 @@ void dbprtf(const char* fmt, ...) {
 int CheckCommentHead(void) {
     if(inCommentBlock == TRUE) {
         yERROR("Expecting closing previous comment block with */ before opening new comment block with /*");
+        return FALSE;
     }
 
     inCommentBlock = TRUE;
@@ -131,6 +156,7 @@ int CheckCommentHead(void) {
 int CheckCommentTail(void) {
     if(inCommentBlock == FALSE) {
         yERROR("Cannot find the beginning of this comment block with /*");
+        return FALSE;
     }
 
     dbprtf("MULTILINE COMMENT TAIL, LINE %d : %s\n", yyline, yytext);
@@ -155,6 +181,13 @@ int CheckInt(int *int_value) {
     if(integer_value > MAX_INTEGER) {
         yERROR("Integer literal is not within the legal range");
         *int_value = MAX_INTEGER;
+        return FALSE;
+    }
+
+    /* check int start with 0 */
+    if(strlen(yytext) > 1 && yytext[0] == '0') {
+        yERROR("Integer literal cannot start with 0");
+        *int_value = 0;
         return FALSE;
     }
     
@@ -185,8 +218,9 @@ int CheckFloat(float *float_value) {
 
 int CheckID(char *id_value) {
     /* identifier length check */
-    if(strlen(yytext) >= MAX_IDENTIFIER) {
-        /* identifier + '\0' <= MAX_IDENTIFIER */
+    if(strlen(yytext) > MAX_IDENTIFIER) {
+        /* identifier <= MAX_IDENTIFIER 
+         * identifier + '\0' <= MAX_IDENTIFIER + 1 */
         yERROR("Identifier has a illegal length");
         strcpy(id_value, "");
         return FALSE;

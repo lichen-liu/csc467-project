@@ -56,7 +56,7 @@ extern int yyline;        /* variable holding current line number   */
   int as_int;
   float as_float;
   
-  char as_id[MAX_IDENTIFIER];
+  char as_id[MAX_IDENTIFIER + 1];
   char as_d_type[MAX_IDENTIFIER];
   char as_func[MAX_IDENTIFIER];
 }
