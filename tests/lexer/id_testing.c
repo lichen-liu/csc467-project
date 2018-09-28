@@ -1,6 +1,5 @@
 a
 ab
-0ab
 a0b
 ab0
 ab_0
@@ -10,7 +9,6 @@ _0
 
 A
 aB
-0Ab
 a0B
 Ab0
 
@@ -18,8 +16,8 @@ if
 else
 ifelse
 
-thisidentifieristhirtyonelength
-thisidentifierhasthirty_twochars
+thisidentifieris_thirtytwolength
+thisidentifierhasthirtythreechars
 
 .ab_0
 +b_0

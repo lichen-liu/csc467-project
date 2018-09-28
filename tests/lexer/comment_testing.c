@@ -27,3 +27,7 @@ comment tail*/
 Comment
 */
 */
+
+/* /* Unmatched comment tail in a single line */
+
+/* Dangling comment head
