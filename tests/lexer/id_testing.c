@@ -23,6 +23,9 @@ thisidentifierhasthirtythreechars
 +b_0
 ab_.0
 
+e
+E
+
 lit
 bvec2
 bvec2lit

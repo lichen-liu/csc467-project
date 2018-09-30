@@ -138,8 +138,6 @@ EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 <IN_MULTILINE_COMMENT><<EOF>>   { BEGIN(INITIAL); yERROR("Comment block is not closed by */ until EOF"); errorOccurred = TRUE; yyterminate();                      }
 %%
 
-/* <<EOF>> TODO:check comment closing */
-
 void dbprtf(const char* fmt, ...) {
 #ifdef SCANNER_DEBUG
     va_list args;
@@ -191,17 +189,17 @@ int CheckInt(int *int_value) {
     char *pend;
     long int integer_value = strtol(yytext, &pend, 10);
 
+    /* check int start with 0 */
+    if(strlen(yytext) >= 2 && yytext[0] == '0') {
+        yERROR("Integer literal cannot start with 0");
+        *int_value = 0;
+        return FALSE;
+    }
+
     /* bound-check */
     if(integer_value > MAX_INTEGER) {
         yERROR("Integer literal is not within the legal range");
         *int_value = MAX_INTEGER;
-        return FALSE;
-    }
-
-    /* check int start with 0 */
-    if(strlen(yytext) > 1 && yytext[0] == '0') {
-        yERROR("Integer literal cannot start with 0");
-        *int_value = 0;
         return FALSE;
     }
     
@@ -212,6 +210,13 @@ int CheckInt(int *int_value) {
 int CheckFloat(float *float_value) {
     char *pend;
     double double_value = strtod(yytext, &pend);
+
+    /* check float start with 0 */
+    if(strlen(yytext) >= 2 && yytext[0] == '0' && !(yytext[1] == '.' || yytext[1] == 'e' || yytext[1] == 'E')) {
+        yERROR("Float literal cannot start with 0");
+        *float_value = 0.0;
+        return FALSE;
+    }
 
     /* bound-check */
     if(double_value != 0.0) {
