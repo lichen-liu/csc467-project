@@ -1,33 +1,35 @@
 /* comment */
 
+int
+
 /* comment head
-comment body
+comment /*
 comment tail*/
+
+float
 
 /*
 /*comment in comment*/
-*/
+int */
 
-/*/*comment in comment*/*/
+float
 
-/*
-/*
-Comment
-*/
-*/
+/*/*comment in comment*/float*/
+
+float
 
 /* comment head
 comment body
-comment tail*//* comment head
+comment 0 tail*//* comment 1.2e+2 head
 comment body
 comment tail*/
 
-/*
-/*
-Comment
-*/
-*/
+bvec2
 
 /* /* Unmatched comment tail in a single line */
+
+bool
+
+/*/*/0*/**/1
 
 /* Dangling comment head
