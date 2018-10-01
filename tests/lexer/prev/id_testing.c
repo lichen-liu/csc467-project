@@ -19,6 +19,8 @@ TOKEN 280 : +
 TOKEN 302 : b_0
 TOKEN 302 : ab_
 TOKEN 301 : .0
+TOKEN 302 : e
+TOKEN 302 : E
 TOKEN 276 : lit
 TOKEN 265 : bvec2
 TOKEN 302 : bvec2lit
