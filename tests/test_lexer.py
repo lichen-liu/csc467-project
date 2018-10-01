@@ -1,5 +1,6 @@
 # Must be executed in compiler467/
 
+import difflib
 import os
 import subprocess
 
@@ -45,9 +46,13 @@ for root, dirs, files in os.walk(test_dir):
                 print '===== ACTUAL ====='
                 print total_out
                 print '=================='
-                print '===== EXPECTED ====='
+                print '***** EXPECTED *****'
                 print prev_total_out
-                print '===================='
+                print '********************'
+                print '----- DIFF -----'
+                diff = difflib.unified_diff(prev_total_out, total_out, fromfile = 'expected', tofile = 'actual')
+                print ''.join(diff)
+                print '----------------'
                 print '\nThere are probably some bugs with the compiler, or update the EXPECTED in ' + prev_dir + test_target_file + '!'
                 print
                 raise Exception(test_target_file + ' failed to produce same output as expected!')
