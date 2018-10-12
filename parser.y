@@ -90,7 +90,6 @@ extern int yyline;        /* variable holding current line number   */
 // Identifier
 %token           ID
 
-
 %start    program
 
 %%
@@ -105,61 +104,92 @@ extern int yyline;        /* variable holding current line number   */
  *    1. Add code to rules for construction of AST.
  ***********************************************************************/
 program
-  :   tokens       
+  :   scope
   ;
-tokens
-  :  tokens token  
-  |      
+scope
+  :   LBRACE declarations statements RBRACE
   ;
-// TODO: replace myToken with the token the you defined. I don't know what the fuck to do with it now.
-token
-  :     IF_SYM
-  |     ELSE_SYM
-  |     WHILE_SYM
-  |     TRUE_SYM
-  |     FALSE_SYM
-  |     CONST_SYM
-  |     BOOL_T
-  |     BVEC2_T
-  |     BVEC3_T
-  |     BVEC4_T
-  |     INT_T
-  |     IVEC2_T
-  |     IVEC3_T
-  |     IVEC4_T
-  |     FLOAT_T
-  |     VEC2_T
-  |     VEC3_T
-  |     VEC4_T
-  |     FUNC
-  |     NOT
-  |     AND
-  |     OR
-  |     PLUS
-  |     MINUS
-  |     TIMES
-  |     SLASH
-  |     EXP
-  |     EQL
-  |     NEQ
-  |     LSS
-  |     LEQ
-  |     GTR
-  |     GEQ
-  |     LPAREN
-  |     RPAREN
-  |     LBRACE
-  |     RBRACE
-  |     LBRACKET
-  |     RBRACKET
-  |     ASSGNMT
-  |     SEMICOLON
-  |     COMMA
-  |     INT_C
-  |     FLOAT_C
-  |     ID
+declarations
+  :  declarations declaration  
+  |  /* epsilon */    
   ;
-
+statements
+  :  statements statement  
+  |  /* epsilon */    
+  ;
+declaration
+  :  type ID SEMICOLON
+  |  type ID ASSGNMT expression SEMICOLON
+  |  CONST_SYM type ID ASSGNMT expression SEMICOLON
+  |  /* epsilon */
+  ;
+statement
+  :  variable ASSGNMT expression SEMICOLON
+  |  IF_SYM LPAREN expression RPAREN statement else_statement
+  |  WHILE_SYM LPAREN expression RPAREN statement
+  |  scope
+  |  SEMICOLON
+  ;
+else_statement
+  :  ELSE_SYM statement  
+  |  /* epsilon */    
+  ;
+type
+  :  INT_T | IVEC2_T | IVEC3_T | IVEC4_T
+  |  BOOL_T | BVEC2_T | BVEC3_T  | BVEC4_T
+  |  FLOAT_T | VEC2_T | VEC3_T | VEC4_T
+  ;
+expression
+  :  constructor
+  |  function
+  |  INT_C
+  |  FLOAT_C
+  |  TRUE_SYM | FALSE_SYM
+  |  variable
+  |  unary_op expression
+  |  expression binary_op expression
+  |  LPAREN expression RPAREN
+  ;
+variable
+  :  ID
+  |  ID LBRACKET INT_C RBRACKET
+  ;
+unary_op
+  :  NOT
+  |  MINUS
+  ;
+binary_op
+  :  AND
+  |  OR
+  |  EQL    
+  |  NEQ
+  |  LSS
+  |  LEQ
+  |  GTR
+  |  GEQ
+  |  PLUS
+  |  MINUS
+  |  TIMES
+  |  SLASH
+  |  EXP
+  ;
+constructor
+  :  type LPAREN arguments RPAREN
+  ;
+function
+  :  function_name LPAREN arguments_opt RPAREN
+  ;
+function_name
+  :  FUNC
+  ;
+arguments_opt
+  :  arguments
+  |  /* epsilon */
+  ;
+arguments
+  :  arguments COMMA expression
+  |  expression
+  ;
 
 %%
 
