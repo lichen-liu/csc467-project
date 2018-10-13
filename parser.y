@@ -90,6 +90,8 @@ extern int yyline;        /* variable holding current line number   */
 %token           ID
 
 
+%start           program
+
 // Precedence declarations
 // lower declaration, higher precedence
 // precedence 7
@@ -114,10 +116,8 @@ extern int yyline;        /* variable holding current line number   */
 %left            UNARY_PREC
 
 // precedence 0
-%left            VECT_FUNC_CONS_PREC
+%left            V_F_C_PREC
 
-
-%start    program
 
 %%
 
@@ -131,91 +131,101 @@ extern int yyline;        /* variable holding current line number   */
  *    1. Add code to rules for construction of AST.
  ***********************************************************************/
 program
-  :   scope                                                       { yTRACE("program -> scope");                                                       }
+  :  scope                                                          { yTRACE("program -> scope");                                         }
   ;
 scope
-  :   LBRACE declarations statements RBRACE                       { yTRACE("scope -> { declarations statements }");                                   }
+  :  LBRACE declarations statements RBRACE                          { yTRACE("scope -> { declarations statements }");                     }
   ;
 declarations
-  :  declarations declaration                                     { yTRACE("declarations -> declarations declaration");                               }
-  |  epsilon                                                      { yTRACE("declarations -> epsilon");                                                }
+  :  declarations declaration                                       { yTRACE("declarations -> declarations declaration");                 }
+  |  epsilon                                                        { yTRACE("declarations -> epsilon");                                  }
   ;
 statements
-  :  statements statement                                         { yTRACE("statements -> statements statement");                                     }
-  |  epsilon                                                      { yTRACE("statements -> epsilon");                                                  }
+  :  statements statement                                           { yTRACE("statements -> statements statement");                       }
+  |  epsilon                                                        { yTRACE("statements -> epsilon");                                    }
   ;
 declaration
-  :  type ID SEMICOLON                                            { yTRACE("declaration -> type ID ;");                                               }
-  |  type ID ASSGNMT expression SEMICOLON                         { yTRACE("declaration -> type ID = expression ;");                                  }
-  |  CONST_SYM type ID ASSGNMT expression SEMICOLON               { yTRACE("declaration -> const type ID = expression ;");                            }
-  |  epsilon                                                      { yTRACE("declaration -> epsilon");                                                 }
+  :  type ID SEMICOLON                                              { yTRACE("declaration -> type ID ;");                                 }
+  |  type ID ASSGNMT expression SEMICOLON                           { yTRACE("declaration -> type ID = expression ;");                    }
+  |  CONST_SYM type ID ASSGNMT expression SEMICOLON                 { yTRACE("declaration -> const type ID = expression ;");              }
+  |  epsilon                                                        { yTRACE("declaration -> epsilon");                                   }
   ;
 statement
-  :  variable ASSGNMT expression SEMICOLON                        { yTRACE("statement -> variable = expression ;");                                   }
-  |  IF_SYM LPAREN expression RPAREN statement else_statement     { yTRACE("statement -> if ( expression ) statement else_statement");                }
-  |  WHILE_SYM LPAREN expression RPAREN statement                 { yTRACE("statement -> while ( expression ) statement");                            }
-  |  scope                                                        { yTRACE("statement -> scope");                                                     }
-  |  SEMICOLON                                                    { yTRACE("statement -> ;");                                                         }
+  :  variable ASSGNMT expression SEMICOLON                          { yTRACE("statement -> variable = expression ;");                     }
+  |  IF_SYM LPAREN expression RPAREN statement else_statement       { yTRACE("statement -> if ( expression ) statement else_statement");  }
+  |  WHILE_SYM LPAREN expression RPAREN statement                   { yTRACE("statement -> while ( expression ) statement");              }
+  |  scope                                                          { yTRACE("statement -> scope");                                       }
+  |  SEMICOLON                                                      { yTRACE("statement -> ;");                                           }
   ;
 else_statement
-  :  ELSE_SYM statement                                           { yTRACE("else_statement -> else statement");                                       }
-  |  epsilon                                                      { yTRACE("else_statement -> epsilon");                                              }
+  :  ELSE_SYM statement                                             { yTRACE("else_statement -> else statement");                         }
+  |  epsilon                                                        { yTRACE("else_statement -> epsilon");                                }
   ;
 type
-  :  INT_T | IVEC2_T | IVEC3_T | IVEC4_T                          { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                                    }
-  |  BOOL_T | BVEC2_T | BVEC3_T  | BVEC4_T                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                                   }
-  |  FLOAT_T | VEC2_T | VEC3_T | VEC4_T                           { yTRACE("type -> float | vec2 | vec3 | vec4");                                     }
+  :  INT_T                                                          { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
+  |  IVEC2_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
+  |  IVEC3_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
+  |  IVEC4_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
+  |  BOOL_T                                                         { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
+  |  BVEC2_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
+  |  BVEC3_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
+  |  BVEC4_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
+  |  FLOAT_T                                                        { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
+  |  VEC2_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
+  |  VEC3_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
+  |  VEC4_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
   ;
 expression
-  :  constructor                                                  { yTRACE("expression -> constructor");                                              }
-  |  function                                                     { yTRACE("expression -> function");                                                 }
-  |  INT_C                                                        { yTRACE("expression -> integer_literal");                                          }
-  |  FLOAT_C                                                      { yTRACE("expression -> float_literal");                                            }
-  |  TRUE_SYM | FALSE_SYM                                         { yTRACE("expression -> true | false");                                             }
-  |  variable                                                     { yTRACE("expression -> variable");                                                 }
-  |  unary_op expression                                          { yTRACE("expression -> unary_op expression");                                      }
-  |  expression binary_op expression                              { yTRACE("expression -> expression binary_op expression");                          }
-  |  LPAREN expression RPAREN                                     { yTRACE("expression -> (expression)");                                             }
+  :  constructor                                                    { yTRACE("expression -> constructor");                                }
+  |  function                                                       { yTRACE("expression -> function");                                   }
+  |  INT_C                                                          { yTRACE("expression -> integer_literal");                            }
+  |  FLOAT_C                                                        { yTRACE("expression -> float_literal");                              }
+  |  TRUE_SYM                                                       { yTRACE("expression -> true | false");                               }
+  |  FALSE_SYM                                                      { yTRACE("expression -> true | false");                               }
+  |  variable                                                       { yTRACE("expression -> variable");                                   }
+  |  unary_op expression                                            { yTRACE("expression -> unary_op expression");                        }
+  |  expression binary_op expression                                { yTRACE("expression -> expression binary_op expression");            }
+  |  LPAREN expression RPAREN                                       { yTRACE("expression -> (expression)");                               }
   ;
 variable
-  :  ID                                                           { yTRACE("variable -> identifier");                                                 }
-  |  ID LBRACKET INT_C RBRACKET      %prec VECT_FUNC_CONS_PREC    { yTRACE("variable -> identifier[integer_literal]");                                }
+  :  ID                                                             { yTRACE("variable -> identifier");                                   }
+  |  ID LBRACKET INT_C RBRACKET                   %prec V_F_C_PREC  { yTRACE("variable -> identifier[integer_literal]");                  }
   ;
 unary_op
-  :  NOT                             %prec UNARY_PREC             { yTRACE("unary_op -> !");                                                          }
-  |  MINUS                           %prec UNARY_PREC             { yTRACE("unary_op -> -");                                                          }
+  :  NOT                                          %prec UNARY_PREC  { yTRACE("unary_op -> !");                                            }
+  |  MINUS                                        %prec UNARY_PREC  { yTRACE("unary_op -> -");                                            }
   ;
 binary_op
-  :  AND                                                          { yTRACE("binary_op -> &&");                                                        }
-  |  OR                                                           { yTRACE("binary_op -> ||");                                                        }
-  |  EQL                                                          { yTRACE("binary_op -> ==");                                                        }
-  |  NEQ                                                          { yTRACE("binary_op -> !=");                                                        }
-  |  LSS                                                          { yTRACE("binary_op -> <");                                                         }
-  |  LEQ                                                          { yTRACE("binary_op -> <=");                                                        }
-  |  GTR                                                          { yTRACE("binary_op -> >");                                                         }
-  |  GEQ                                                          { yTRACE("binary_op -> >=");                                                        }
-  |  PLUS                                                         { yTRACE("binary_op -> +");                                                         }
-  |  MINUS                                                        { yTRACE("binary_op -> -");                                                         }
-  |  TIMES                                                        { yTRACE("binary_op -> *");                                                         }
-  |  SLASH                                                        { yTRACE("binary_op -> /");                                                         }
-  |  EXP                                                          { yTRACE("binary_op -> ^");                                                         }
+  :  AND                                                            { yTRACE("binary_op -> &&");                                          }
+  |  OR                                                             { yTRACE("binary_op -> ||");                                          }
+  |  EQL                                                            { yTRACE("binary_op -> ==");                                          }
+  |  NEQ                                                            { yTRACE("binary_op -> !=");                                          }
+  |  LSS                                                            { yTRACE("binary_op -> <");                                           }
+  |  LEQ                                                            { yTRACE("binary_op -> <=");                                          }
+  |  GTR                                                            { yTRACE("binary_op -> >");                                           }
+  |  GEQ                                                            { yTRACE("binary_op -> >=");                                          }
+  |  PLUS                                                           { yTRACE("binary_op -> +");                                           }
+  |  MINUS                                                          { yTRACE("binary_op -> -");                                           }
+  |  TIMES                                                          { yTRACE("binary_op -> *");                                           }
+  |  SLASH                                                          { yTRACE("binary_op -> /");                                           }
+  |  EXP                                                            { yTRACE("binary_op -> ^");                                           }
   ;
 constructor
-  :  type LPAREN arguments RPAREN    %prec VECT_FUNC_CONS_PREC    { yTRACE("constructor -> type ( arguments )");                                      }
+  :  type LPAREN arguments RPAREN                 %prec V_F_C_PREC  { yTRACE("constructor -> type ( arguments )");                        }
   ;
 function
-  :  function_name LPAREN arguments_opt RPAREN    %prec VECT_FUNC_CONS_PREC   { yTRACE("function -> function_name ( arguments_opt )");                }
+  :  function_name LPAREN arguments_opt RPAREN    %prec V_F_C_PREC  { yTRACE("function -> function_name ( arguments_opt )");              }
   ;
 function_name
-  :  FUNC                                                         { yTRACE("function_name -> lit | dp3 | rsq");                                       }
+  :  FUNC                                                           { yTRACE("function_name -> lit | dp3 | rsq");                         }
   ;
 arguments_opt
-  :  arguments                                                    { yTRACE("arguments_opt -> arguments");                                             }
-  |  epsilon                                                      { yTRACE("arguments_opt -> epsilon");                                               }
+  :  arguments                                                      { yTRACE("arguments_opt -> arguments");                               }
+  |  epsilon                                                        { yTRACE("arguments_opt -> epsilon");                                 }
   ;
 arguments
-  :  arguments COMMA expression                                   { yTRACE("arguments -> arguments , expression");                                    }
-  |  expression                                                   { yTRACE("arguments -> expression");                                                }
+  :  arguments COMMA expression                                     { yTRACE("arguments -> arguments , expression");                      }
+  |  expression                                                     { yTRACE("arguments -> expression");                                  }
   ;
 epsilon
   :
