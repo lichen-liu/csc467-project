@@ -183,7 +183,7 @@ expression
   |  TRUE_SYM                                                       { yTRACE("expression -> true | false");                               }
   |  FALSE_SYM                                                      { yTRACE("expression -> true | false");                               }
   |  variable                                                       { yTRACE("expression -> variable");                                   }
-  |  unary_op expression                                            { yTRACE("expression -> unary_op expression");                        }
+  |  unary_op expression                          %prec UNARY_PREC  { yTRACE("expression -> unary_op expression");                        }
   |  expression binary_op expression                                { yTRACE("expression -> expression binary_op expression");            }
   |  LPAREN expression RPAREN                                       { yTRACE("expression -> (expression)");                               }
   ;
@@ -192,8 +192,8 @@ variable
   |  ID LBRACKET INT_C RBRACKET                   %prec V_F_C_PREC  { yTRACE("variable -> identifier[integer_literal]");                  }
   ;
 unary_op
-  :  NOT                                          %prec UNARY_PREC  { yTRACE("unary_op -> !");                                            }
-  |  MINUS                                        %prec UNARY_PREC  { yTRACE("unary_op -> -");                                            }
+  :  NOT                                                            { yTRACE("unary_op -> !");                                            }
+  |  MINUS                                                          { yTRACE("unary_op -> -");                                            }
   ;
 binary_op
   :  AND                                                            { yTRACE("binary_op -> &&");                                          }
