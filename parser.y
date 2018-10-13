@@ -183,7 +183,19 @@ expression
   |  FALSE_SYM                                                      { yTRACE("expression -> true | false");                               }
   |  variable                                                       { yTRACE("expression -> variable");                                   }
   |  unary_op expression                          %prec UNARY_PREC  { yTRACE("expression -> unary_op expression");                        }
-  |  expression binary_op expression                                { yTRACE("expression -> expression binary_op expression");            }
+  |  expression AND expression                                      { yTRACE("expression -> expression && expression");                   }
+  |  expression OR expression                                       { yTRACE("expression -> expression || expression");                   }
+  |  expression EQL expression                                      { yTRACE("expression -> expression == expression");                   }
+  |  expression NEQ expression                                      { yTRACE("expression -> expression != expression");                   }
+  |  expression LSS expression                                      { yTRACE("expression -> expression < expression");                    }
+  |  expression LEQ expression                                      { yTRACE("expression -> expression <= expression");                   }
+  |  expression GTR expression                                      { yTRACE("expression -> expression > expression");                    }
+  |  expression GEQ expression                                      { yTRACE("expression -> expression >= expression");                   }
+  |  expression PLUS expression                                     { yTRACE("expression -> expression + expression");                    }
+  |  expression MINUS expression                                    { yTRACE("expression -> expression - expression");                    }
+  |  expression TIMES expression                                    { yTRACE("expression -> expression * expression");                    }
+  |  expression SLASH expression                                    { yTRACE("expression -> expression / expression");                    }
+  |  expression EXP expression                                      { yTRACE("expression -> expression ^ expression");                    }
   |  LPAREN expression RPAREN                                       { yTRACE("expression -> (expression)");                               }
   ;
 variable
@@ -193,21 +205,6 @@ variable
 unary_op
   :  NOT                                                            { yTRACE("unary_op -> !");                                            }
   |  MINUS                                                          { yTRACE("unary_op -> -");                                            }
-  ;
-binary_op
-  :  AND                                                            { yTRACE("binary_op -> &&");                                          }
-  |  OR                                                             { yTRACE("binary_op -> ||");                                          }
-  |  EQL                                                            { yTRACE("binary_op -> ==");                                          }
-  |  NEQ                                                            { yTRACE("binary_op -> !=");                                          }
-  |  LSS                                                            { yTRACE("binary_op -> <");                                           }
-  |  LEQ                                                            { yTRACE("binary_op -> <=");                                          }
-  |  GTR                                                            { yTRACE("binary_op -> >");                                           }
-  |  GEQ                                                            { yTRACE("binary_op -> >=");                                          }
-  |  PLUS                                                           { yTRACE("binary_op -> +");                                           }
-  |  MINUS                                                          { yTRACE("binary_op -> -");                                           }
-  |  TIMES                                                          { yTRACE("binary_op -> *");                                           }
-  |  SLASH                                                          { yTRACE("binary_op -> /");                                           }
-  |  EXP                                                            { yTRACE("binary_op -> ^");                                           }
   ;
 constructor
   :  type LPAREN arguments RPAREN                 %prec V_F_C_PREC  { yTRACE("constructor -> type ( arguments )");                        }

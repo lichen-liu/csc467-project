@@ -2,9 +2,8 @@ declarations -> epsilon
 statements -> epsilon
 variable -> identifier
 expression -> variable
-binary_op -> ==
 expression -> true | false
-expression -> expression binary_op expression
+expression -> expression == expression
 declarations -> epsilon
 statements -> epsilon
 variable -> identifier
@@ -27,9 +26,8 @@ declarations -> epsilon
 statements -> epsilon
 variable -> identifier
 expression -> integer_literal
-binary_op -> *
 expression -> true | false
-expression -> expression binary_op expression
+expression -> expression * expression
 statement -> variable = expression ;
 statements -> statements statement
 scope -> { declarations statements }

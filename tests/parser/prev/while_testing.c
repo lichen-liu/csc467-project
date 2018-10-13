@@ -4,9 +4,8 @@ unary_op -> -
 variable -> identifier[integer_literal]
 expression -> variable
 expression -> unary_op expression
-binary_op -> ==
 expression -> integer_literal
-expression -> expression binary_op expression
+expression -> expression == expression
 declarations -> epsilon
 statements -> epsilon
 unary_op -> !

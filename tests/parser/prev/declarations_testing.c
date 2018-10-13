@@ -17,23 +17,20 @@ declaration -> type ID = expression ;
 declarations -> declarations declaration
 type -> int | ivec2 | ivec3 | ivec4
 expression -> integer_literal
-binary_op -> +
 expression -> integer_literal
-expression -> expression binary_op expression
+expression -> expression + expression
 declaration -> type ID = expression ;
 declarations -> declarations declaration
 type -> float | vec2 | vec3 | vec4
 expression -> float_literal
-binary_op -> *
 expression -> float_literal
-expression -> expression binary_op expression
+expression -> expression * expression
 declaration -> type ID = expression ;
 declarations -> declarations declaration
 type -> int | ivec2 | ivec3 | ivec4
 expression -> integer_literal
-binary_op -> *
 expression -> integer_literal
-expression -> expression binary_op expression
+expression -> expression * expression
 declaration -> const type ID = expression ;
 declarations -> declarations declaration
 type -> float | vec2 | vec3 | vec4
