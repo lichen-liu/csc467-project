@@ -148,7 +148,6 @@ declaration
   :  type ID SEMICOLON                                              { yTRACE("declaration -> type ID ;");                                 }
   |  type ID ASSGNMT expression SEMICOLON                           { yTRACE("declaration -> type ID = expression ;");                    }
   |  CONST_SYM type ID ASSGNMT expression SEMICOLON                 { yTRACE("declaration -> const type ID = expression ;");              }
-  |  epsilon                                                        { yTRACE("declaration -> epsilon");                                   }
   ;
 statement
   :  variable ASSGNMT expression SEMICOLON                          { yTRACE("statement -> variable = expression ;");                     }
