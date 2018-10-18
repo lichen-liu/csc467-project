@@ -22,6 +22,7 @@ p = subprocess.Popen(['make', 'CFLAGS=-g -O0 -Wall -DTEST_SCANNER'], stdout = su
 make_out, make_err = p.communicate()
 print "    make."
 
+passed_count = 0
 for root, dirs, files in os.walk(test_dir):
     if root == test_dir:
         for test_target_file in files:
@@ -41,6 +42,7 @@ for root, dirs, files in os.walk(test_dir):
                 prev_total_out = ''.join(prev_file.readlines())
                 if prev_total_out == total_out:
                     print '    Passed.'
+                    passed_count += 1
                 else:
                     print '    Failed.'
                     print '    DIFF'
@@ -57,3 +59,5 @@ for root, dirs, files in os.walk(test_dir):
                     print '\nThere are probably some bugs with the compiler, or update the EXPECTED in ' + prev_dir + test_target_file + '!'
                     print
                     raise Exception(test_target_file + ' failed to produce same output as expected!')
+print '##########'
+print 'Total Passed: ' + str(passed_count)
