@@ -9,7 +9,7 @@ expression -> expression == expression
 declarations -> epsilon
 statements -> epsilon
 unary_op -> !
-expression -> true | false
+expression -> false
 expression -> unary_op expression
 statement -> ;
 statement -> while ( expression ) statement

@@ -1,6 +1,6 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
-type -> int | ivec2 | ivec3 | ivec4
+type -> ivec2
+type -> ivec2
 expression -> integer_literal
 arguments -> expression
 expression -> integer_literal
@@ -9,12 +9,12 @@ constructor -> type ( arguments )
 expression -> constructor
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 variable -> identifier[integer_literal]
 expression -> variable
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 variable -> identifier[integer_literal]
 expression -> variable
 declaration -> type ID = expression ;

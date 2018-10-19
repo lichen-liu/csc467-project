@@ -1,39 +1,39 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
+type -> bvec2
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> float
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> vec4
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
-expression -> true | false
+type -> bool
+expression -> true
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 expression -> integer_literal
 expression -> integer_literal
 expression -> expression + expression
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> float
 expression -> float_literal
 expression -> float_literal
 expression -> expression * expression
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 expression -> integer_literal
 expression -> integer_literal
 expression -> expression * expression
 declaration -> const type ID = expression ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> float
 expression -> float_literal
 declaration -> const type ID = expression ;
 declarations -> declarations declaration

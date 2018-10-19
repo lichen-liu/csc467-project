@@ -161,26 +161,26 @@ else_statement
   |  epsilon                                                        { yTRACE("else_statement -> epsilon");                                }
   ;
 type
-  :  INT_T                                                          { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
-  |  IVEC2_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
-  |  IVEC3_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
-  |  IVEC4_T                                                        { yTRACE("type -> int | ivec2 | ivec3 | ivec4");                      }
-  |  BOOL_T                                                         { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
-  |  BVEC2_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
-  |  BVEC3_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
-  |  BVEC4_T                                                        { yTRACE("type -> bool | bvec2 | bvec3 | bvec4");                     }
-  |  FLOAT_T                                                        { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
-  |  VEC2_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
-  |  VEC3_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
-  |  VEC4_T                                                         { yTRACE("type -> float | vec2 | vec3 | vec4");                       }
+  :  INT_T                                                          { yTRACE("type -> int");                                              }
+  |  IVEC2_T                                                        { yTRACE("type -> ivec2");                                            }
+  |  IVEC3_T                                                        { yTRACE("type -> ivec3");                                            }
+  |  IVEC4_T                                                        { yTRACE("type -> ivec4");                                            }
+  |  BOOL_T                                                         { yTRACE("type -> bool");                                             }
+  |  BVEC2_T                                                        { yTRACE("type -> bvec2");                                            }
+  |  BVEC3_T                                                        { yTRACE("type -> bvec3");                                            }
+  |  BVEC4_T                                                        { yTRACE("type -> bvec4");                                            }
+  |  FLOAT_T                                                        { yTRACE("type -> float");                                            }
+  |  VEC2_T                                                         { yTRACE("type -> vec2");                                             }
+  |  VEC3_T                                                         { yTRACE("type -> vec3");                                             }
+  |  VEC4_T                                                         { yTRACE("type -> vec4");                                             }
   ;
 expression
   :  constructor                                                    { yTRACE("expression -> constructor");                                }
   |  function                                                       { yTRACE("expression -> function");                                   }
   |  INT_C                                                          { yTRACE("expression -> integer_literal");                            }
   |  FLOAT_C                                                        { yTRACE("expression -> float_literal");                              }
-  |  TRUE_SYM                                                       { yTRACE("expression -> true | false");                               }
-  |  FALSE_SYM                                                      { yTRACE("expression -> true | false");                               }
+  |  TRUE_SYM                                                       { yTRACE("expression -> true");                                       }
+  |  FALSE_SYM                                                      { yTRACE("expression -> false");                                      }
   |  variable                                                       { yTRACE("expression -> variable");                                   }
   |  unary_op expression                          %prec UNARY_PREC  { yTRACE("expression -> unary_op expression");                        }
   |  expression AND expression                                      { yTRACE("expression -> expression && expression");                   }
