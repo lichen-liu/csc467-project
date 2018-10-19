@@ -2,7 +2,7 @@ declarations -> epsilon
 statements -> epsilon
 variable -> identifier
 expression -> variable
-expression -> true | false
+expression -> true
 expression -> expression == expression
 declarations -> epsilon
 statements -> epsilon
@@ -26,7 +26,7 @@ declarations -> epsilon
 statements -> epsilon
 variable -> identifier
 expression -> integer_literal
-expression -> true | false
+expression -> true
 expression -> expression * expression
 statement -> variable = expression ;
 statements -> statements statement

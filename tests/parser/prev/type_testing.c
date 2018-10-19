@@ -1,38 +1,38 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> ivec2
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> ivec3
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> int | ivec2 | ivec3 | ivec4
+type -> ivec4
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
+type -> bool
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
+type -> bvec2
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
+type -> bvec3
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
+type -> bvec4
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> float
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> vec2
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> vec3
 declaration -> type ID ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> vec4
 declaration -> type ID ;
 declarations -> declarations declaration
 statements -> epsilon

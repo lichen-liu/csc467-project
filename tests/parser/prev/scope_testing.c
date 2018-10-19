@@ -1,5 +1,5 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 declaration -> type ID ;
 declarations -> declarations declaration
 statements -> epsilon

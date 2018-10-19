@@ -1,20 +1,26 @@
 declarations -> epsilon
 statements -> epsilon
-expression -> true
-expression -> false
-variable -> identifier
-expression -> integer_literal
-statement -> variable = expression ;
-variable -> identifier
 variable -> identifier
 expression -> variable
+expression -> true
+expression -> expression == expression
+declarations -> epsilon
+statements -> epsilon
+variable -> identifier
 expression -> integer_literal
-expression -> expression / expression
 statement -> variable = expression ;
-else_statement -> else statement
-statement -> if ( expression ) statement else_statement
+statements -> statements statement
+unary_op -> !
+variable -> identifier
+expression -> variable
+expression -> unary_op expression
+variable -> identifier
+expression -> integer_literal
+statement -> variable = expression ;
 else_statement -> epsilon
 statement -> if ( expression ) statement else_statement
 statements -> statements statement
 scope -> { declarations statements }
-program -> scope
+statement -> scope
+
+PARSER ERROR, LINE 7: syntax error, unexpected RBRACE

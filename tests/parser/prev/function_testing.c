@@ -1,6 +1,6 @@
 declarations -> epsilon
-type -> float | vec2 | vec3 | vec4
-type -> float | vec2 | vec3 | vec4
+type -> vec3
+type -> vec3
 expression -> float_literal
 arguments -> expression
 expression -> float_literal
@@ -11,8 +11,8 @@ constructor -> type ( arguments )
 expression -> constructor
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
-type -> float | vec2 | vec3 | vec4
+type -> vec3
+type -> vec3
 expression -> float_literal
 arguments -> expression
 expression -> float_literal
@@ -23,7 +23,7 @@ constructor -> type ( arguments )
 expression -> constructor
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
+type -> float
 function_name -> lit | dp3 | rsq
 variable -> identifier
 expression -> variable

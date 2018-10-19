@@ -1,5 +1,5 @@
 declarations -> epsilon
-type -> float | vec2 | vec3 | vec4
+type -> float
 function_name -> lit | dp3 | rsq
 variable -> identifier[integer_literal]
 expression -> variable

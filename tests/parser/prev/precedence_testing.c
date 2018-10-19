@@ -1,6 +1,6 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
-expression -> true | false
+type -> int
+expression -> false
 variable -> identifier
 expression -> variable
 variable -> identifier
@@ -20,7 +20,7 @@ expression -> (expression)
 unary_op -> -
 expression -> integer_literal
 expression -> unary_op expression
-type -> int | ivec2 | ivec3 | ivec4
+type -> int
 variable -> identifier
 expression -> variable
 arguments -> expression

@@ -1,6 +1,6 @@
 declarations -> epsilon
-type -> int | ivec2 | ivec3 | ivec4
-type -> int | ivec2 | ivec3 | ivec4
+type -> ivec4
+type -> ivec4
 expression -> integer_literal
 arguments -> expression
 expression -> integer_literal
@@ -13,16 +13,16 @@ constructor -> type ( arguments )
 expression -> constructor
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> bool | bvec2 | bvec3 | bvec4
-type -> bool | bvec2 | bvec3 | bvec4
-expression -> true | false
+type -> bool
+type -> bool
+expression -> true
 arguments -> expression
 constructor -> type ( arguments )
 expression -> constructor
 declaration -> type ID = expression ;
 declarations -> declarations declaration
-type -> float | vec2 | vec3 | vec4
-type -> bool | bvec2 | bvec3 | bvec4
+type -> vec2
+type -> bvec2
 expression -> integer_literal
 arguments -> expression
 constructor -> type ( arguments )
