@@ -11,7 +11,7 @@ python ./tests/test_lexer.py
 ### To Test PARSER
 ``` bash
 ./compiler467 -Tp ./tests/parser/*.c
-python ./tests/test_parser/py
+python ./tests/test_parser.py
 ```
 
 ### To Commit
