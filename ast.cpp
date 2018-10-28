@@ -86,6 +86,10 @@ class PrintVisitor {
 #define PRINT_THIS_NODE     virtual void print(PrintVisitor &printVisitor) {    \
                                 printVisitor.print(this);                       \
                             }
+            
+#define ACT_ON_THIS_NODE    public:                                             \
+                            VISIT_THIS_NODE                                     \
+                            PRINT_THIS_NODE
 
 class ScopeNode: public Node {
     private:
@@ -94,10 +98,53 @@ class ScopeNode: public Node {
     public:
         ScopeNode(DeclarationsNode *declarationsNode, StatementsNode *statementsNode):
             m_declarationsNode(declarationsNode), m_statementsNode(statementsNode) {}
-    public:
-        VISIT_THIS_NODE
-        PRINT_THIS_NODE
+
+    ACT_ON_THIS_NODE
 };
+
+class ExpressionNode: public Node {
+    /* Pure Virtual Intermediate Layer */
+};
+
+class UnaryExpressionNode: public ExpressionNode {
+    private:
+        int m_type;                             // types defined in parser.tab.h:enum yytokentype
+        int m_op;                               // unary operators defined in parser.tab.h:enum yytokentype
+        ExpressionNode *m_expr;                 // sub-expression
+    public:
+        UnaryExpressionNode(int type, int op, ExpressionNode *expr):
+            m_type(type), m_op(op), m_expr(expr) {}
+    
+    ACT_ON_THIS_NODE
+};
+
+class BinaryExpressionNode: public ExpressionNode {
+    private:
+        int m_type;                             // types defined in parser.tab.h:enum yytokentype
+        int m_op;                               // binary operators defined in parser.tab.h:enum yytokentype
+        ExpressionNode *m_leftExpr;             // left sub-expression
+        ExpressionNode *m_rightExpr;            // right sub-expression
+    public:
+        BinaryExpressionNode(int type, int op, ExpressionNode *leftExpr, ExpressionNode *rightExpr):
+            m_type(type), m_op(op), m_leftExpr(leftExpr), m_rightExpr(rightExpr) {}
+    
+    ACT_ON_THIS_NODE
+};
+
+// class IntNode;
+// class FloatNode;
+// class IdentifierNode;
+// class VariableNode; // maybe change to refer to indexing vector
+// class FunctionNode;
+// class ConstructorNode;
+// class StatementNode;
+// class StatementsNode;
+// class IfStatementNode;
+// class WhileStatementNode;
+// class AssignmentNode;
+// class NestedScopeNode;
+// class DeclarationNode;
+// class DeclarationsNode;
 
 //////////////////////////////////////////////////////////////////
 //
