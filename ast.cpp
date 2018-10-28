@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string.h>
+
+#include <string>
+#include <vector>
 
 #include "ast.h"
 #include "common.h"
@@ -16,12 +18,14 @@ node *ast = NULL;
 // A Modern Object-Oriented Approach for AST
 //
 //////////////////////////////////////////////////////////////////
+#define ANY_TYPE -1
+
 class ScopeNode;
 class ExpressionNode;
 class UnaryExpressionNode;
 class BinaryExpressionNode;
-class IntNode;
-class FloatNode;
+class IntLiteralNode;
+class FloatLiteralNode;
 class IdentifierNode;
 class VariableNode; // maybe change to refer to indexing vector
 class FunctionNode;
@@ -41,8 +45,8 @@ class Visitor {
         void visit(ExpressionNode *expressionNode);
         void visit(UnaryExpressionNode *unaryExpressionNode);
         void visit(BinaryExpressionNode *binaryExpressionNode);
-        void visit(IntNode *intNode);
-        void visit(FloatNode *floatNode);
+        void visit(IntLiteralNode *IntLiteralNode);
+        void visit(FloatLiteralNode *FloatLiteralNode);
         void visit(IdentifierNode *identifierNode);
         void visit(VariableNode *variableNode);
         void visit(FunctionNode *functionNode);
@@ -63,8 +67,8 @@ class PrintVisitor {
         void print(ExpressionNode *expressionNode);
         void print(UnaryExpressionNode *unaryExpressionNode);
         void print(BinaryExpressionNode *binaryExpressionNode);
-        void print(IntNode *intNode);
-        void print(FloatNode *floatNode);
+        void print(IntLiteralNode *IntLiteralNode);
+        void print(FloatLiteralNode *FloatLiteralNode);
         void print(IdentifierNode *identifierNode);
         void print(VariableNode *variableNode);
         void print(FunctionNode *functionNode);
@@ -104,39 +108,110 @@ class ScopeNode: public Node {
 
 class ExpressionNode: public Node {
     /* Pure Virtual Intermediate Layer */
+    public:
+        virtual int getExpressionType() = 0;            // pure virtual
+        virtual void setExpressionType(int type) {}     // provide default definition
 };
 
 class UnaryExpressionNode: public ExpressionNode {
     private:
-        int m_type;                             // types defined in parser.tab.h:enum yytokentype
-        int m_op;                               // unary operators defined in parser.tab.h:enum yytokentype
-        ExpressionNode *m_expr;                 // sub-expression
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        int m_op;                                       // unary operators defined in parser.tab.h
+        ExpressionNode *m_expr;                         // sub-expression
     public:
-        UnaryExpressionNode(int type, int op, ExpressionNode *expr):
-            m_type(type), m_op(op), m_expr(expr) {}
+        UnaryExpressionNode(int op, ExpressionNode *expr):
+            m_op(op), m_expr(expr) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
     
     ACT_ON_THIS_NODE
 };
 
 class BinaryExpressionNode: public ExpressionNode {
     private:
-        int m_type;                             // types defined in parser.tab.h:enum yytokentype
-        int m_op;                               // binary operators defined in parser.tab.h:enum yytokentype
-        ExpressionNode *m_leftExpr;             // left sub-expression
-        ExpressionNode *m_rightExpr;            // right sub-expression
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        int m_op;                                       // binary operators defined in parser.tab.h
+        ExpressionNode *m_leftExpr;                     // left sub-expression
+        ExpressionNode *m_rightExpr;                    // right sub-expression
     public:
-        BinaryExpressionNode(int type, int op, ExpressionNode *leftExpr, ExpressionNode *rightExpr):
-            m_type(type), m_op(op), m_leftExpr(leftExpr), m_rightExpr(rightExpr) {}
+        BinaryExpressionNode(int op, ExpressionNode *leftExpr, ExpressionNode *rightExpr):
+            m_op(op), m_leftExpr(leftExpr), m_rightExpr(rightExpr) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
     
     ACT_ON_THIS_NODE
 };
 
-// class IntNode;
-// class FloatNode;
-// class IdentifierNode;
-// class VariableNode; // maybe change to refer to indexing vector
-// class FunctionNode;
-// class ConstructorNode;
+class IntLiteralNode: public ExpressionNode {
+    private:
+        int m_val;                                      // value of this int literal
+    public:
+        IntLiteralNode(int val):
+            m_val(val) {}
+    public:
+        virtual int getExpressionType() { return INT_T; }
+    
+    ACT_ON_THIS_NODE
+};
+
+class FloatLiteralNode: public ExpressionNode {
+    private:
+        float m_val;                                    // value of this float literal
+    public:
+        FloatLiteralNode(float val):
+            m_val(val) {}
+    public:
+        virtual int getExpressionType() { return FLOAT_T; }
+    
+    ACT_ON_THIS_NODE
+};
+
+class IdentifierNode: public ExpressionNode {
+    private:
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        std::string m_id;                               // name of this identifier
+    public:
+        IdentifierNode(const std::string &id):
+            m_id(id) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
+
+    ACT_ON_THIS_NODE
+};
+
+class VariableNode: public ExpressionNode {             // maybe change to refer to indexing vector
+    private:
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        IdentifierNode *m_identifierNode;               // identifier node of the vector variable
+        ExpressionNode *m_indexExprNode;                // index expression node
+    public:
+        VariableNode(IdentifierNode *identifierNode, ExpressionNode *indexExprNode):
+            m_identifierNode(identifierNode), m_indexExprNode(indexExprNode) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
+
+    ACT_ON_THIS_NODE
+};
+
+class FunctionNode: public ExpressionNode {
+    private:
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        std::string m_functionName;                     // name of this function
+        std::vector<ExpressionNode *> m_arguments;      // argument expressions of this function
+    public:
+        FunctionNode(const std::string &functionName, const std::vector<ExpressionNode *> &arguments):
+            m_functionName(functionName), m_arguments(arguments) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
+
+    ACT_ON_THIS_NODE
+};
+
+class ConstructorNode: public ExpressionNode {
+    private:
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+};
+
 // class StatementNode;
 // class StatementsNode;
 // class IfStatementNode;
