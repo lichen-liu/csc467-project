@@ -41,6 +41,7 @@ class DeclarationsNode;
 class IfStatementNode;
 class WhileStatementNode;
 class AssignmentNode;
+class StallStatementNode;
 class NestedScopeNode;
 class ScopeNode;
 
@@ -64,6 +65,7 @@ class Visitor {
         void visit(IfStatementNode *ifStatementNode);
         void visit(WhileStatementNode *whileStatementNode);
         void visit(AssignmentNode *assignmentNode);
+        void visit(StallStatementNode *stallStatementNode);
         void visit(NestedScopeNode *nestedScopeNode);
         void visit(ScopeNode *scopeNode);
 };
@@ -88,6 +90,7 @@ class PrintVisitor {
         void print(IfStatementNode *ifStatementNode);
         void print(WhileStatementNode *whileStatementNode);
         void print(AssignmentNode *assignmentNode);
+        void print(StallStatementNode *stallStatementNode);
         void print(NestedScopeNode *nestedScopeNode);
         void print(ScopeNode *scopeNode);
 };
@@ -322,7 +325,7 @@ class DeclarationNode: public Node {
         // not using IdentifierNode because the name itself is not yet an expression
         std::string m_variableName;                     // variable name
         int m_type;                                     // types defined in parser.tab.h
-        ExpressionNode *m_initValExpr = nullptr;        // initial value expression
+        ExpressionNode *m_initValExpr = nullptr;        // initial value expression (optional)
     public:
         DeclarationNode(const std::string &variableName, int type, ExpressionNode *initValExpr = nullptr):
             m_variableName(variableName), m_type(type), m_initValExpr(initValExpr) {}
@@ -358,7 +361,7 @@ class IfStatementNode: public StatementNode {
     private:
         ExpressionNode *m_condExpr;                     // condition expression
         StatementNode *m_thenStmt;                      // then statement
-        StatementNode *m_elseStmt = nullptr;            // else statement
+        StatementNode *m_elseStmt = nullptr;            // else statement (optional)
     public:
         IfStatementNode(ExpressionNode *condExpr, StatementNode *thenStmt, StatementNode *elseStmt = nullptr):
             m_condExpr(condExpr), m_thenStmt(thenStmt), m_elseStmt(elseStmt) {}
@@ -408,6 +411,16 @@ class AssignmentNode: public StatementNode {
             Node::destructNode(m_newValExpr);
         }
     
+    ACT_ON_THIS_NODE
+};
+
+/* In case of a single semicolon statement */
+class StallStatementNode: public StatementNode {
+    public:
+        StallStatementNode() {}
+    protected:
+        virtual ~StallStatementNode() {}
+
     ACT_ON_THIS_NODE
 };
 

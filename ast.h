@@ -39,6 +39,7 @@ typedef enum {
     WHILE_STATEMENT_NODE     ,
     ASSIGNMENT_NODE          ,
     NESTED_SCOPE_NODE        ,
+    STALL_STATEMENT_NODE     ,
     STATEMENTS_NODE          ,
 
     DECLARATION_NODE         ,
