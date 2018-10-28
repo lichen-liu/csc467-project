@@ -100,11 +100,11 @@ class PrintVisitor {
 
 class ScopeNode: public Node {
     private:
-        DeclarationsNode *m_declarationsNode;
-        StatementsNode *m_statementsNode;
+        DeclarationsNode *m_decls;
+        StatementsNode *m_stmts;
     public:
-        ScopeNode(DeclarationsNode *declarationsNode, StatementsNode *statementsNode):
-            m_declarationsNode(declarationsNode), m_statementsNode(statementsNode) {}
+        ScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
+            m_decls(decls), m_stmts(stmts) {}
 
     ACT_ON_THIS_NODE
 };
@@ -126,6 +126,7 @@ class UnaryExpressionNode: public ExpressionNode {
             m_op(op), m_expr(expr) {}
     public:
         virtual int getExpressionType() { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
     
     ACT_ON_THIS_NODE
 };
@@ -141,6 +142,7 @@ class BinaryExpressionNode: public ExpressionNode {
             m_op(op), m_leftExpr(leftExpr), m_rightExpr(rightExpr) {}
     public:
         virtual int getExpressionType() { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
     
     ACT_ON_THIS_NODE
 };
@@ -190,6 +192,7 @@ class IdentifierNode: public ExpressionNode {
             m_id(id) {}
     public:
         virtual int getExpressionType() { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
 
     ACT_ON_THIS_NODE
 };
@@ -197,13 +200,14 @@ class IdentifierNode: public ExpressionNode {
 class VariableNode: public ExpressionNode {             // maybe change to refer to indexing vector
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
-        IdentifierNode *m_identifierNode;               // identifier node of the vector variable
-        ExpressionNode *m_indexExprNode;                // index expression node
+        IdentifierNode *m_identifier;                   // identifier node of the vector variable
+        ExpressionNode *m_indexExpr;                    // index expression node
     public:
-        VariableNode(IdentifierNode *identifierNode, ExpressionNode *indexExprNode):
-            m_identifierNode(identifierNode), m_indexExprNode(indexExprNode) {}
+        VariableNode(IdentifierNode *identifier, ExpressionNode *indexExpr):
+            m_identifier(identifier), m_indexExpr(indexExpr) {}
     public:
         virtual int getExpressionType() { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
 
     ACT_ON_THIS_NODE
 };
@@ -220,6 +224,7 @@ class FunctionNode: public ExpressionNode {
             m_functionName(functionName), m_arguments(arguments) {}
     public:
         virtual int getExpressionType() { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
 
     ACT_ON_THIS_NODE
 };
@@ -239,9 +244,34 @@ class ConstructorNode: public ExpressionNode {
     ACT_ON_THIS_NODE
 };
 
-// class StatementNode;
-// class StatementsNode;
-// class IfStatementNode;
+class StatementNode: public Node {
+    /* Pure Virtual Intermediate Layer */
+};
+
+class StatementsNode: public Node {
+    private:
+        std::vector<StatementNode *> m_statements;      // a list of StatementNodes
+    public:
+        StatementsNode(const std::vector<StatementNode *> &statements):
+            m_statements(statements) {}
+        StatementsNode(std::vector<StatementNode *> &&statements):
+            m_statements(statements) {}
+
+    ACT_ON_THIS_NODE
+};
+
+class IfStatementNode: StatementNode {
+    private:
+        ExpressionNode *m_condExpr;                     // condition expression
+        StatementNode *m_thenStmt;                      // then statement
+        StatementNode *m_elseStmt = nullptr;            // else statement
+    public:
+        IfStatementNode(ExpressionNode *condExpr, StatementNode *thenStmt, StatementNode *elseStmt = nullptr):
+            m_condExpr(condExpr), m_thenStmt(thenStmt), m_elseStmt(elseStmt) {}
+    
+    ACT_ON_THIS_NODE
+};
+
 // class WhileStatementNode;
 // class AssignmentNode;
 // class NestedScopeNode;
