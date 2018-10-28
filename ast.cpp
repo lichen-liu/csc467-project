@@ -20,7 +20,6 @@ node *ast = NULL;
 //////////////////////////////////////////////////////////////////
 #define ANY_TYPE -1
 
-class ScopeNode;
 class ExpressionNode;
 class UnaryExpressionNode;
 class BinaryExpressionNode;
@@ -40,10 +39,10 @@ class AssignmentNode;
 class NestedScopeNode;
 class DeclarationNode;
 class DeclarationsNode;
+class ScopeNode;
 
 class Visitor {
     public:
-        void visit(ScopeNode *scopeNode);
         void visit(ExpressionNode *expressionNode);
         void visit(UnaryExpressionNode *unaryExpressionNode);
         void visit(BinaryExpressionNode *binaryExpressionNode);
@@ -63,11 +62,11 @@ class Visitor {
         void visit(NestedScopeNode *nestedScopeNode);
         void visit(DeclarationNode *declarationNode);
         void visit(DeclarationsNode *declarationsNode);
+        void visit(ScopeNode *scopeNode);
 };
 
 class PrintVisitor {
     public:
-        void print(ScopeNode *scopeNode);
         void print(ExpressionNode *expressionNode);
         void print(UnaryExpressionNode *unaryExpressionNode);
         void print(BinaryExpressionNode *binaryExpressionNode);
@@ -87,6 +86,7 @@ class PrintVisitor {
         void print(NestedScopeNode *nestedScopeNode);
         void print(DeclarationNode *declarationNode);
         void print(DeclarationsNode *declarationsNode);
+        void print(ScopeNode *scopeNode);
 };
 
 #define VISIT_THIS_NODE     virtual void visit(Visitor &visitor) {              \
@@ -100,17 +100,6 @@ class PrintVisitor {
 #define ACT_ON_THIS_NODE    public:                                             \
                             VISIT_THIS_NODE                                     \
                             PRINT_THIS_NODE
-
-class ScopeNode: public Node {
-    private:
-        DeclarationsNode *m_decls;
-        StatementsNode *m_stmts;
-    public:
-        ScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
-            m_decls(decls), m_stmts(stmts) {}
-
-    ACT_ON_THIS_NODE
-};
 
 class ExpressionNode: public Node {
     /* Pure Virtual Intermediate Layer */
@@ -292,11 +281,78 @@ class WhileStatementNode: StatementNode {
 };
 
 class AssignmentNode: StatementNode {
-
+    private:
+        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        VariableNode *m_var;                            // variable node
+        ExpressionNode *m_newValExpr;                   // new value expression
+    public:
+        AssignmentNode(VariableNode *var, ExpressionNode *newValExpr):
+            m_var(var), m_newValExpr(newValExpr) {}
+    public:
+        int getExpressionType() { return m_type; }
+        void setExpressionType(int type) { m_type = type; }
 };
-// class NestedScopeNode;
-// class DeclarationNode;
-// class DeclarationsNode;
+
+/* Inner ScopeNode */
+class NestedScopeNode: StatementNode {
+    private:
+        DeclarationsNode *m_decls;
+        StatementsNode *m_stmts;
+    public:
+        NestedScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
+            m_decls(decls), m_stmts(stmts) {}
+
+    ACT_ON_THIS_NODE
+};
+
+class DeclarationNode: Node {
+    private:
+        // not using IdentifierNode because the name itself is not yet an expression
+        std::string m_variableName;                     // variable name
+        int m_type;                                     // types defined in parser.tab.h
+        ExpressionNode *m_initValExpr = nullptr;        // initial value expression
+    public:
+        DeclarationNode(const std::string &variableName, int type, ExpressionNode *initValExpr = nullptr):
+            m_variableName(variableName), m_type(type), m_initValExpr(initValExpr) {}
+    
+    ACT_ON_THIS_NODE
+};
+
+class DeclarationsNode: Node {
+    private:
+        std::vector<DeclarationNode *> m_declarations;  // a list of DeclarationNodes
+    public:
+        DeclarationsNode(const std::vector<DeclarationNode *> &declarations):
+            m_declarations(declarations) {}
+        DeclarationsNode(std::vector<DeclarationNode *> &&declarations):
+            m_declarations(declarations) {}
+
+    ACT_ON_THIS_NODE
+};
+
+/* Global ScopeNode */
+class ScopeNode: public Node {
+    private:
+        DeclarationsNode *m_decls;
+        StatementsNode *m_stmts;
+    public:
+        ScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
+            m_decls(decls), m_stmts(stmts) {}
+    
+    public:
+        static NestedScopeNode *convertToNestedScopeNode(ScopeNode *scopeNode) {
+            NestedScopeNode *nestedScopeNode = new NestedScopeNode(scopeNode->m_decls, scopeNode->m_stmts);
+            
+            // Delete scopeNode
+            scopeNode->m_decls = nullptr;
+            scopeNode->m_stmts = nullptr;
+            delete scopeNode;
+
+            return nestedScopeNode;
+        }
+
+    ACT_ON_THIS_NODE
+};
 
 //////////////////////////////////////////////////////////////////
 //
