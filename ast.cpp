@@ -21,7 +21,6 @@ node *ast = NULL;
 #define ANY_TYPE -1
 
 class Visitor;
-class PrintVisitor;
 
 class ExpressionNode;
 class UnaryExpressionNode;
@@ -47,65 +46,32 @@ class ScopeNode;
 
 class Visitor {
     public:
-        void visit(ExpressionNode *expressionNode);
-        void visit(UnaryExpressionNode *unaryExpressionNode);
-        void visit(BinaryExpressionNode *binaryExpressionNode);
-        void visit(IntLiteralNode *intLiteralNode);
-        void visit(FloatLiteralNode *floatLiteralNode);
-        void visit(BooleanLiteralNode *booleanLiteralNode);
-        void visit(VariableNode *variableNode);
-        void visit(IdentifierNode *identifierNode);
-        void visit(IndexingNode *IndexingNode);
-        void visit(FunctionNode *functionNode);
-        void visit(ConstructorNode *constructorNode);
-        void visit(StatementNode *statementNode);
-        void visit(StatementsNode *statementsNode);
-        void visit(DeclarationNode *declarationNode);
-        void visit(DeclarationsNode *declarationsNode);
-        void visit(IfStatementNode *ifStatementNode);
-        void visit(WhileStatementNode *whileStatementNode);
-        void visit(AssignmentNode *assignmentNode);
-        void visit(StallStatementNode *stallStatementNode);
-        void visit(NestedScopeNode *nestedScopeNode);
-        void visit(ScopeNode *scopeNode);
-};
-
-class PrintVisitor {
-    public:
-        void print(ExpressionNode *expressionNode);
-        void print(UnaryExpressionNode *unaryExpressionNode);
-        void print(BinaryExpressionNode *binaryExpressionNode);
-        void print(IntLiteralNode *intLiteralNode);
-        void print(FloatLiteralNode *floatLiteralNode);
-        void print(BooleanLiteralNode *booleanLiteralNode);
-        void print(VariableNode *variableNode);
-        void print(IdentifierNode *identifierNode);
-        void print(IndexingNode *IndexingNode);
-        void print(FunctionNode *functionNode);
-        void print(ConstructorNode *constructorNode);
-        void print(StatementNode *statementNode);
-        void print(StatementsNode *statementsNode);
-        void print(DeclarationNode *declarationNode);
-        void print(DeclarationsNode *declarationsNode);
-        void print(IfStatementNode *ifStatementNode);
-        void print(WhileStatementNode *whileStatementNode);
-        void print(AssignmentNode *assignmentNode);
-        void print(StallStatementNode *stallStatementNode);
-        void print(NestedScopeNode *nestedScopeNode);
-        void print(ScopeNode *scopeNode);
+        virtual void visit(ExpressionNode *expressionNode){}
+        virtual void visit(UnaryExpressionNode *unaryExpressionNode){}
+        virtual void visit(BinaryExpressionNode *binaryExpressionNode){}
+        virtual void visit(IntLiteralNode *intLiteralNode){}
+        virtual void visit(FloatLiteralNode *floatLiteralNode){}
+        virtual void visit(BooleanLiteralNode *booleanLiteralNode){}
+        virtual void visit(VariableNode *variableNode){}
+        virtual void visit(IdentifierNode *identifierNode){}
+        virtual void visit(IndexingNode *IndexingNode){}
+        virtual void visit(FunctionNode *functionNode){}
+        virtual void visit(ConstructorNode *constructorNode){}
+        virtual void visit(StatementNode *statementNode){}
+        virtual void visit(StatementsNode *statementsNode){}
+        virtual void visit(DeclarationNode *declarationNode){}
+        virtual void visit(DeclarationsNode *declarationsNode){}
+        virtual void visit(IfStatementNode *ifStatementNode){}
+        virtual void visit(WhileStatementNode *whileStatementNode){}
+        virtual void visit(AssignmentNode *assignmentNode){}
+        virtual void visit(StallStatementNode *stallStatementNode){}
+        virtual void visit(NestedScopeNode *nestedScopeNode){}
+        virtual void visit(ScopeNode *scopeNode){}
 };
 
 #define VISIT_THIS_NODE     virtual void visit(Visitor &visitor) {              \
                                 visitor.visit(this);                            \
                             }
-
-#define PRINT_THIS_NODE     virtual void print(PrintVisitor &printVisitor) {    \
-                                printVisitor.print(this);                       \
-                            }
-            
-#define ACT_ON_THIS_NODE    public:                                             \
-                            VISIT_THIS_NODE                                     \
-                            PRINT_THIS_NODE
 
 /*
  * Base class for AST Nodes
@@ -113,7 +79,6 @@ class PrintVisitor {
 class Node {
     public:
         virtual void visit(Visitor &vistor) = 0;
-        virtual void print(PrintVisitor &printVisitor) = 0;
     protected:
         virtual ~Node() {}
     public:
@@ -146,7 +111,7 @@ class UnaryExpressionNode: public ExpressionNode {
             Node::destructNode(m_expr);
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class BinaryExpressionNode: public ExpressionNode {
@@ -167,7 +132,7 @@ class BinaryExpressionNode: public ExpressionNode {
             Node::destructNode(m_rightExpr);
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class IntLiteralNode: public ExpressionNode {
@@ -181,7 +146,7 @@ class IntLiteralNode: public ExpressionNode {
     protected:
         virtual ~IntLiteralNode() {}
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class FloatLiteralNode: public ExpressionNode {
@@ -195,7 +160,7 @@ class FloatLiteralNode: public ExpressionNode {
     protected:
         virtual ~FloatLiteralNode() {}
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class BooleanLiteralNode: public ExpressionNode {
@@ -209,7 +174,7 @@ class BooleanLiteralNode: public ExpressionNode {
     protected:
         virtual ~BooleanLiteralNode() {}
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class VariableNode: public ExpressionNode {
@@ -229,7 +194,7 @@ class IdentifierNode: public VariableNode {
     protected:
         virtual ~IdentifierNode() {}
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class IndexingNode: public VariableNode {
@@ -249,7 +214,7 @@ class IndexingNode: public VariableNode {
             Node::destructNode(m_indexExpr);
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class FunctionNode: public ExpressionNode {
@@ -272,7 +237,7 @@ class FunctionNode: public ExpressionNode {
             }
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class ConstructorNode: public ExpressionNode {
@@ -293,7 +258,7 @@ class ConstructorNode: public ExpressionNode {
             }
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class StatementNode: public Node {
@@ -317,7 +282,7 @@ class StatementsNode: public Node {
             }
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class DeclarationNode: public Node {
@@ -336,7 +301,7 @@ class DeclarationNode: public Node {
             }
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class DeclarationsNode: public Node {
@@ -354,7 +319,7 @@ class DeclarationsNode: public Node {
             }
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class IfStatementNode: public StatementNode {
@@ -374,7 +339,7 @@ class IfStatementNode: public StatementNode {
             }
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class WhileStatementNode: public StatementNode {
@@ -391,7 +356,7 @@ class WhileStatementNode: public StatementNode {
             Node::destructNode(m_bodyStmt);
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 class AssignmentNode: public StatementNode {
@@ -411,7 +376,7 @@ class AssignmentNode: public StatementNode {
             Node::destructNode(m_newValExpr);
         }
     
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 /* In case of a single semicolon statement */
@@ -421,7 +386,7 @@ class StallStatementNode: public StatementNode {
     protected:
         virtual ~StallStatementNode() {}
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 /* Inner ScopeNode */
@@ -438,7 +403,7 @@ class NestedScopeNode: public StatementNode {
             Node::destructNode(m_stmts);
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 /* Global ScopeNode */
@@ -471,7 +436,7 @@ class ScopeNode: public Node {
             return nestedScopeNode;
         }
 
-    ACT_ON_THIS_NODE
+    VISIT_THIS_NODE
 };
 
 //////////////////////////////////////////////////////////////////
