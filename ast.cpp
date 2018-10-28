@@ -20,6 +20,9 @@ node *ast = NULL;
 //////////////////////////////////////////////////////////////////
 #define ANY_TYPE -1
 
+class Visitor;
+class PrintVisitor;
+
 class ExpressionNode;
 class UnaryExpressionNode;
 class BinaryExpressionNode;
@@ -33,12 +36,12 @@ class FunctionNode;
 class ConstructorNode;
 class StatementNode;
 class StatementsNode;
+class DeclarationNode;
+class DeclarationsNode;
 class IfStatementNode;
 class WhileStatementNode;
 class AssignmentNode;
 class NestedScopeNode;
-class DeclarationNode;
-class DeclarationsNode;
 class ScopeNode;
 
 class Visitor {
@@ -56,12 +59,12 @@ class Visitor {
         void visit(ConstructorNode *constructorNode);
         void visit(StatementNode *statementNode);
         void visit(StatementsNode *statementsNode);
+        void visit(DeclarationNode *declarationNode);
+        void visit(DeclarationsNode *declarationsNode);
         void visit(IfStatementNode *ifStatementNode);
         void visit(WhileStatementNode *whileStatementNode);
         void visit(AssignmentNode *assignmentNode);
         void visit(NestedScopeNode *nestedScopeNode);
-        void visit(DeclarationNode *declarationNode);
-        void visit(DeclarationsNode *declarationsNode);
         void visit(ScopeNode *scopeNode);
 };
 
@@ -80,12 +83,12 @@ class PrintVisitor {
         void print(ConstructorNode *constructorNode);
         void print(StatementNode *statementNode);
         void print(StatementsNode *statementsNode);
+        void print(DeclarationNode *declarationNode);
+        void print(DeclarationsNode *declarationsNode);
         void print(IfStatementNode *ifStatementNode);
         void print(WhileStatementNode *whileStatementNode);
         void print(AssignmentNode *assignmentNode);
         void print(NestedScopeNode *nestedScopeNode);
-        void print(DeclarationNode *declarationNode);
-        void print(DeclarationsNode *declarationsNode);
         void print(ScopeNode *scopeNode);
 };
 
@@ -101,11 +104,27 @@ class PrintVisitor {
                             VISIT_THIS_NODE                                     \
                             PRINT_THIS_NODE
 
+/*
+ * Base class for AST Nodes
+ */
+class Node {
+    public:
+        virtual void visit(Visitor &vistor) = 0;
+        virtual void print(PrintVisitor &printVisitor) = 0;
+    protected:
+        virtual ~Node() {}
+    public:
+        /* The only way to destruct any AST Node */
+        static void destructNode(Node *node) { delete node; }
+};
+
 class ExpressionNode: public Node {
     /* Pure Virtual Intermediate Layer */
     public:
         virtual int getExpressionType() = 0;            // pure virtual
         virtual void setExpressionType(int type) {}     // provide default definition
+    protected:
+        virtual ~ExpressionNode() {}
 };
 
 class UnaryExpressionNode: public ExpressionNode {
@@ -119,6 +138,10 @@ class UnaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~UnaryExpressionNode() {
+            Node::destructNode(m_expr);
+        }
     
     ACT_ON_THIS_NODE
 };
@@ -135,6 +158,11 @@ class BinaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~BinaryExpressionNode() {
+            Node::destructNode(m_leftExpr);
+            Node::destructNode(m_rightExpr);
+        }
     
     ACT_ON_THIS_NODE
 };
@@ -147,6 +175,8 @@ class IntLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() { return INT_T; }
+    protected:
+        virtual ~IntLiteralNode() {}
     
     ACT_ON_THIS_NODE
 };
@@ -159,7 +189,9 @@ class FloatLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() { return FLOAT_T; }
-    
+    protected:
+        virtual ~FloatLiteralNode() {}
+
     ACT_ON_THIS_NODE
 };
 
@@ -171,6 +203,8 @@ class BooleanLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() { return BOOL_T; }
+    protected:
+        virtual ~BooleanLiteralNode() {}
 
     ACT_ON_THIS_NODE
 };
@@ -189,6 +223,8 @@ class IdentifierNode: public VariableNode {
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~IdentifierNode() {}
 
     ACT_ON_THIS_NODE
 };
@@ -204,6 +240,11 @@ class IndexingNode: public VariableNode {
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~IndexingNode() {
+            Node::destructNode(m_identifier);
+            Node::destructNode(m_indexExpr);
+        }
 
     ACT_ON_THIS_NODE
 };
@@ -221,6 +262,12 @@ class FunctionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~FunctionNode() {
+            for(ExpressionNode *node: m_arguments) {
+                Node::destructNode(node);
+            }
+        }
 
     ACT_ON_THIS_NODE
 };
@@ -236,12 +283,20 @@ class ConstructorNode: public ExpressionNode {
             m_type(type), m_arguments(arguments) {}
     public:
         virtual int getExpressionType() { return m_type; }
+    protected:
+        virtual ~ConstructorNode() {
+            for(ExpressionNode *node: m_arguments) {
+                Node::destructNode(node);
+            }
+        }
 
     ACT_ON_THIS_NODE
 };
 
 class StatementNode: public Node {
     /* Pure Virtual Intermediate Layer */
+    protected:
+        virtual ~StatementNode() {}
 };
 
 class StatementsNode: public Node {
@@ -252,11 +307,54 @@ class StatementsNode: public Node {
             m_statements(statements) {}
         StatementsNode(std::vector<StatementNode *> &&statements):
             m_statements(statements) {}
+    protected:
+        virtual ~StatementsNode() {
+            for(StatementNode *node: m_statements) {
+                Node::destructNode(node);
+            }
+        }
 
     ACT_ON_THIS_NODE
 };
 
-class IfStatementNode: StatementNode {
+class DeclarationNode: public Node {
+    private:
+        // not using IdentifierNode because the name itself is not yet an expression
+        std::string m_variableName;                     // variable name
+        int m_type;                                     // types defined in parser.tab.h
+        ExpressionNode *m_initValExpr = nullptr;        // initial value expression
+    public:
+        DeclarationNode(const std::string &variableName, int type, ExpressionNode *initValExpr = nullptr):
+            m_variableName(variableName), m_type(type), m_initValExpr(initValExpr) {}
+    protected:
+        virtual ~DeclarationNode() {
+            if(m_initValExpr != nullptr) {
+                Node::destructNode(m_initValExpr);
+            }
+        }
+    
+    ACT_ON_THIS_NODE
+};
+
+class DeclarationsNode: public Node {
+    private:
+        std::vector<DeclarationNode *> m_declarations;  // a list of DeclarationNodes
+    public:
+        DeclarationsNode(const std::vector<DeclarationNode *> &declarations):
+            m_declarations(declarations) {}
+        DeclarationsNode(std::vector<DeclarationNode *> &&declarations):
+            m_declarations(declarations) {}
+    protected:
+        virtual ~DeclarationsNode() {
+            for(DeclarationNode *node: m_declarations) {
+                Node::destructNode(node);
+            }
+        }
+
+    ACT_ON_THIS_NODE
+};
+
+class IfStatementNode: public StatementNode {
     private:
         ExpressionNode *m_condExpr;                     // condition expression
         StatementNode *m_thenStmt;                      // then statement
@@ -264,11 +362,19 @@ class IfStatementNode: StatementNode {
     public:
         IfStatementNode(ExpressionNode *condExpr, StatementNode *thenStmt, StatementNode *elseStmt = nullptr):
             m_condExpr(condExpr), m_thenStmt(thenStmt), m_elseStmt(elseStmt) {}
+    protected:
+        virtual ~IfStatementNode() {
+            Node::destructNode(m_condExpr);
+            Node::destructNode(m_thenStmt);
+            if(m_elseStmt != nullptr) {
+                Node::destructNode(m_elseStmt);
+            }
+        }
     
     ACT_ON_THIS_NODE
 };
 
-class WhileStatementNode: StatementNode {
+class WhileStatementNode: public StatementNode {
     /* No Support */
     private:
         ExpressionNode *m_condExpr;                     // condition expression
@@ -276,11 +382,16 @@ class WhileStatementNode: StatementNode {
     public:
         WhileStatementNode(ExpressionNode *condExpr, StatementNode *bodyStmt):
             m_condExpr(condExpr), m_bodyStmt(bodyStmt) {}
+    protected:
+        virtual ~WhileStatementNode() {
+            Node::destructNode(m_condExpr);
+            Node::destructNode(m_bodyStmt);
+        }
     
     ACT_ON_THIS_NODE
 };
 
-class AssignmentNode: StatementNode {
+class AssignmentNode: public StatementNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
         VariableNode *m_var;                            // variable node
@@ -291,41 +402,28 @@ class AssignmentNode: StatementNode {
     public:
         int getExpressionType() { return m_type; }
         void setExpressionType(int type) { m_type = type; }
+    protected:
+        virtual ~AssignmentNode() {
+            Node::destructNode(m_var);
+            Node::destructNode(m_newValExpr);
+        }
+    
+    ACT_ON_THIS_NODE
 };
 
 /* Inner ScopeNode */
-class NestedScopeNode: StatementNode {
+class NestedScopeNode: public StatementNode {
     private:
         DeclarationsNode *m_decls;
         StatementsNode *m_stmts;
     public:
         NestedScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
             m_decls(decls), m_stmts(stmts) {}
-
-    ACT_ON_THIS_NODE
-};
-
-class DeclarationNode: Node {
-    private:
-        // not using IdentifierNode because the name itself is not yet an expression
-        std::string m_variableName;                     // variable name
-        int m_type;                                     // types defined in parser.tab.h
-        ExpressionNode *m_initValExpr = nullptr;        // initial value expression
-    public:
-        DeclarationNode(const std::string &variableName, int type, ExpressionNode *initValExpr = nullptr):
-            m_variableName(variableName), m_type(type), m_initValExpr(initValExpr) {}
-    
-    ACT_ON_THIS_NODE
-};
-
-class DeclarationsNode: Node {
-    private:
-        std::vector<DeclarationNode *> m_declarations;  // a list of DeclarationNodes
-    public:
-        DeclarationsNode(const std::vector<DeclarationNode *> &declarations):
-            m_declarations(declarations) {}
-        DeclarationsNode(std::vector<DeclarationNode *> &&declarations):
-            m_declarations(declarations) {}
+    protected:
+        virtual ~NestedScopeNode() {
+            Node::destructNode(m_decls);
+            Node::destructNode(m_stmts);
+        }
 
     ACT_ON_THIS_NODE
 };
@@ -338,6 +436,15 @@ class ScopeNode: public Node {
     public:
         ScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
             m_decls(decls), m_stmts(stmts) {}
+    protected:
+        virtual ~ScopeNode() {
+            if(m_decls != nullptr) {
+                Node::destructNode(m_decls);
+            }
+            if(m_stmts != nullptr) {
+                Node::destructNode(m_stmts);
+            }
+        }
     
     public:
         static NestedScopeNode *convertToNestedScopeNode(ScopeNode *scopeNode) {

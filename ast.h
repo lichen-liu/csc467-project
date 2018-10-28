@@ -80,20 +80,6 @@ struct node_ {
 // A Modern Object-Oriented Approach for AST
 //
 //////////////////////////////////////////////////////////////////
-
-/*
- * Forward Declaration for Vistors
- */
-class Visitor;
-class PrintVisitor;
-
-/*
- * Base class for AST Nodes
- */
-class Node {
-    public:
-        virtual void visit(Visitor &vistor) = 0;
-        virtual void print(PrintVisitor &printVisitor) = 0;
-};
+class Node;
 
 #endif /* AST_H_ */
