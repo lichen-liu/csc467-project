@@ -27,8 +27,9 @@ class BinaryExpressionNode;
 class IntLiteralNode;
 class FloatLiteralNode;
 class BooleanLiteralNode;
+class VariableNode;
 class IdentifierNode;
-class VariableNode; // maybe change to refer to indexing vector
+class IndexingNode;
 class FunctionNode;
 class ConstructorNode;
 class StatementNode;
@@ -49,8 +50,9 @@ class Visitor {
         void visit(IntLiteralNode *intLiteralNode);
         void visit(FloatLiteralNode *floatLiteralNode);
         void visit(BooleanLiteralNode *booleanLiteralNode);
-        void visit(IdentifierNode *identifierNode);
         void visit(VariableNode *variableNode);
+        void visit(IdentifierNode *identifierNode);
+        void visit(IndexingNode *IndexingNode);
         void visit(FunctionNode *functionNode);
         void visit(ConstructorNode *constructorNode);
         void visit(StatementNode *statementNode);
@@ -72,8 +74,9 @@ class PrintVisitor {
         void print(IntLiteralNode *intLiteralNode);
         void print(FloatLiteralNode *floatLiteralNode);
         void print(BooleanLiteralNode *booleanLiteralNode);
-        void print(IdentifierNode *identifierNode);
         void print(VariableNode *variableNode);
+        void print(IdentifierNode *identifierNode);
+        void print(IndexingNode *IndexingNode);
         void print(FunctionNode *functionNode);
         void print(ConstructorNode *constructorNode);
         void print(StatementNode *statementNode);
@@ -183,7 +186,11 @@ class BooleanLiteralNode: public ExpressionNode {
     ACT_ON_THIS_NODE
 };
 
-class IdentifierNode: public ExpressionNode {
+class VariableNode: public ExpressionNode {
+    /* Pure Virtual Intermediate Layer */
+};
+
+class IdentifierNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
         std::string m_id;                               // name of this identifier
@@ -197,13 +204,13 @@ class IdentifierNode: public ExpressionNode {
     ACT_ON_THIS_NODE
 };
 
-class VariableNode: public ExpressionNode {             // maybe change to refer to indexing vector
+class IndexingNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
         IdentifierNode *m_identifier;                   // identifier node of the vector variable
         ExpressionNode *m_indexExpr;                    // index expression node
     public:
-        VariableNode(IdentifierNode *identifier, ExpressionNode *indexExpr):
+        IndexingNode(IdentifierNode *identifier, ExpressionNode *indexExpr):
             m_identifier(identifier), m_indexExpr(indexExpr) {}
     public:
         virtual int getExpressionType() { return m_type; }
@@ -272,8 +279,21 @@ class IfStatementNode: StatementNode {
     ACT_ON_THIS_NODE
 };
 
-// class WhileStatementNode;
-// class AssignmentNode;
+class WhileStatementNode: StatementNode {
+    /* No Support */
+    private:
+        ExpressionNode *m_condExpr;                     // condition expression
+        StatementNode *m_bodyStmt;                      // loop body statement
+    public:
+        WhileStatementNode(ExpressionNode *condExpr, StatementNode *bodyStmt):
+            m_condExpr(condExpr), m_bodyStmt(bodyStmt) {}
+    
+    ACT_ON_THIS_NODE
+};
+
+class AssignmentNode: StatementNode {
+
+};
 // class NestedScopeNode;
 // class DeclarationNode;
 // class DeclarationsNode;

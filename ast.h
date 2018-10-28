@@ -28,8 +28,9 @@ typedef enum {
     INT_C_NODE               ,
     FLOAT_C_NODE             ,
     BOOL_C_NODE              ,
+    VAR_NODE                 ,
     ID_NODE                  ,
-    VAR_NODE                 ,              // maybe change to refer to indexing vector
+    INDEXING_NODE            ,
     FUNCTION_NODE            ,
     CONSTRUCTOR_NODE         ,
 
