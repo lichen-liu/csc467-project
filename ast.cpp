@@ -23,6 +23,7 @@ node *ast = NULL;
 class Visitor;
 
 class ExpressionNode;
+class ExpressionsNode;
 class UnaryExpressionNode;
 class BinaryExpressionNode;
 class IntLiteralNode;
@@ -47,6 +48,7 @@ class ScopeNode;
 class Visitor {
     public:
         virtual void visit(ExpressionNode *expressionNode){}
+        virtual void visit(ExpressionsNode *expressionsNode){}
         virtual void visit(UnaryExpressionNode *unaryExpressionNode){}
         virtual void visit(BinaryExpressionNode *binaryExpressionNode){}
         virtual void visit(IntLiteralNode *intLiteralNode){}
@@ -69,7 +71,8 @@ class Visitor {
         virtual void visit(ScopeNode *scopeNode){}
 };
 
-#define VISIT_THIS_NODE     virtual void visit(Visitor &visitor) {              \
+#define VISIT_THIS_NODE     public:                                             \
+                            virtual void visit(Visitor &visitor) {              \
                                 visitor.visit(this);                            \
                             }
 
@@ -83,7 +86,7 @@ class Node {
         virtual ~Node() {}
     public:
         /* The only way to destruct any AST Node */
-        static void destructNode(Node *node) { delete node; }
+        static void destructNode(Node *astNode) { delete astNode; }
 };
 
 class ExpressionNode: public Node {
@@ -93,6 +96,24 @@ class ExpressionNode: public Node {
         virtual void setExpressionType(int type) {}     // provide default definition
     protected:
         virtual ~ExpressionNode() {}
+};
+
+class ExpressionsNode: public Node {
+    private:
+        std::vector<ExpressionNode *> m_exprs;          // A list of ExpressionNodes
+    public:
+        ExpressionsNode(const std::vector<ExpressionNode *> &exprs):
+            m_exprs(exprs) {}
+        ExpressionsNode(std::vector<ExpressionNode *> &&exprs):
+            m_exprs(exprs) {}
+    protected:
+        virtual ~ExpressionsNode() {
+            for(ExpressionNode *expr: m_exprs) {
+                Node::destructNode(expr);
+            }
+        }
+
+    VISIT_THIS_NODE
 };
 
 class UnaryExpressionNode: public ExpressionNode {
@@ -221,20 +242,16 @@ class FunctionNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
         std::string m_functionName;                     // name of this function
-        std::vector<ExpressionNode *> m_arguments;      // argument expressions of this function
+        ExpressionsNode *m_argExprs;                    // argument expressions of this function
     public:
-        FunctionNode(const std::string &functionName, const std::vector<ExpressionNode *> &arguments):
-            m_functionName(functionName), m_arguments(arguments) {}
-        FunctionNode(const std::string &functionName, std::vector<ExpressionNode *> &&arguments):
-            m_functionName(functionName), m_arguments(arguments) {}
+        FunctionNode(const std::string &functionName, ExpressionsNode *argExprs):
+            m_functionName(functionName), m_argExprs(argExprs) {}
     public:
         virtual int getExpressionType() { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~FunctionNode() {
-            for(ExpressionNode *node: m_arguments) {
-                Node::destructNode(node);
-            }
+            Node::destructNode(m_argExprs);
         }
 
     VISIT_THIS_NODE
@@ -243,19 +260,15 @@ class FunctionNode: public ExpressionNode {
 class ConstructorNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
-        std::vector<ExpressionNode *> m_arguments;      // argument expressions of this constructor
+        ExpressionsNode *m_argExprs;                    // argument expressions of this constructor
     public:
-        ConstructorNode(int type, const std::vector<ExpressionNode *> &arguments):
-            m_type(type), m_arguments(arguments) {}
-        ConstructorNode(int type, std::vector<ExpressionNode *> &&arguments):
-            m_type(type), m_arguments(arguments) {}
+        ConstructorNode(int type, ExpressionsNode *argExprs):
+            m_type(type), m_argExprs(argExprs) {}
     public:
         virtual int getExpressionType() { return m_type; }
     protected:
         virtual ~ConstructorNode() {
-            for(ExpressionNode *node: m_arguments) {
-                Node::destructNode(node);
-            }
+            Node::destructNode(m_argExprs);
         }
 
     VISIT_THIS_NODE
@@ -277,8 +290,8 @@ class StatementsNode: public Node {
             m_statements(statements) {}
     protected:
         virtual ~StatementsNode() {
-            for(StatementNode *node: m_statements) {
-                Node::destructNode(node);
+            for(StatementNode *stmt: m_statements) {
+                Node::destructNode(stmt);
             }
         }
 
@@ -314,8 +327,8 @@ class DeclarationsNode: public Node {
             m_declarations(declarations) {}
     protected:
         virtual ~DeclarationsNode() {
-            for(DeclarationNode *node: m_declarations) {
-                Node::destructNode(node);
+            for(DeclarationNode *decl: m_declarations) {
+                Node::destructNode(decl);
             }
         }
 
@@ -446,33 +459,110 @@ class ScopeNode: public Node {
 //////////////////////////////////////////////////////////////////
 
 node *ast_allocate(node_kind kind, ...) {
-  va_list args;
+    va_list args;
 
-  // make the node
-  node *ast = (node *) malloc(sizeof(node));
-  memset(ast, 0, sizeof *ast);
-  ast->kind = kind;
+    // make the node
+    Node *astNode = nullptr;
 
-  va_start(args, kind); 
+    switch(kind) {
+        case SCOPE_NODE: {
+            DeclarationsNode *decls = static_cast<DeclarationsNode *>(va_arg(args, Node *));
+            StatementsNode *stmts = static_cast<StatementsNode *>(va_arg(args, Node *));
+            astNode = new ScopeNode(decls, stmts);
+            break;
+        }
 
-  switch(kind) {
-  
-  // ...
+        case EXPRESSION_NODE: {
+            /* Virtual Node, Does not Have Instance */
+            astNode = nullptr;
+            break;
+        }
 
-  case BINARY_EXPRESSION_NODE:
-    ast->binary_expr.op = va_arg(args, int);
-    ast->binary_expr.left = va_arg(args, node *);
-    ast->binary_expr.right = va_arg(args, node *);
-    break;
+        case UNARY_EXPRESION_NODE: {
+            int op = va_arg(args, int);
+            ExpressionNode *expr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            astNode = new UnaryExpressionNode(op, expr);
+            break;
+        }
 
-  // ...
+        case BINARY_EXPRESSION_NODE: {
+            int op = va_arg(args, int);
+            ExpressionNode *leftExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            ExpressionNode *rightExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            astNode = new BinaryExpressionNode(op, leftExpr, rightExpr);
+            break;
+        }
 
-  default: break;
-  }
+        case INT_C_NODE: {
+            int val = va_arg(args, int);
+            astNode = new IntLiteralNode(val);
+            break;
+        }
 
-  va_end(args);
+        case FLOAT_C_NODE: {
+            double val = va_arg(args, double);
+            astNode = new FloatLiteralNode(val);
+            break;
+        }
 
-  return ast;
+        case BOOL_C_NODE: {
+            bool val = static_cast<bool>(va_arg(args, int));
+            astNode = new BooleanLiteralNode(val);
+            break;
+        }
+
+        case VAR_NODE: {
+            /* Virtual Node, Does not Have Instance */
+            astNode = nullptr;
+            break;
+        }
+
+        case ID_NODE: {
+            const char *id = va_arg(args, char *);
+            astNode = new IdentifierNode(id);
+            break;
+        }
+
+        case INDEXING_NODE: {
+            /* 
+             * Stick to http://dsrg.utoronto.ca/csc467/lab/lab3.pdf
+             * Use expression as index.
+             * Need another layer to convert IntLiteralNode to ExpressionNode.
+             */
+            const char *id = va_arg(args, char *);
+            ExpressionNode *indexExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            astNode = new IndexingNode(new IdentifierNode(id), indexExpr);
+            break;
+        }
+
+        case FUNCTION_NODE: {
+            /* WIP */
+            // astNode = FunctionNode(const std::string &functionName, ExpressionsNode *argExprs);
+            // break;
+        }
+
+        case CONSTRUCTOR_NODE:
+
+        case STATEMENT_NODE:
+        case IF_STATEMENT_NODE:
+        case WHILE_STATEMENT_NODE:
+        case ASSIGNMENT_NODE:
+        case NESTED_SCOPE_NODE:
+        case STALL_STATEMENT_NODE:
+        case STATEMENTS_NODE:
+
+        case DECLARATION_NODE:
+        case DECLARATIONS_NODE:
+
+        case UNKNOWN:
+        default:
+            astNode = nullptr;
+            break;
+    }
+
+    va_end(args);
+
+    return astNode;
 }
 
 void ast_free(node *ast) {

@@ -3,19 +3,17 @@
 
 #include <stdarg.h>
 
-// Dummy node just so everything compiles, create your own node/nodes
+//////////////////////////////////////////////////////////////////
 //
-// The code provided below is an example ONLY. You can use/modify it,
-// but do not assume that it is correct or complete.
+// A Modern Object-Oriented Approach for AST
 //
-// There are many ways of making AST nodes. The approach below is an example
-// of a descriminated union.
-//
+//////////////////////////////////////////////////////////////////
+class Node;
 
-// Forward declarations
-struct node_;
-typedef struct node_ node;
+
+typedef struct Node node;
 extern node *ast;
+
 
 typedef enum {
     UNKNOWN               = 0,
@@ -23,6 +21,7 @@ typedef enum {
     SCOPE_NODE               ,
 
     EXPRESSION_NODE          ,
+    EXPRESSIONS_NODE         ,
     UNARY_EXPRESION_NODE     ,
     BINARY_EXPRESSION_NODE   ,
     INT_C_NODE               ,
@@ -50,37 +49,5 @@ node *ast_allocate(node_kind type, ...);
 void ast_free(node *ast);
 void ast_print(node * ast);
 int semantic_check(node * ast);
-
-struct node_ {
-    // an example of tagging each node with a type
-    node_kind kind;
-
-    union {
-    struct {
-        // declarations?
-        // statements?
-    } scope;
-
-    struct {
-        int op;
-        node *right;
-    } unary_expr;
-
-    struct {
-        int op;
-        node *left;
-        node *right;
-    } binary_expr;
-
-    // TODO: add more type of nodes
-    };
-};
-
-//////////////////////////////////////////////////////////////////
-//
-// A Modern Object-Oriented Approach for AST
-//
-//////////////////////////////////////////////////////////////////
-class Node;
 
 #endif /* AST_H_ */
