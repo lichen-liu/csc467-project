@@ -26,6 +26,7 @@ class UnaryExpressionNode;
 class BinaryExpressionNode;
 class IntLiteralNode;
 class FloatLiteralNode;
+class BooleanLiteralNode;
 class IdentifierNode;
 class VariableNode; // maybe change to refer to indexing vector
 class FunctionNode;
@@ -45,8 +46,9 @@ class Visitor {
         void visit(ExpressionNode *expressionNode);
         void visit(UnaryExpressionNode *unaryExpressionNode);
         void visit(BinaryExpressionNode *binaryExpressionNode);
-        void visit(IntLiteralNode *IntLiteralNode);
-        void visit(FloatLiteralNode *FloatLiteralNode);
+        void visit(IntLiteralNode *intLiteralNode);
+        void visit(FloatLiteralNode *floatLiteralNode);
+        void visit(BooleanLiteralNode *booleanLiteralNode);
         void visit(IdentifierNode *identifierNode);
         void visit(VariableNode *variableNode);
         void visit(FunctionNode *functionNode);
@@ -67,8 +69,9 @@ class PrintVisitor {
         void print(ExpressionNode *expressionNode);
         void print(UnaryExpressionNode *unaryExpressionNode);
         void print(BinaryExpressionNode *binaryExpressionNode);
-        void print(IntLiteralNode *IntLiteralNode);
-        void print(FloatLiteralNode *FloatLiteralNode);
+        void print(IntLiteralNode *intLiteralNode);
+        void print(FloatLiteralNode *floatLiteralNode);
+        void print(BooleanLiteralNode *booleanLiteralNode);
         void print(IdentifierNode *identifierNode);
         void print(VariableNode *variableNode);
         void print(FunctionNode *functionNode);
@@ -166,6 +169,18 @@ class FloatLiteralNode: public ExpressionNode {
     ACT_ON_THIS_NODE
 };
 
+class BooleanLiteralNode: public ExpressionNode {
+    private:
+        bool m_val;                                     // value of this boolean literal
+    public:
+        BooleanLiteralNode(bool val):
+            m_val(val) {}
+    public:
+        virtual int getExpressionType() { return BOOL_T; }
+
+    ACT_ON_THIS_NODE
+};
+
 class IdentifierNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
@@ -201,6 +216,8 @@ class FunctionNode: public ExpressionNode {
     public:
         FunctionNode(const std::string &functionName, const std::vector<ExpressionNode *> &arguments):
             m_functionName(functionName), m_arguments(arguments) {}
+        FunctionNode(const std::string &functionName, std::vector<ExpressionNode *> &&arguments):
+            m_functionName(functionName), m_arguments(arguments) {}
     public:
         virtual int getExpressionType() { return m_type; }
 
@@ -210,6 +227,16 @@ class FunctionNode: public ExpressionNode {
 class ConstructorNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        std::vector<ExpressionNode *> m_arguments;      // argument expressions of this constructor
+    public:
+        ConstructorNode(int type, const std::vector<ExpressionNode *> &arguments):
+            m_type(type), m_arguments(arguments) {}
+        ConstructorNode(int type, std::vector<ExpressionNode *> &&arguments):
+            m_type(type), m_arguments(arguments) {}
+    public:
+        virtual int getExpressionType() { return m_type; }
+
+    ACT_ON_THIS_NODE
 };
 
 // class StatementNode;
