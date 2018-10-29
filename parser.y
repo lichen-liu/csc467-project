@@ -16,9 +16,9 @@
 
 #include <string.h>
 #include "common.h"
-//#include "ast.h"
-//#include "symbol.h"
-//#include "semantic.h"
+#include "ast.h"
+#include "symbol.h"
+// #include "semantic.h"
 #define YYERROR_VERBOSE
 #define yTRACE(x)    { if (traceParser) fprintf(traceFile, "%s\n", x); }
 
@@ -48,75 +48,101 @@ extern int yyline;        /* variable holding current line number   */
 #define YYDEBUG 1
 %}
 
+
 // TODO:Modify me to add more data types
 // Can access me from flex useing yyval
 %union {
+  /* Lexer */
   int as_int;
   float as_float;
   
   char as_id[MAX_IDENTIFIER + 1];
   char as_func[MAX_IDENTIFIER + 1];
+
+  /* Parser */
+  int op_type;
+  int data_type;
+  node *ast_node;
 }
 
-// Token declarations
+
+/* Token declarations */
 // String keywords
-%token           IF_SYM ELSE_SYM
-%token           WHILE_SYM
-%token           TRUE_SYM FALSE_SYM
-%token           CONST_SYM
+%token              IF_SYM ELSE_SYM
+%token              WHILE_SYM
+%token              TRUE_SYM FALSE_SYM
+%token              CONST_SYM
 
 // Predefined
-%token           BOOL_T BVEC2_T BVEC3_T BVEC4_T
-%token           INT_T IVEC2_T IVEC3_T IVEC4_T
-%token           FLOAT_T VEC2_T VEC3_T VEC4_T
-%token           FUNC
+%token              BOOL_T BVEC2_T BVEC3_T BVEC4_T
+%token              INT_T IVEC2_T IVEC3_T IVEC4_T
+%token              FLOAT_T VEC2_T VEC3_T VEC4_T
+%token <as_func>    FUNC
 
 // Symbols
-%token           NOT AND OR
-%token           PLUS MINUS TIMES SLASH EXP
-%token           EQL NEQ LSS LEQ GTR GEQ
-%token           LPAREN RPAREN
-%token           LBRACE RBRACE
-%token           LBRACKET RBRACKET
-%token           ASSGNMT
-%token           SEMICOLON
-%token           COMMA
+%token              NOT AND OR
+%token              PLUS MINUS TIMES SLASH EXP
+%token              EQL NEQ LSS LEQ GTR GEQ
+%token              LPAREN RPAREN
+%token              LBRACE RBRACE
+%token              LBRACKET RBRACKET
+%token              ASSGNMT
+%token              SEMICOLON
+%token              COMMA
 
 // Literals
-%token           INT_C
-%token           FLOAT_C
+%token <as_int>     INT_C
+%token <as_float>   FLOAT_C
 
 // Identifier
-%token           ID
+%token <as_id>      ID
 
 
-%start           program
+/* Non-terminal declarations */
+%type <ast_node>    scope
+%type <ast_node>    declarations
+%type <ast_node>    statements
+%type <ast_node>    declaration
+%type <ast_node>    statement
+%type <ast_node>    else_statement
+%type <data_type>   type
+%type <ast_node>    expression
+%type <ast_node>    variable
+%type <op_type>     unary_op
+%type <ast_node>    constructor
+%type <ast_node>    function
+%type <as_func>     function_name
+%type <ast_node>    arguments_opt
+%type <ast_node>    arguments
 
-// Precedence declarations
+%start              program
+
+
+/* Precedence declarations */
 // lower declaration, higher precedence
 // precedence 7
-%left            OR
+%left               OR
 
 // precedence 6
-%left            AND
+%left               AND
 
 // precedence 5
-%nonassoc        EQL NEQ LSS LEQ GTR GEQ
+%nonassoc           EQL NEQ LSS LEQ GTR GEQ
 
 // precedence 4
-%left            PLUS MINUS
+%left               PLUS MINUS
 
 // precedence 3
-%left            TIMES SLASH
+%left               TIMES SLASH
 
 // precedence 2
-%right           EXP
+%right              EXP
 
 // precedence 1
-%left            UNARY_PREC
+%left               UNARY_PREC
 
 // precedence 0
-%left            V_F_C_PREC
+%left               V_F_C_PREC
 
 
 %%

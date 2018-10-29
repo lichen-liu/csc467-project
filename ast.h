@@ -11,7 +11,7 @@
 class Node;
 
 
-typedef struct Node node;
+typedef Node node;
 extern node *ast;
 
 

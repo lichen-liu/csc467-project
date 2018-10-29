@@ -513,6 +513,7 @@ class ScopeNode: public Node {
 
 node *ast_allocate(node_kind kind, ...) {
     va_list args;
+    va_start(args, kind);
 
     // make the node
     Node *astNode = nullptr;
@@ -873,7 +874,7 @@ class PrintVisitor: public Visitor {
 
         virtual void visit(AssignmentNode *assignmentNode) {
             // (ASSIGN type variable-name new-value)
-            printf("( ");
+            printf("(ASSIGN ");
             printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
             assignmentNode->getVariable()->visit(*this);
             printf(" ");
