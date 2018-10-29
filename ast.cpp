@@ -92,7 +92,7 @@ class Node {
 class ExpressionNode: public Node {
     /* Pure Virtual Intermediate Layer */
     public:
-        virtual int getExpressionType() const = 0;            // pure virtual
+        virtual int getExpressionType() const = 0;      // pure virtual
         virtual void setExpressionType(int type) {}     // provide default definition
     protected:
         virtual ~ExpressionNode() {}
@@ -100,19 +100,19 @@ class ExpressionNode: public Node {
 
 class ExpressionsNode: public Node {
     private:
-        std::vector<ExpressionNode *> m_exprs;          // A list of ExpressionNodes
+        std::vector<ExpressionNode *> m_expressions;    // A list of ExpressionNodes
     public:
-        ExpressionsNode(const std::vector<ExpressionNode *> &exprs):
-            m_exprs(exprs) {}
-        ExpressionsNode(std::vector<ExpressionNode *> &&exprs):
-            m_exprs(exprs) {}
+        ExpressionsNode(const std::vector<ExpressionNode *> &expressions):
+            m_expressions(expressions) {}
+        ExpressionsNode(std::vector<ExpressionNode *> &&expressions):
+            m_expressions(expressions) {}
         ExpressionsNode() {}
     public:
-        void pushBackExpression(ExpressionNode *expr) { m_exprs.push_back(expr); }
-        const std::vector<ExpressionNode *> &getExpressions() const { return m_exprs; }
+        void pushBackExpression(ExpressionNode *expr) { m_expressions.push_back(expr); }
+        const std::vector<ExpressionNode *> &getExpressionList() const { return m_expressions; }
     protected:
         virtual ~ExpressionsNode() {
-            for(ExpressionNode *expr: m_exprs) {
+            for(ExpressionNode *expr: m_expressions) {
                 Node::destructNode(expr);
             }
         }
@@ -291,6 +291,8 @@ class ConstructorNode: public ExpressionNode {
             m_type(type), m_argExprs(argExprs) {}
     public:
         virtual int getExpressionType() const { return m_type; }
+    public:
+        ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:
         virtual ~ConstructorNode() {
             Node::destructNode(m_argExprs);
@@ -316,6 +318,7 @@ class StatementsNode: public Node {
         StatementsNode() {}
     public:
         void pushBackStatement(StatementNode *stmt) { m_statements.push_back(stmt); }
+        const std::vector<StatementNode *> &getStatementList() const { return m_statements; }
     protected:
         virtual ~StatementsNode() {
             for(StatementNode *stmt: m_statements) {
@@ -336,6 +339,11 @@ class DeclarationNode: public Node {
     public:
         DeclarationNode(const std::string &variableName, bool isConst, int type, ExpressionNode *initValExpr = nullptr):
             m_variableName(variableName), m_isConst(isConst), m_type(type), m_initValExpr(initValExpr) {}
+    public:
+        const std::string &getName() const { return m_variableName; }
+        bool isConst() const { return m_isConst; }
+        int getType() const { return m_type; }
+        ExpressionNode *getExpression() const { return m_initValExpr; }
     protected:
         virtual ~DeclarationNode() {
             if(m_initValExpr != nullptr) {
@@ -357,6 +365,7 @@ class DeclarationsNode: public Node {
         DeclarationsNode() {}
     public:
         void pushBackDeclaration(DeclarationNode *decl) { m_declarations.push_back(decl); }
+        const std::vector<DeclarationNode *> &getDeclarationList() const { return m_declarations; }
     protected:
         virtual ~DeclarationsNode() {
             for(DeclarationNode *decl: m_declarations) {
@@ -375,6 +384,10 @@ class IfStatementNode: public StatementNode {
     public:
         IfStatementNode(ExpressionNode *condExpr, StatementNode *thenStmt, StatementNode *elseStmt = nullptr):
             m_condExpr(condExpr), m_thenStmt(thenStmt), m_elseStmt(elseStmt) {}
+    public:
+        ExpressionNode *getConditionExpression() const { return m_condExpr; }
+        StatementNode *getThenStatement() const { return m_thenStmt; }
+        StatementNode *getElseStatement() const { return m_elseStmt; }
     protected:
         virtual ~IfStatementNode() {
             Node::destructNode(m_condExpr);
@@ -415,6 +428,8 @@ class AssignmentNode: public StatementNode {
     public:
         int getExpressionType() const { return m_type; }
         void setExpressionType(int type) { m_type = type; }
+        VariableNode *getVariable() const { return m_var; }
+        ExpressionNode *getExpression() const { return m_newValExpr; }
     protected:
         virtual ~AssignmentNode() {
             Node::destructNode(m_var);
@@ -442,6 +457,9 @@ class NestedScopeNode: public StatementNode {
     public:
         NestedScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
             m_decls(decls), m_stmts(stmts) {}
+    public:
+        DeclarationsNode *getDeclarations() const { return m_decls; }
+        StatementsNode *getStatements() const { return m_stmts; }
     protected:
         virtual ~NestedScopeNode() {
             Node::destructNode(m_decls);
@@ -459,6 +477,9 @@ class ScopeNode: public Node {
     public:
         ScopeNode(DeclarationsNode *decls, StatementsNode *stmts):
             m_decls(decls), m_stmts(stmts) {}
+    public:
+        DeclarationsNode *getDeclarations() const { return m_decls; }
+        StatementsNode *getStatements() const { return m_stmts; }
     protected:
         virtual ~ScopeNode() {
             if(m_decls != nullptr) {
@@ -681,7 +702,9 @@ node *ast_allocate(node_kind kind, ...) {
 }
 
 void ast_free(node *ast) {
-    Node::destructNode(static_cast<Node *>(ast));
+    if(ast != nullptr) {
+        Node::destructNode(static_cast<Node *>(ast));
+    }
 }
 
 #define STRINGIFY(x) #x
@@ -728,7 +751,7 @@ class PrintVisitor: public Visitor {
 
     public:
         virtual void visit(ExpressionsNode *expressionsNode) {
-            for(ExpressionNode *expr: expressionsNode->getExpressions()) {
+            for(ExpressionNode *expr: expressionsNode->getExpressionList()) {
                 printf(" ");
                 expr->visit(*this);
             }
@@ -793,20 +816,91 @@ class PrintVisitor: public Visitor {
         }
 
         virtual void visit(ConstructorNode *constructorNode) {
-
+            // (CALL name ...)
+            printf("(CALL ");
+            printf("%s", getTypeString(constructorNode->getExpressionType()).c_str());
+            constructorNode->getArgumentExpressions()->visit(*this);
+            printf(")");
         }
 
-        virtual void visit(StatementsNode *statementsNode) {}
-        virtual void visit(DeclarationNode *declarationNode) {}
-        virtual void visit(DeclarationsNode *declarationsNode) {}
-        virtual void visit(IfStatementNode *ifStatementNode) {}
-        virtual void visit(WhileStatementNode *whileStatementNode) {}
-        virtual void visit(AssignmentNode *assignmentNode) {}
-        virtual void visit(NestedScopeNode *nestedScopeNode) {}
-        virtual void visit(ScopeNode *scopeNode) {}
+        virtual void visit(StatementsNode *statementsNode) {
+            // (STATEMENTS ...)
+            printf("    (STATEMENTS\n");
+            for(StatementNode *stmt: statementsNode->getStatementList()) {
+                printf("        ");
+                stmt->visit(*this);
+                printf("\n");
+            }
+            printf("    )\n");
+        }
+
+        virtual void visit(DeclarationNode *declarationNode) {
+            // (DECLARATION variable-name type-name initial-value?)
+            printf("(DECLARATION ");
+            printf("%s ", declarationNode->getName().c_str());
+            printf("%s", (declarationNode->isConst() ? "const ":""));
+            printf("%s", getTypeString(declarationNode->getType()).c_str());
+            if(declarationNode->getExpression() != nullptr) {
+                printf(" ");
+                declarationNode->getExpression()->visit(*this);
+            }
+            printf(")");
+        }
+
+        virtual void visit(DeclarationsNode *declarationsNode) {
+            // (DECLARATIONS ...)
+            printf("    (DECLARATIONS\n");
+            for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
+                printf("        ");
+                decl->visit(*this);
+                printf("\n");
+            }
+            printf("    )\n");
+        }
+
+        virtual void visit(IfStatementNode *ifStatementNode) {
+            // (IF cond then-stmt else-stmt?)
+            printf("(IF ");
+            ifStatementNode->getConditionExpression()->visit(*this);
+            printf(" ");
+            ifStatementNode->getThenStatement()->visit(*this);
+            if(ifStatementNode->getElseStatement() != nullptr) {
+                printf(" ");
+                ifStatementNode->getElseStatement()->visit(*this);
+            }
+            printf(")");
+        }
+
+        virtual void visit(AssignmentNode *assignmentNode) {
+            // (ASSIGN type variable-name new-value)
+            printf("( ");
+            printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
+            assignmentNode->getVariable()->visit(*this);
+            printf(" ");
+            assignmentNode->getExpression()->visit(*this);
+            printf(")");
+        }
+
+        virtual void visit(NestedScopeNode *nestedScopeNode) {
+            // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
+            printf("(SCOPE\n");
+            nestedScopeNode->getDeclarations()->visit(*this);
+            nestedScopeNode->getStatements()->visit(*this);
+            printf(")\n");
+        }
+
+        virtual void visit(ScopeNode *scopeNode) {
+            // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
+            printf("(SCOPE\n");
+            scopeNode->getDeclarations()->visit(*this);
+            scopeNode->getStatements()->visit(*this);
+            printf(")\n");
+        }
 };
 
 void ast_print(node *ast) {
-    PrintVisitor printer;
-    static_cast<Node *>(ast)->visit(printer);
+    if(ast != nullptr) {
+        PrintVisitor printer;
+        static_cast<Node *>(ast)->visit(printer);
+    }
 }
