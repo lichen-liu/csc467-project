@@ -157,97 +157,97 @@ extern int yyline;        /* variable holding current line number   */
  *    1. Add code to rules for construction of AST.
  ***********************************************************************/
 program
-  :  scope                                                          { yTRACE("program -> scope");                                         }
+  :  scope                                                          { yTRACE("program -> scope");                                         ast = $1;}
   ;
 scope
-  :  LBRACE declarations statements RBRACE                          { yTRACE("scope -> { declarations statements }");                     }
+  :  LBRACE declarations statements RBRACE                          { yTRACE("scope -> { declarations statements }");                     $$ = ast_allocate(SCOPE_NODE, $2, $3);}
   ;
 declarations
-  :  declarations declaration                                       { yTRACE("declarations -> declarations declaration");                 }
-  |  epsilon                                                        { yTRACE("declarations -> epsilon");                                  }
+  :  declarations declaration                                       { yTRACE("declarations -> declarations declaration");                 $$ = ast_allocate(DECLARATIONS_NODE, $1, $2);}
+  |  epsilon                                                        { yTRACE("declarations -> epsilon");                                  $$ = ast_allocate(DECLARATIONS_NODE, nullptr, nullptr);}
   ;
 statements
-  :  statements statement                                           { yTRACE("statements -> statements statement");                       }
-  |  epsilon                                                        { yTRACE("statements -> epsilon");                                    }
+  :  statements statement                                           { yTRACE("statements -> statements statement");                       $$ = ast_allocate(STATEMENTS_NODE, $1, $2);}
+  |  epsilon                                                        { yTRACE("statements -> epsilon");                                    $$ = ast_allocate(STATEMENTS_NODE, nullptr, nullptr);}
   ;
 declaration
-  :  type ID SEMICOLON                                              { yTRACE("declaration -> type ID ;");                                 }
-  |  type ID ASSGNMT expression SEMICOLON                           { yTRACE("declaration -> type ID = expression ;");                    }
-  |  CONST_SYM type ID ASSGNMT expression SEMICOLON                 { yTRACE("declaration -> const type ID = expression ;");              }
+  :  type ID SEMICOLON                                              { yTRACE("declaration -> type ID ;");                                 $$ = ast_allocate(DECLARATION_NODE, $2, 0, $1, nullptr);}
+  |  type ID ASSGNMT expression SEMICOLON                           { yTRACE("declaration -> type ID = expression ;");                    $$ = ast_allocate(DECLARATION_NODE, $2, 0, $1, $4);}
+  |  CONST_SYM type ID ASSGNMT expression SEMICOLON                 { yTRACE("declaration -> const type ID = expression ;");              $$ = ast_allocate(DECLARATION_NODE, $3, 1, $2, $5);}
   ;
 statement
-  :  variable ASSGNMT expression SEMICOLON                          { yTRACE("statement -> variable = expression ;");                     }
-  |  IF_SYM LPAREN expression RPAREN statement else_statement       { yTRACE("statement -> if ( expression ) statement else_statement");  }
-  |  WHILE_SYM LPAREN expression RPAREN statement                   { yTRACE("statement -> while ( expression ) statement");              }
-  |  scope                                                          { yTRACE("statement -> scope");                                       }
-  |  SEMICOLON                                                      { yTRACE("statement -> ;");                                           }
+  :  variable ASSGNMT expression SEMICOLON                          { yTRACE("statement -> variable = expression ;");                     $$ = ast_allocate(ASSIGNMENT_NODE, $1, $3);}
+  |  IF_SYM LPAREN expression RPAREN statement else_statement       { yTRACE("statement -> if ( expression ) statement else_statement");  $$ = ast_allocate(IF_STATEMENT_NODE, $3, $5, $6);}
+  |  WHILE_SYM LPAREN expression RPAREN statement                   { yTRACE("statement -> while ( expression ) statement");              $$ = ast_allocate(WHILE_STATEMENT_NODE, $3, $5);}
+  |  scope                                                          { yTRACE("statement -> scope");                                       $$ = ast_allocate(NESTED_SCOPE_NODE, $1); }
+  |  SEMICOLON                                                      { yTRACE("statement -> ;");                                           $$ = ast_allocate(STALL_STATEMENT_NODE);}
   ;
 else_statement
-  :  ELSE_SYM statement                                             { yTRACE("else_statement -> else statement");                         }
-  |  epsilon                                                        { yTRACE("else_statement -> epsilon");                                }
+  :  ELSE_SYM statement                                             { yTRACE("else_statement -> else statement");                         $$ = $2;}
+  |  epsilon                                                        { yTRACE("else_statement -> epsilon");                                $$ = nullptr;}
   ;
 type
-  :  INT_T                                                          { yTRACE("type -> int");                                              }
-  |  IVEC2_T                                                        { yTRACE("type -> ivec2");                                            }
-  |  IVEC3_T                                                        { yTRACE("type -> ivec3");                                            }
-  |  IVEC4_T                                                        { yTRACE("type -> ivec4");                                            }
-  |  BOOL_T                                                         { yTRACE("type -> bool");                                             }
-  |  BVEC2_T                                                        { yTRACE("type -> bvec2");                                            }
-  |  BVEC3_T                                                        { yTRACE("type -> bvec3");                                            }
-  |  BVEC4_T                                                        { yTRACE("type -> bvec4");                                            }
-  |  FLOAT_T                                                        { yTRACE("type -> float");                                            }
-  |  VEC2_T                                                         { yTRACE("type -> vec2");                                             }
-  |  VEC3_T                                                         { yTRACE("type -> vec3");                                             }
-  |  VEC4_T                                                         { yTRACE("type -> vec4");                                             }
+  :  INT_T                                                          { yTRACE("type -> int");                                              $$ = INT_T;}
+  |  IVEC2_T                                                        { yTRACE("type -> ivec2");                                            $$ = IVEC2_T;}
+  |  IVEC3_T                                                        { yTRACE("type -> ivec3");                                            $$ = IVEC3_T;}
+  |  IVEC4_T                                                        { yTRACE("type -> ivec4");                                            $$ = IVEC4_T;}
+  |  BOOL_T                                                         { yTRACE("type -> bool");                                             $$ = BOOL_T;}
+  |  BVEC2_T                                                        { yTRACE("type -> bvec2");                                            $$ = BVEC2_T;}
+  |  BVEC3_T                                                        { yTRACE("type -> bvec3");                                            $$ = BVEC3_T;}
+  |  BVEC4_T                                                        { yTRACE("type -> bvec4");                                            $$ = BVEC4_T;}
+  |  FLOAT_T                                                        { yTRACE("type -> float");                                            $$ = FLOAT_T;}
+  |  VEC2_T                                                         { yTRACE("type -> vec2");                                             $$ = VEC2_T;}
+  |  VEC3_T                                                         { yTRACE("type -> vec3");                                             $$ = VEC3_T;}
+  |  VEC4_T                                                         { yTRACE("type -> vec4");                                             $$ = VEC4_T;}
   ;
 expression
-  :  constructor                                                    { yTRACE("expression -> constructor");                                }
-  |  function                                                       { yTRACE("expression -> function");                                   }
-  |  INT_C                                                          { yTRACE("expression -> integer_literal");                            }
-  |  FLOAT_C                                                        { yTRACE("expression -> float_literal");                              }
-  |  TRUE_SYM                                                       { yTRACE("expression -> true");                                       }
-  |  FALSE_SYM                                                      { yTRACE("expression -> false");                                      }
-  |  variable                                                       { yTRACE("expression -> variable");                                   }
-  |  unary_op expression                          %prec UNARY_PREC  { yTRACE("expression -> unary_op expression");                        }
-  |  expression AND expression                                      { yTRACE("expression -> expression && expression");                   }
-  |  expression OR expression                                       { yTRACE("expression -> expression || expression");                   }
-  |  expression EQL expression                                      { yTRACE("expression -> expression == expression");                   }
-  |  expression NEQ expression                                      { yTRACE("expression -> expression != expression");                   }
-  |  expression LSS expression                                      { yTRACE("expression -> expression < expression");                    }
-  |  expression LEQ expression                                      { yTRACE("expression -> expression <= expression");                   }
-  |  expression GTR expression                                      { yTRACE("expression -> expression > expression");                    }
-  |  expression GEQ expression                                      { yTRACE("expression -> expression >= expression");                   }
-  |  expression PLUS expression                                     { yTRACE("expression -> expression + expression");                    }
-  |  expression MINUS expression                                    { yTRACE("expression -> expression - expression");                    }
-  |  expression TIMES expression                                    { yTRACE("expression -> expression * expression");                    }
-  |  expression SLASH expression                                    { yTRACE("expression -> expression / expression");                    }
-  |  expression EXP expression                                      { yTRACE("expression -> expression ^ expression");                    }
-  |  LPAREN expression RPAREN                                       { yTRACE("expression -> (expression)");                               }
+  :  constructor                                                    { yTRACE("expression -> constructor");                                $$ = $1;}
+  |  function                                                       { yTRACE("expression -> function");                                   $$ = $1;}
+  |  INT_C                                                          { yTRACE("expression -> integer_literal");                            $$ = ast_allocate(INT_C_NODE, $1);}
+  |  FLOAT_C                                                        { yTRACE("expression -> float_literal");                              $$ = ast_allocate(FLOAT_C_NODE, $1);}
+  |  TRUE_SYM                                                       { yTRACE("expression -> true");                                       $$ = ast_allocate(BOOL_C_NODE, 1);}
+  |  FALSE_SYM                                                      { yTRACE("expression -> false");                                      $$ = ast_allocate(BOOL_C_NODE, 0);}
+  |  variable                                                       { yTRACE("expression -> variable");                                   $$ = $1;}
+  |  unary_op expression                          %prec UNARY_PREC  { yTRACE("expression -> unary_op expression");                        $$ = ast_allocate(UNARY_EXPRESION_NODE, $1, $2);}
+  |  expression AND expression                                      { yTRACE("expression -> expression && expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, AND, $1, $3);}
+  |  expression OR expression                                       { yTRACE("expression -> expression || expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, OR, $1, $3);}
+  |  expression EQL expression                                      { yTRACE("expression -> expression == expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, EQL, $1, $3);}
+  |  expression NEQ expression                                      { yTRACE("expression -> expression != expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, NEQ, $1, $3);}
+  |  expression LSS expression                                      { yTRACE("expression -> expression < expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, LSS, $1, $3);}
+  |  expression LEQ expression                                      { yTRACE("expression -> expression <= expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, LEQ, $1, $3);}
+  |  expression GTR expression                                      { yTRACE("expression -> expression > expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, GTR, $1, $3);}
+  |  expression GEQ expression                                      { yTRACE("expression -> expression >= expression");                   $$ = ast_allocate(BINARY_EXPRESSION_NODE, GEQ, $1, $3);}
+  |  expression PLUS expression                                     { yTRACE("expression -> expression + expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, PLUS, $1, $3);}
+  |  expression MINUS expression                                    { yTRACE("expression -> expression - expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, MINUS, $1, $3);}
+  |  expression TIMES expression                                    { yTRACE("expression -> expression * expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, TIMES, $1, $3);}
+  |  expression SLASH expression                                    { yTRACE("expression -> expression / expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, SLASH, $1, $3);}
+  |  expression EXP expression                                      { yTRACE("expression -> expression ^ expression");                    $$ = ast_allocate(BINARY_EXPRESSION_NODE, EXP, $1, $3);}
+  |  LPAREN expression RPAREN                                       { yTRACE("expression -> (expression)");                               $$ = $2;}
   ;
 variable
-  :  ID                                                             { yTRACE("variable -> identifier");                                   }
-  |  ID LBRACKET INT_C RBRACKET                   %prec V_F_C_PREC  { yTRACE("variable -> identifier[integer_literal]");                  }
+  :  ID                                                             { yTRACE("variable -> identifier");                                   $$ = ast_allocate(ID_NODE, $1);}
+  |  ID LBRACKET INT_C RBRACKET                   %prec V_F_C_PREC  { yTRACE("variable -> identifier[integer_literal]");                  $$ = ast_allocate(INDEXING_NODE, $1, ast_allocate(INT_C_NODE, $3));}
   ;
 unary_op
-  :  NOT                                                            { yTRACE("unary_op -> !");                                            }
-  |  MINUS                                                          { yTRACE("unary_op -> -");                                            }
+  :  NOT                                                            { yTRACE("unary_op -> !");                                            $$ = NOT;}
+  |  MINUS                                                          { yTRACE("unary_op -> -");                                            $$ = MINUS;}
   ;
 constructor
-  :  type LPAREN arguments RPAREN                 %prec V_F_C_PREC  { yTRACE("constructor -> type ( arguments )");                        }
+  :  type LPAREN arguments RPAREN                 %prec V_F_C_PREC  { yTRACE("constructor -> type ( arguments )");                        $$ = ast_allocate(CONSTRUCTOR_NODE, $1, $3);}
   ;
 function
-  :  function_name LPAREN arguments_opt RPAREN    %prec V_F_C_PREC  { yTRACE("function -> function_name ( arguments_opt )");              }
+  :  function_name LPAREN arguments_opt RPAREN    %prec V_F_C_PREC  { yTRACE("function -> function_name ( arguments_opt )");              $$ = ast_allocate(FUNCTION_NODE, $1, $3);}
   ;
 function_name
-  :  FUNC                                                           { yTRACE("function_name -> lit | dp3 | rsq");                         }
+  :  FUNC                                                           { yTRACE("function_name -> lit | dp3 | rsq");                         strcpy($$, $1);}
   ;
 arguments_opt
-  :  arguments                                                      { yTRACE("arguments_opt -> arguments");                               }
-  |  epsilon                                                        { yTRACE("arguments_opt -> epsilon");                                 }
+  :  arguments                                                      { yTRACE("arguments_opt -> arguments");                               $$ = $1;}
+  |  epsilon                                                        { yTRACE("arguments_opt -> epsilon");                                 $$ = ast_allocate(EXPRESSIONS_NODE, nullptr, nullptr);}
   ;
 arguments
-  :  arguments COMMA expression                                     { yTRACE("arguments -> arguments , expression");                      }
-  |  expression                                                     { yTRACE("arguments -> expression");                                  }
+  :  arguments COMMA expression                                     { yTRACE("arguments -> arguments , expression");                      $$ = ast_allocate(EXPRESSIONS_NODE, $1, $3);}
+  |  expression                                                     { yTRACE("arguments -> expression");                                  $$ = ast_allocate(EXPRESSIONS_NODE, nullptr, $1);}
   ;
 epsilon
   :
