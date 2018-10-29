@@ -56,7 +56,7 @@ class Visitor {
         virtual void visit(BooleanLiteralNode *booleanLiteralNode) {}
         virtual void visit(VariableNode *variableNode) {}
         virtual void visit(IdentifierNode *identifierNode) {}
-        virtual void visit(IndexingNode *IndexingNode) {}
+        virtual void visit(IndexingNode *indexingNode) {}
         virtual void visit(FunctionNode *functionNode) {}
         virtual void visit(ConstructorNode *constructorNode) {}
         virtual void visit(StatementNode *statementNode) {}
@@ -108,12 +108,8 @@ class ExpressionsNode: public Node {
             m_exprs(exprs) {}
         ExpressionsNode() {}
     public:
-        void pushBackExpression(ExpressionNode *expr) {
-            m_exprs.push_back(expr);
-        }
-        const std::vector<ExpressionNode *> &getExpressions() const {
-            return m_exprs;
-        }
+        void pushBackExpression(ExpressionNode *expr) { m_exprs.push_back(expr); }
+        const std::vector<ExpressionNode *> &getExpressions() const { return m_exprs; }
     protected:
         virtual ~ExpressionsNode() {
             for(ExpressionNode *expr: m_exprs) {
@@ -135,6 +131,9 @@ class UnaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    public:
+        int getOperator() const { return m_op; }
+        ExpressionNode *getExpression() const { return m_expr; }
     protected:
         virtual ~UnaryExpressionNode() {
             Node::destructNode(m_expr);
@@ -155,6 +154,10 @@ class BinaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    public:
+        int getOperator() const { return m_op; }
+        ExpressionNode *getLeftExpression() const { return m_leftExpr; }
+        ExpressionNode *getRightExpression() const { return m_rightExpr; }
     protected:
         virtual ~BinaryExpressionNode() {
             Node::destructNode(m_leftExpr);
@@ -172,6 +175,8 @@ class IntLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const { return INT_T; }
+    public:
+        int getVal() const { return m_val; }
     protected:
         virtual ~IntLiteralNode() {}
     
@@ -186,6 +191,8 @@ class FloatLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const { return FLOAT_T; }
+    public:
+        float getVal() const { return m_val; }
     protected:
         virtual ~FloatLiteralNode() {}
 
@@ -200,6 +207,8 @@ class BooleanLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const { return BOOL_T; }
+    public:
+        bool getVal() const { return m_val; }
     protected:
         virtual ~BooleanLiteralNode() {}
 
@@ -220,6 +229,8 @@ class IdentifierNode: public VariableNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    public:
+        const std::string &getName() const { return m_id; }
     protected:
         virtual ~IdentifierNode() {}
 
@@ -237,6 +248,9 @@ class IndexingNode: public VariableNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    public:
+        IdentifierNode *getIdentifier() const { return m_identifier; }
+        ExpressionNode *getIndexExpression() const { return m_indexExpr; }
     protected:
         virtual ~IndexingNode() {
             Node::destructNode(m_identifier);
@@ -257,6 +271,9 @@ class FunctionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+    public:
+        const std::string &getName() const { return m_functionName; }
+        ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:
         virtual ~FunctionNode() {
             Node::destructNode(m_argExprs);
@@ -298,9 +315,7 @@ class StatementsNode: public Node {
             m_statements(statements) {}
         StatementsNode() {}
     public:
-        void pushBackStatement(StatementNode *stmt) {
-            m_statements.push_back(stmt);
-        }
+        void pushBackStatement(StatementNode *stmt) { m_statements.push_back(stmt); }
     protected:
         virtual ~StatementsNode() {
             for(StatementNode *stmt: m_statements) {
@@ -341,9 +356,7 @@ class DeclarationsNode: public Node {
             m_declarations(declarations) {}
         DeclarationsNode() {}
     public:
-        void pushBackDeclaration(DeclarationNode *decl) {
-            m_declarations.push_back(decl);
-        }
+        void pushBackDeclaration(DeclarationNode *decl) { m_declarations.push_back(decl); }
     protected:
         virtual ~DeclarationsNode() {
             for(DeclarationNode *decl: m_declarations) {
@@ -671,23 +684,118 @@ void ast_free(node *ast) {
     Node::destructNode(static_cast<Node *>(ast));
 }
 
+#define STRINGIFY(x) #x
 class PrintVisitor: public Visitor {
+    public:
+        static std::string getTypeString(int type) {
+            switch(type) {
+                case ANY_TYPE:      return STRINGIFY(ANY_TYPE);
+                case BOOL_T:        return STRINGIFY(BOOL_T);
+                case BVEC2_T:       return STRINGIFY(BVEC2_T);
+                case BVEC3_T:       return STRINGIFY(BVEC3_T);
+                case BVEC4_T:       return STRINGIFY(BVEC4_T);
+                case INT_T:         return STRINGIFY(INT_T);
+                case IVEC2_T:       return STRINGIFY(IVEC2_T);
+                case IVEC3_T:       return STRINGIFY(IVEC3_T);
+                case IVEC4_T:       return STRINGIFY(IVEC4_T);
+                case FLOAT_T:       return STRINGIFY(FLOAT_T);
+                case VEC2_T:        return STRINGIFY(VEC2_T);
+                case VEC3_T:        return STRINGIFY(VEC3_T);
+                case VEC4_T:        return STRINGIFY(VEC4_T);
+                default:            return "ERROR";
+            }
+        }
+
+        static std::string getOperatorString(int op) {
+            switch(op) {
+                case NOT:           return "!";
+                case AND:           return "&&";
+                case OR:            return "||";
+                case PLUS:          return "+";
+                case MINUS:         return "-";
+                case TIMES:         return "*";
+                case SLASH:         return "/";
+                case EXP:           return "^";
+                case EQL:           return "==";
+                case NEQ:           return "!=";
+                case LSS:           return "<";
+                case LEQ:           return "<=";
+                case GTR:           return ">";
+                case GEQ:           return ">=";
+                default:            return "Error";
+            }
+        }
+
     public:
         virtual void visit(ExpressionsNode *expressionsNode) {
             for(ExpressionNode *expr: expressionsNode->getExpressions()) {
+                printf(" ");
                 expr->visit(*this);
             }
         }
 
-        virtual void visit(UnaryExpressionNode *unaryExpressionNode) {}
-        virtual void visit(BinaryExpressionNode *binaryExpressionNode) {}
-        virtual void visit(IntLiteralNode *intLiteralNode) {}
-        virtual void visit(FloatLiteralNode *floatLiteralNode) {}
-        virtual void visit(BooleanLiteralNode *booleanLiteralNode) {}
-        virtual void visit(IdentifierNode *identifierNode) {}
-        virtual void visit(IndexingNode *IndexingNode) {}
-        virtual void visit(FunctionNode *functionNode) {}
-        virtual void visit(ConstructorNode *constructorNode) {}
+        virtual void visit(UnaryExpressionNode *unaryExpressionNode) {
+            // (UNARY type op expr)
+            printf("(UNARY ");
+            printf("%s ", getTypeString(unaryExpressionNode->getExpressionType()).c_str());
+            printf("%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
+            unaryExpressionNode->getExpression()->visit(*this);
+            printf(")");
+        }
+
+        virtual void visit(BinaryExpressionNode *binaryExpressionNode) {
+            // (BINARY type op left right)
+            printf("(BINARY ");
+            printf("%s ", getTypeString(binaryExpressionNode->getExpressionType()).c_str());
+            printf("%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
+            binaryExpressionNode->getLeftExpression()->visit(*this);
+            printf(" ");
+            binaryExpressionNode->getRightExpression()->visit(*this);
+            printf(")");
+        }
+
+        virtual void visit(IntLiteralNode *intLiteralNode) {
+            // <literal>
+            printf("%d", intLiteralNode->getVal());
+        }
+
+        virtual void visit(FloatLiteralNode *floatLiteralNode) {
+            // <literal>
+            printf("%f", floatLiteralNode->getVal());
+        }
+
+        virtual void visit(BooleanLiteralNode *booleanLiteralNode) {
+            // <literal>
+            printf("%s", (booleanLiteralNode->getVal() ? "true":"false"));
+        }
+
+        virtual void visit(IdentifierNode *identifierNode) {
+            // <identifier>
+            printf("%s", identifierNode->getName().c_str());
+        }
+
+        virtual void visit(IndexingNode *indexingNode) {
+            // (INDEX type id index)
+            printf("(INDEX ");
+            printf("%s ", getTypeString(indexingNode->getExpressionType()).c_str());
+            indexingNode->getIdentifier()->visit(*this);
+            printf(" ");
+            indexingNode->getIndexExpression()->visit(*this);
+            printf(")");
+        }
+
+        virtual void visit(FunctionNode *functionNode) {
+            // (CALL name ...)
+            printf("(CALL ");
+            printf("%s", functionNode->getName().c_str());
+            functionNode->getArgumentExpressions()->visit(*this);
+            printf(")");
+        }
+
+        virtual void visit(ConstructorNode *constructorNode) {
+
+        }
+
         virtual void visit(StatementsNode *statementsNode) {}
         virtual void visit(DeclarationNode *declarationNode) {}
         virtual void visit(DeclarationsNode *declarationsNode) {}
