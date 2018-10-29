@@ -8,10 +8,12 @@
 // A Modern Object-Oriented Approach for AST
 //
 //////////////////////////////////////////////////////////////////
-class Node;
+namespace AST{
+    class Node;
+;}
 
 
-typedef Node node;
+typedef AST::Node node;
 extern node *ast;
 
 
