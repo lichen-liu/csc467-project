@@ -106,6 +106,11 @@ class ExpressionsNode: public Node {
             m_exprs(exprs) {}
         ExpressionsNode(std::vector<ExpressionNode *> &&exprs):
             m_exprs(exprs) {}
+        ExpressionsNode() {}
+    public:
+        void pushBackExpression(ExpressionNode *expr) {
+            m_exprs.push_back(expr);
+        }
     protected:
         virtual ~ExpressionsNode() {
             for(ExpressionNode *expr: m_exprs) {
@@ -288,6 +293,11 @@ class StatementsNode: public Node {
             m_statements(statements) {}
         StatementsNode(std::vector<StatementNode *> &&statements):
             m_statements(statements) {}
+        StatementsNode() {}
+    public:
+        void pushBackStatement(StatementNode *stmt) {
+            m_statements.push_back(stmt);
+        }
     protected:
         virtual ~StatementsNode() {
             for(StatementNode *stmt: m_statements) {
@@ -302,11 +312,12 @@ class DeclarationNode: public Node {
     private:
         // not using IdentifierNode because the name itself is not yet an expression
         std::string m_variableName;                     // variable name
+        bool m_isConst;                                 // const qualified
         int m_type;                                     // types defined in parser.tab.h
         ExpressionNode *m_initValExpr = nullptr;        // initial value expression (optional)
     public:
-        DeclarationNode(const std::string &variableName, int type, ExpressionNode *initValExpr = nullptr):
-            m_variableName(variableName), m_type(type), m_initValExpr(initValExpr) {}
+        DeclarationNode(const std::string &variableName, bool isConst, int type, ExpressionNode *initValExpr = nullptr):
+            m_variableName(variableName), m_isConst(isConst), m_type(type), m_initValExpr(initValExpr) {}
     protected:
         virtual ~DeclarationNode() {
             if(m_initValExpr != nullptr) {
@@ -325,6 +336,11 @@ class DeclarationsNode: public Node {
             m_declarations(declarations) {}
         DeclarationsNode(std::vector<DeclarationNode *> &&declarations):
             m_declarations(declarations) {}
+        DeclarationsNode() {}
+    public:
+        void pushBackDeclaration(DeclarationNode *decl) {
+            m_declarations.push_back(decl);
+        }
     protected:
         virtual ~DeclarationsNode() {
             for(DeclarationNode *decl: m_declarations) {
@@ -478,6 +494,19 @@ node *ast_allocate(node_kind kind, ...) {
             break;
         }
 
+        case EXPRESSIONS_NODE: {
+            ExpressionsNode *exprs = static_cast<ExpressionsNode *>(va_arg(args, Node *));
+            ExpressionNode *expr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            if(exprs == nullptr) {
+                exprs = new ExpressionsNode();
+            }
+            if(expr != nullptr) {
+                exprs->pushBackExpression(expr);
+            }
+            astNode = exprs;
+            break;
+        }
+
         case UNARY_EXPRESION_NODE: {
             int op = va_arg(args, int);
             ExpressionNode *expr = static_cast<ExpressionNode *>(va_arg(args, Node *));
@@ -536,23 +565,93 @@ node *ast_allocate(node_kind kind, ...) {
         }
 
         case FUNCTION_NODE: {
-            /* WIP */
-            // astNode = FunctionNode(const std::string &functionName, ExpressionsNode *argExprs);
-            // break;
+            const char *functionName = va_arg(args, char *);
+            ExpressionsNode *argExprs = static_cast<ExpressionsNode *>(va_arg(args, Node *));
+            astNode = new FunctionNode(functionName, argExprs);
+            break;
         }
 
-        case CONSTRUCTOR_NODE:
+        case CONSTRUCTOR_NODE: {
+            int type = va_arg(args, int);
+            ExpressionsNode *argExprs = static_cast<ExpressionsNode *>(va_arg(args, Node *));
+            astNode = new ConstructorNode(type, argExprs);
+            break;
+        }
 
-        case STATEMENT_NODE:
-        case IF_STATEMENT_NODE:
-        case WHILE_STATEMENT_NODE:
-        case ASSIGNMENT_NODE:
-        case NESTED_SCOPE_NODE:
-        case STALL_STATEMENT_NODE:
-        case STATEMENTS_NODE:
+        case STATEMENT_NODE: {
+            /* Virtual Node, Does not Have Instance */
+            astNode = nullptr;
+            break;
+        }
 
-        case DECLARATION_NODE:
-        case DECLARATIONS_NODE:
+        case IF_STATEMENT_NODE: {
+            ExpressionNode *condExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            StatementNode *thenStmt = static_cast<StatementNode *>(va_arg(args, Node *));
+            StatementNode *elseStmt = static_cast<StatementNode *>(va_arg(args, Node *));
+            astNode = new IfStatementNode(condExpr, thenStmt, elseStmt);
+            break;
+        }
+
+        case WHILE_STATEMENT_NODE: {
+            ExpressionNode *condExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            StatementNode *bodyStmt = static_cast<StatementNode *>(va_arg(args, Node *));
+            astNode = new WhileStatementNode(condExpr, bodyStmt);
+            break;
+        }
+
+        case ASSIGNMENT_NODE: {
+            VariableNode *var = static_cast<VariableNode *>(va_arg(args, Node *));
+            ExpressionNode *newValExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            astNode = new AssignmentNode(var, newValExpr);
+            break;
+        }
+
+        case NESTED_SCOPE_NODE: {
+            /* Argument ScopeNode is destructed and converted to NestedScopeNode */
+            ScopeNode *scopeNode = static_cast<ScopeNode *>(va_arg(args, Node *));
+            astNode = ScopeNode::convertToNestedScopeNode(scopeNode);
+            break;
+        }
+
+        case STALL_STATEMENT_NODE: {
+            astNode = new StallStatementNode();
+            break;
+        }
+
+        case STATEMENTS_NODE: {
+            StatementsNode *stmts = static_cast<StatementsNode *>(va_arg(args, Node *));
+            StatementNode *stmt = static_cast<StatementNode *>(va_arg(args, Node *));
+            if(stmts == nullptr) {
+                stmts = new StatementsNode();
+            }
+            if(stmt != nullptr) {
+                stmts->pushBackStatement(stmt);
+            }
+            astNode = stmts;
+            break;
+        }
+
+        case DECLARATION_NODE: {
+            const char *varName = va_arg(args, char *);
+            int isConst = va_arg(args, int);
+            int type = va_arg(args, int);
+            ExpressionNode *initValExpr = static_cast<ExpressionNode *>(va_arg(args, Node *));
+            astNode = new DeclarationNode(varName, static_cast<bool>(isConst), type, initValExpr);
+            break;
+        }
+
+        case DECLARATIONS_NODE: {
+            DeclarationsNode *decls = static_cast<DeclarationsNode *>(va_arg(args, Node *));
+            DeclarationNode *decl = static_cast<DeclarationNode *>(va_arg(args, Node *));
+            if(decls == nullptr) {
+                decls = new DeclarationsNode();
+            }
+            if(decl != nullptr) {
+                decls->pushBackDeclaration(decl);
+            }
+            astNode = decls;
+            break;
+        }
 
         case UNKNOWN:
         default:
@@ -566,9 +665,9 @@ node *ast_allocate(node_kind kind, ...) {
 }
 
 void ast_free(node *ast) {
-
+    Node::destructNode(static_cast<Node *>(ast));
 }
 
-void ast_print(node * ast) {
+void ast_print(node *ast) {
 
 }
