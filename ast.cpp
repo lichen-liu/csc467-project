@@ -750,6 +750,18 @@ class PrintVisitor: public Visitor {
             }
         }
 
+        static std::string getIndentSpaceString(int indentSize) {
+            return std::string(indentSize, ' ');
+        }
+    
+    private:
+        int indentSize = 0;
+        static constexpr int indentIncr = 4;
+    private:
+        int getIndentSize() const { return indentSize; }
+        void enterScope() { indentSize += indentIncr; }
+        void exitScope() { indentSize -= indentIncr; }
+
     public:
         virtual void visit(ExpressionsNode *expressionsNode) {
             for(ExpressionNode *expr: expressionsNode->getExpressionList()) {
@@ -826,13 +838,17 @@ class PrintVisitor: public Visitor {
 
         virtual void visit(StatementsNode *statementsNode) {
             // (STATEMENTS ...)
-            printf("    (STATEMENTS\n");
+            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+            printf("(STATEMENTS\n");
+            enterScope();
             for(StatementNode *stmt: statementsNode->getStatementList()) {
-                printf("        ");
+                printf("%s", getIndentSpaceString(getIndentSize()).c_str());
                 stmt->visit(*this);
                 printf("\n");
             }
-            printf("    )\n");
+            exitScope();
+            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+            printf(")\n");
         }
 
         virtual void visit(DeclarationNode *declarationNode) {
@@ -850,13 +866,17 @@ class PrintVisitor: public Visitor {
 
         virtual void visit(DeclarationsNode *declarationsNode) {
             // (DECLARATIONS ...)
-            printf("    (DECLARATIONS\n");
+            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+            printf("(DECLARATIONS\n");
+            enterScope();
             for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
-                printf("        ");
+                printf("%s", getIndentSpaceString(getIndentSize()).c_str());
                 decl->visit(*this);
                 printf("\n");
             }
-            printf("    )\n");
+            exitScope();
+            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+            printf(")\n");
         }
 
         virtual void visit(IfStatementNode *ifStatementNode) {
@@ -885,16 +905,21 @@ class PrintVisitor: public Visitor {
         virtual void visit(NestedScopeNode *nestedScopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
             printf("(SCOPE\n");
+            enterScope();
             nestedScopeNode->getDeclarations()->visit(*this);
             nestedScopeNode->getStatements()->visit(*this);
-            printf(")\n");
+            exitScope();
+            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+            printf(")");
         }
 
         virtual void visit(ScopeNode *scopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
             printf("(SCOPE\n");
+            enterScope();
             scopeNode->getDeclarations()->visit(*this);
             scopeNode->getStatements()->visit(*this);
+            exitScope();
             printf(")\n");
         }
 };
