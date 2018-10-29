@@ -47,28 +47,28 @@ class ScopeNode;
 
 class Visitor {
     public:
-        virtual void visit(ExpressionNode *expressionNode){}
-        virtual void visit(ExpressionsNode *expressionsNode){}
-        virtual void visit(UnaryExpressionNode *unaryExpressionNode){}
-        virtual void visit(BinaryExpressionNode *binaryExpressionNode){}
-        virtual void visit(IntLiteralNode *intLiteralNode){}
-        virtual void visit(FloatLiteralNode *floatLiteralNode){}
-        virtual void visit(BooleanLiteralNode *booleanLiteralNode){}
-        virtual void visit(VariableNode *variableNode){}
-        virtual void visit(IdentifierNode *identifierNode){}
-        virtual void visit(IndexingNode *IndexingNode){}
-        virtual void visit(FunctionNode *functionNode){}
-        virtual void visit(ConstructorNode *constructorNode){}
-        virtual void visit(StatementNode *statementNode){}
-        virtual void visit(StatementsNode *statementsNode){}
-        virtual void visit(DeclarationNode *declarationNode){}
-        virtual void visit(DeclarationsNode *declarationsNode){}
-        virtual void visit(IfStatementNode *ifStatementNode){}
-        virtual void visit(WhileStatementNode *whileStatementNode){}
-        virtual void visit(AssignmentNode *assignmentNode){}
-        virtual void visit(StallStatementNode *stallStatementNode){}
-        virtual void visit(NestedScopeNode *nestedScopeNode){}
-        virtual void visit(ScopeNode *scopeNode){}
+        virtual void visit(ExpressionNode *expressionNode) {}
+        virtual void visit(ExpressionsNode *expressionsNode) {}
+        virtual void visit(UnaryExpressionNode *unaryExpressionNode) {}
+        virtual void visit(BinaryExpressionNode *binaryExpressionNode) {}
+        virtual void visit(IntLiteralNode *intLiteralNode) {}
+        virtual void visit(FloatLiteralNode *floatLiteralNode) {}
+        virtual void visit(BooleanLiteralNode *booleanLiteralNode) {}
+        virtual void visit(VariableNode *variableNode) {}
+        virtual void visit(IdentifierNode *identifierNode) {}
+        virtual void visit(IndexingNode *IndexingNode) {}
+        virtual void visit(FunctionNode *functionNode) {}
+        virtual void visit(ConstructorNode *constructorNode) {}
+        virtual void visit(StatementNode *statementNode) {}
+        virtual void visit(StatementsNode *statementsNode) {}
+        virtual void visit(DeclarationNode *declarationNode) {}
+        virtual void visit(DeclarationsNode *declarationsNode) {}
+        virtual void visit(IfStatementNode *ifStatementNode) {}
+        virtual void visit(WhileStatementNode *whileStatementNode) {}
+        virtual void visit(AssignmentNode *assignmentNode) {}
+        virtual void visit(StallStatementNode *stallStatementNode) {}
+        virtual void visit(NestedScopeNode *nestedScopeNode) {}
+        virtual void visit(ScopeNode *scopeNode) {}
 };
 
 #define VISIT_THIS_NODE     public:                                             \
@@ -92,7 +92,7 @@ class Node {
 class ExpressionNode: public Node {
     /* Pure Virtual Intermediate Layer */
     public:
-        virtual int getExpressionType() = 0;            // pure virtual
+        virtual int getExpressionType() const = 0;            // pure virtual
         virtual void setExpressionType(int type) {}     // provide default definition
     protected:
         virtual ~ExpressionNode() {}
@@ -110,6 +110,9 @@ class ExpressionsNode: public Node {
     public:
         void pushBackExpression(ExpressionNode *expr) {
             m_exprs.push_back(expr);
+        }
+        const std::vector<ExpressionNode *> &getExpressions() const {
+            return m_exprs;
         }
     protected:
         virtual ~ExpressionsNode() {
@@ -130,7 +133,7 @@ class UnaryExpressionNode: public ExpressionNode {
         UnaryExpressionNode(int op, ExpressionNode *expr):
             m_op(op), m_expr(expr) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~UnaryExpressionNode() {
@@ -150,7 +153,7 @@ class BinaryExpressionNode: public ExpressionNode {
         BinaryExpressionNode(int op, ExpressionNode *leftExpr, ExpressionNode *rightExpr):
             m_op(op), m_leftExpr(leftExpr), m_rightExpr(rightExpr) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~BinaryExpressionNode() {
@@ -168,7 +171,7 @@ class IntLiteralNode: public ExpressionNode {
         IntLiteralNode(int val):
             m_val(val) {}
     public:
-        virtual int getExpressionType() { return INT_T; }
+        virtual int getExpressionType() const { return INT_T; }
     protected:
         virtual ~IntLiteralNode() {}
     
@@ -182,7 +185,7 @@ class FloatLiteralNode: public ExpressionNode {
         FloatLiteralNode(float val):
             m_val(val) {}
     public:
-        virtual int getExpressionType() { return FLOAT_T; }
+        virtual int getExpressionType() const { return FLOAT_T; }
     protected:
         virtual ~FloatLiteralNode() {}
 
@@ -196,7 +199,7 @@ class BooleanLiteralNode: public ExpressionNode {
         BooleanLiteralNode(bool val):
             m_val(val) {}
     public:
-        virtual int getExpressionType() { return BOOL_T; }
+        virtual int getExpressionType() const { return BOOL_T; }
     protected:
         virtual ~BooleanLiteralNode() {}
 
@@ -215,7 +218,7 @@ class IdentifierNode: public VariableNode {
         IdentifierNode(const std::string &id):
             m_id(id) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~IdentifierNode() {}
@@ -232,7 +235,7 @@ class IndexingNode: public VariableNode {
         IndexingNode(IdentifierNode *identifier, ExpressionNode *indexExpr):
             m_identifier(identifier), m_indexExpr(indexExpr) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~IndexingNode() {
@@ -252,7 +255,7 @@ class FunctionNode: public ExpressionNode {
         FunctionNode(const std::string &functionName, ExpressionsNode *argExprs):
             m_functionName(functionName), m_argExprs(argExprs) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~FunctionNode() {
@@ -270,7 +273,7 @@ class ConstructorNode: public ExpressionNode {
         ConstructorNode(int type, ExpressionsNode *argExprs):
             m_type(type), m_argExprs(argExprs) {}
     public:
-        virtual int getExpressionType() { return m_type; }
+        virtual int getExpressionType() const { return m_type; }
     protected:
         virtual ~ConstructorNode() {
             Node::destructNode(m_argExprs);
@@ -397,7 +400,7 @@ class AssignmentNode: public StatementNode {
         AssignmentNode(VariableNode *var, ExpressionNode *newValExpr):
             m_var(var), m_newValExpr(newValExpr) {}
     public:
-        int getExpressionType() { return m_type; }
+        int getExpressionType() const { return m_type; }
         void setExpressionType(int type) { m_type = type; }
     protected:
         virtual ~AssignmentNode() {
@@ -668,6 +671,34 @@ void ast_free(node *ast) {
     Node::destructNode(static_cast<Node *>(ast));
 }
 
-void ast_print(node *ast) {
+class PrintVisitor: public Visitor {
+    public:
+        virtual void visit(ExpressionsNode *expressionsNode) {
+            for(ExpressionNode *expr: expressionsNode->getExpressions()) {
+                expr->visit(*this);
+            }
+        }
 
+        virtual void visit(UnaryExpressionNode *unaryExpressionNode) {}
+        virtual void visit(BinaryExpressionNode *binaryExpressionNode) {}
+        virtual void visit(IntLiteralNode *intLiteralNode) {}
+        virtual void visit(FloatLiteralNode *floatLiteralNode) {}
+        virtual void visit(BooleanLiteralNode *booleanLiteralNode) {}
+        virtual void visit(IdentifierNode *identifierNode) {}
+        virtual void visit(IndexingNode *IndexingNode) {}
+        virtual void visit(FunctionNode *functionNode) {}
+        virtual void visit(ConstructorNode *constructorNode) {}
+        virtual void visit(StatementsNode *statementsNode) {}
+        virtual void visit(DeclarationNode *declarationNode) {}
+        virtual void visit(DeclarationsNode *declarationsNode) {}
+        virtual void visit(IfStatementNode *ifStatementNode) {}
+        virtual void visit(WhileStatementNode *whileStatementNode) {}
+        virtual void visit(AssignmentNode *assignmentNode) {}
+        virtual void visit(NestedScopeNode *nestedScopeNode) {}
+        virtual void visit(ScopeNode *scopeNode) {}
+};
+
+void ast_print(node *ast) {
+    PrintVisitor printer;
+    static_cast<Node *>(ast)->visit(printer);
 }
