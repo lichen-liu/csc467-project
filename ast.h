@@ -9,11 +9,11 @@
 //
 //////////////////////////////////////////////////////////////////
 namespace AST{
-    class Node;
-;}
+    class ASTNode;
+}
 
 
-typedef AST::Node node;
+typedef AST::ASTNode node;
 extern node *ast;
 
 

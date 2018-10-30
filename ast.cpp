@@ -81,17 +81,17 @@ class Visitor {
 /*
  * Base class for AST Nodes
  */
-class Node {
+class ASTNode {
     public:
         virtual void visit(Visitor &vistor) = 0;
     protected:
-        virtual ~Node() {}
+        virtual ~ASTNode() {}
     public:
-        /* The only way to destruct any AST Node */
-        static void destructNode(Node *astNode) { delete astNode; }
+        /* The only way to destruct any AST ASTNode */
+        static void destructNode(ASTNode *astNode) { delete astNode; }
 };
 
-class ExpressionNode: public Node {
+class ExpressionNode: public ASTNode {
     /* Pure Virtual Intermediate Layer */
     public:
         virtual int getExpressionType() const = 0;      // pure virtual
@@ -100,7 +100,7 @@ class ExpressionNode: public Node {
         virtual ~ExpressionNode() {}
 };
 
-class ExpressionsNode: public Node {
+class ExpressionsNode: public ASTNode {
     private:
         std::vector<ExpressionNode *> m_expressions;    // A list of ExpressionNodes
     public:
@@ -115,7 +115,7 @@ class ExpressionsNode: public Node {
     protected:
         virtual ~ExpressionsNode() {
             for(ExpressionNode *expr: m_expressions) {
-                Node::destructNode(expr);
+                ASTNode::destructNode(expr);
             }
         }
 
@@ -138,7 +138,7 @@ class UnaryExpressionNode: public ExpressionNode {
         ExpressionNode *getExpression() const { return m_expr; }
     protected:
         virtual ~UnaryExpressionNode() {
-            Node::destructNode(m_expr);
+            ASTNode::destructNode(m_expr);
         }
     
     VISIT_THIS_NODE
@@ -162,8 +162,8 @@ class BinaryExpressionNode: public ExpressionNode {
         ExpressionNode *getRightExpression() const { return m_rightExpr; }
     protected:
         virtual ~BinaryExpressionNode() {
-            Node::destructNode(m_leftExpr);
-            Node::destructNode(m_rightExpr);
+            ASTNode::destructNode(m_leftExpr);
+            ASTNode::destructNode(m_rightExpr);
         }
     
     VISIT_THIS_NODE
@@ -255,8 +255,8 @@ class IndexingNode: public VariableNode {
         ExpressionNode *getIndexExpression() const { return m_indexExpr; }
     protected:
         virtual ~IndexingNode() {
-            Node::destructNode(m_identifier);
-            Node::destructNode(m_indexExpr);
+            ASTNode::destructNode(m_identifier);
+            ASTNode::destructNode(m_indexExpr);
         }
 
     VISIT_THIS_NODE
@@ -278,7 +278,7 @@ class FunctionNode: public ExpressionNode {
         ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:
         virtual ~FunctionNode() {
-            Node::destructNode(m_argExprs);
+            ASTNode::destructNode(m_argExprs);
         }
 
     VISIT_THIS_NODE
@@ -297,19 +297,19 @@ class ConstructorNode: public ExpressionNode {
         ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:
         virtual ~ConstructorNode() {
-            Node::destructNode(m_argExprs);
+            ASTNode::destructNode(m_argExprs);
         }
 
     VISIT_THIS_NODE
 };
 
-class StatementNode: public Node {
+class StatementNode: public ASTNode {
     /* Pure Virtual Intermediate Layer */
     protected:
         virtual ~StatementNode() {}
 };
 
-class StatementsNode: public Node {
+class StatementsNode: public ASTNode {
     private:
         std::vector<StatementNode *> m_statements;      // a list of StatementNodes
     public:
@@ -324,14 +324,14 @@ class StatementsNode: public Node {
     protected:
         virtual ~StatementsNode() {
             for(StatementNode *stmt: m_statements) {
-                Node::destructNode(stmt);
+                ASTNode::destructNode(stmt);
             }
         }
 
     VISIT_THIS_NODE
 };
 
-class DeclarationNode: public Node {
+class DeclarationNode: public ASTNode {
     private:
         // not using IdentifierNode because the name itself is not yet an expression
         std::string m_variableName;                     // variable name
@@ -349,14 +349,14 @@ class DeclarationNode: public Node {
     protected:
         virtual ~DeclarationNode() {
             if(m_initValExpr != nullptr) {
-                Node::destructNode(m_initValExpr);
+                ASTNode::destructNode(m_initValExpr);
             }
         }
     
     VISIT_THIS_NODE
 };
 
-class DeclarationsNode: public Node {
+class DeclarationsNode: public ASTNode {
     private:
         std::vector<DeclarationNode *> m_declarations;  // a list of DeclarationNodes
     public:
@@ -371,7 +371,7 @@ class DeclarationsNode: public Node {
     protected:
         virtual ~DeclarationsNode() {
             for(DeclarationNode *decl: m_declarations) {
-                Node::destructNode(decl);
+                ASTNode::destructNode(decl);
             }
         }
 
@@ -392,10 +392,10 @@ class IfStatementNode: public StatementNode {
         StatementNode *getElseStatement() const { return m_elseStmt; }
     protected:
         virtual ~IfStatementNode() {
-            Node::destructNode(m_condExpr);
-            Node::destructNode(m_thenStmt);
+            ASTNode::destructNode(m_condExpr);
+            ASTNode::destructNode(m_thenStmt);
             if(m_elseStmt != nullptr) {
-                Node::destructNode(m_elseStmt);
+                ASTNode::destructNode(m_elseStmt);
             }
         }
     
@@ -412,8 +412,8 @@ class WhileStatementNode: public StatementNode {
             m_condExpr(condExpr), m_bodyStmt(bodyStmt) {}
     protected:
         virtual ~WhileStatementNode() {
-            Node::destructNode(m_condExpr);
-            Node::destructNode(m_bodyStmt);
+            ASTNode::destructNode(m_condExpr);
+            ASTNode::destructNode(m_bodyStmt);
         }
     
     VISIT_THIS_NODE
@@ -434,8 +434,8 @@ class AssignmentNode: public StatementNode {
         ExpressionNode *getExpression() const { return m_newValExpr; }
     protected:
         virtual ~AssignmentNode() {
-            Node::destructNode(m_var);
-            Node::destructNode(m_newValExpr);
+            ASTNode::destructNode(m_var);
+            ASTNode::destructNode(m_newValExpr);
         }
     
     VISIT_THIS_NODE
@@ -464,15 +464,15 @@ class NestedScopeNode: public StatementNode {
         StatementsNode *getStatements() const { return m_stmts; }
     protected:
         virtual ~NestedScopeNode() {
-            Node::destructNode(m_decls);
-            Node::destructNode(m_stmts);
+            ASTNode::destructNode(m_decls);
+            ASTNode::destructNode(m_stmts);
         }
 
     VISIT_THIS_NODE
 };
 
 /* Global ScopeNode */
-class ScopeNode: public Node {
+class ScopeNode: public ASTNode {
     private:
         DeclarationsNode *m_decls;
         StatementsNode *m_stmts;
@@ -485,10 +485,10 @@ class ScopeNode: public Node {
     protected:
         virtual ~ScopeNode() {
             if(m_decls != nullptr) {
-                Node::destructNode(m_decls);
+                ASTNode::destructNode(m_decls);
             }
             if(m_stmts != nullptr) {
-                Node::destructNode(m_stmts);
+                ASTNode::destructNode(m_stmts);
             }
         }
     
@@ -721,7 +721,7 @@ class PrintVisitor: public Visitor {
             printf(")\n");
         }
 };
-}; /* END NAMESPACE */
+} /* END NAMESPACE */
 
 //////////////////////////////////////////////////////////////////
 //
@@ -734,25 +734,25 @@ node *ast_allocate(node_kind kind, ...) {
     va_start(args, kind);
 
     // make the node
-    AST::Node *astNode = nullptr;
+    AST::ASTNode *astNode = nullptr;
 
     switch(kind) {
         case SCOPE_NODE: {
-            AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::Node *));
-            AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::Node *));
+            AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::ASTNode *));
+            AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::ScopeNode(decls, stmts);
             break;
         }
 
         case EXPRESSION_NODE: {
-            /* Virtual Node, Does not Have Instance */
+            /* Virtual ASTNode, Does not Have Instance */
             astNode = nullptr;
             break;
         }
 
         case EXPRESSIONS_NODE: {
-            AST::ExpressionsNode *exprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::Node *));
-            AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionsNode *exprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
+            AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             if(exprs == nullptr) {
                 exprs = new AST::ExpressionsNode();
             }
@@ -765,15 +765,15 @@ node *ast_allocate(node_kind kind, ...) {
 
         case UNARY_EXPRESION_NODE: {
             int op = va_arg(args, int);
-            AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::UnaryExpressionNode(op, expr);
             break;
         }
 
         case BINARY_EXPRESSION_NODE: {
             int op = va_arg(args, int);
-            AST::ExpressionNode *leftExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
-            AST::ExpressionNode *rightExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *leftExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
+            AST::ExpressionNode *rightExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::BinaryExpressionNode(op, leftExpr, rightExpr);
             break;
         }
@@ -797,7 +797,7 @@ node *ast_allocate(node_kind kind, ...) {
         }
 
         case VAR_NODE: {
-            /* Virtual Node, Does not Have Instance */
+            /* Virtual ASTNode, Does not Have Instance */
             astNode = nullptr;
             break;
         }
@@ -815,56 +815,56 @@ node *ast_allocate(node_kind kind, ...) {
              * Need another layer to convert IntLiteralNode to ExpressionNode.
              */
             const char *id = va_arg(args, char *);
-            AST::ExpressionNode *indexExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *indexExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::IndexingNode(new AST::IdentifierNode(id), indexExpr);
             break;
         }
 
         case FUNCTION_NODE: {
             const char *functionName = va_arg(args, char *);
-            AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::FunctionNode(functionName, argExprs);
             break;
         }
 
         case CONSTRUCTOR_NODE: {
             int type = va_arg(args, int);
-            AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::ConstructorNode(type, argExprs);
             break;
         }
 
         case STATEMENT_NODE: {
-            /* Virtual Node, Does not Have Instance */
+            /* Virtual ASTNode, Does not Have Instance */
             astNode = nullptr;
             break;
         }
 
         case IF_STATEMENT_NODE: {
-            AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
-            AST::StatementNode *thenStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::Node *));
-            AST::StatementNode *elseStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
+            AST::StatementNode *thenStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
+            AST::StatementNode *elseStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::IfStatementNode(condExpr, thenStmt, elseStmt);
             break;
         }
 
         case WHILE_STATEMENT_NODE: {
-            AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
-            AST::StatementNode *bodyStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
+            AST::StatementNode *bodyStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::WhileStatementNode(condExpr, bodyStmt);
             break;
         }
 
         case ASSIGNMENT_NODE: {
-            AST::VariableNode *var = static_cast<AST::VariableNode *>(va_arg(args, AST::Node *));
-            AST::ExpressionNode *newValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::VariableNode *var = static_cast<AST::VariableNode *>(va_arg(args, AST::ASTNode *));
+            AST::ExpressionNode *newValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::AssignmentNode(var, newValExpr);
             break;
         }
 
         case NESTED_SCOPE_NODE: {
             /* Argument ScopeNode is destructed and converted to NestedScopeNode */
-            AST::ScopeNode *scopeNode = static_cast<AST::ScopeNode *>(va_arg(args, AST::Node *));
+            AST::ScopeNode *scopeNode = static_cast<AST::ScopeNode *>(va_arg(args, AST::ASTNode *));
             astNode = AST::ScopeNode::convertToNestedScopeNode(scopeNode);
             break;
         }
@@ -875,8 +875,8 @@ node *ast_allocate(node_kind kind, ...) {
         }
 
         case STATEMENTS_NODE: {
-            AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::Node *));
-            AST::StatementNode *stmt = static_cast<AST::StatementNode *>(va_arg(args, AST::Node *));
+            AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::ASTNode *));
+            AST::StatementNode *stmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             if(stmts == nullptr) {
                 stmts = new AST::StatementsNode();
             }
@@ -891,14 +891,14 @@ node *ast_allocate(node_kind kind, ...) {
             const char *varName = va_arg(args, char *);
             int isConst = va_arg(args, int);
             int type = va_arg(args, int);
-            AST::ExpressionNode *initValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::Node *));
+            AST::ExpressionNode *initValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::DeclarationNode(varName, static_cast<bool>(isConst), type, initValExpr);
             break;
         }
 
         case DECLARATIONS_NODE: {
-            AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::Node *));
-            AST::DeclarationNode *decl = static_cast<AST::DeclarationNode *>(va_arg(args, AST::Node *));
+            AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::ASTNode *));
+            AST::DeclarationNode *decl = static_cast<AST::DeclarationNode *>(va_arg(args, AST::ASTNode *));
             if(decls == nullptr) {
                 decls = new AST::DeclarationsNode();
             }
@@ -922,13 +922,13 @@ node *ast_allocate(node_kind kind, ...) {
 
 void ast_free(node *ast) {
     if(ast != nullptr) {
-        AST::Node::destructNode(static_cast<AST::Node *>(ast));
+        AST::ASTNode::destructNode(static_cast<AST::ASTNode *>(ast));
     }
 }
 
 void ast_print(node *ast) {
     if(ast != nullptr) {
         AST::PrintVisitor printer;
-        static_cast<AST::Node *>(ast)->visit(printer);
+        static_cast<AST::ASTNode *>(ast)->visit(printer);
     }
 }
