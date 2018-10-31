@@ -1,5 +1,6 @@
-#include "ast.h"
+#include "semantic.h"
 
+#include "ast.h"
 #include "symbol.h"
 
 namespace SA{ /* START NAMESPACE */
@@ -12,14 +13,28 @@ class SymbolDeclVisitor: public AST::Visitor {
             m_symbolTable(symbolTable) {}
 
     private:
-        // virtual void visit(AST::IdentifierNode *identifierNode) {}
-        // virtual void visit(AST::DeclarationNode *declarationNode) {}
-        // virtual void visit(AST::NestedScopeNode *nestedScopeNode) {}
-        // virtual void visit(AST::ScopeNode *scopeNode) {
-        //     // m_symbolTable.enterScope();
-        //     // scopeNode->getDeclarations()->
-        //     // m_symbolTable.exitScope();
-        // }
+        virtual void preNodeVisit(AST::IdentifierNode *identifierNode) {
+            m_symbolTable.markSymbolRefPos(identifierNode);
+        }
+
+        virtual void postNodeVisit(AST::DeclarationNode *declarationNode) {
+            // Traverse the possible evaluation on rhs before the declaration of symbol
+            m_symbolTable.declareSymbol(declarationNode);
+        }
+
+        virtual void preNodeVisit(AST::NestedScopeNode *nestedScopeNode) {
+            m_symbolTable.enterScope();
+        }
+        virtual void postNodeVisit(AST::NestedScopeNode *nestedScopeNode) {
+            m_symbolTable.exitScope();
+        }
+
+        virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
+            m_symbolTable.enterScope();
+        }
+        virtual void postNodeVisit(AST::ScopeNode *scopeNode) {
+            m_symbolTable.exitScope();
+        }
 };
 
 } /* END NAMESPACE */
@@ -30,6 +45,8 @@ int semantic_check(node * ast) {
     SA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
 
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
+
+    symbolTable.printFromLeaves();
 
     return 1;
 }

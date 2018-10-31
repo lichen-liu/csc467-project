@@ -26,6 +26,7 @@ SymbolTable::~SymbolTable() = default;
 void SymbolTable::clear() {
     m_symbolNodes.clear();
     m_scope.clear();
+    m_symbolTreeLeaves.clear();
     m_currentHead = nullptr;
     m_positionOfRef.clear();
 }
@@ -37,6 +38,7 @@ void SymbolTable::enterScope() {
 
 void SymbolTable::exitScope() {
     /* Pop the last symbol of a scope from the stack, and make it the currentHead */
+    m_symbolTreeLeaves.push_back(m_currentHead);
     m_currentHead = m_scope.front();
     m_scope.pop_front();
 }
@@ -82,6 +84,26 @@ AST::DeclarationNode *SymbolTable::getSymbolDecl(AST::IdentifierNode *ident) con
     }
 
     return resultDecl;
+}
+
+void printFromLeavesHelper(SymbolNode *node) {
+    if(node == nullptr) {
+        return;
+    }
+    printFromLeavesHelper(node->getPrevSymbolNode());
+    ast_print(node->getDecl());
+    printf("\n");
+}
+
+void SymbolTable::printFromLeaves() const {
+    printf("Symbol Table From Leaves\n");
+    int i = 0;
+    for(SymbolNode *node: m_symbolTreeLeaves) {
+        printf("==========\n");
+        printf("Leaf[%d]:\n", i);
+        printFromLeavesHelper(node);
+        i++;
+    }
 }
 
 AST::DeclarationNode *SymbolTable::findRedeclaration(AST::DeclarationNode *decl) const {

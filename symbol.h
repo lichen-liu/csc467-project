@@ -17,6 +17,7 @@ class SymbolTable {
         std::vector<std::unique_ptr<SymbolNode>> m_symbolNodes;     // Ownership of all SymbolNodes
     private:
         std::forward_list<SymbolNode *> m_scope;                    // Scopes
+        std::vector<SymbolNode *> m_symbolTreeLeaves;               // Symbol Tree Leaves
         SymbolNode *m_currentHead = nullptr;                        // Current SymbolNode
     private:
         std::unordered_map<AST::IdentifierNode *, SymbolNode *> m_positionOfRef;
@@ -38,6 +39,9 @@ class SymbolTable {
         /* Identifier Related */
         void markSymbolRefPos(AST::IdentifierNode *ident);
         AST::DeclarationNode *getSymbolDecl(AST::IdentifierNode *ident) const;
+    
+    public:
+        void printFromLeaves() const;
 
     private:
         /* Helper Functions */
