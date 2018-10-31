@@ -80,6 +80,14 @@ class SymbolLUVisitor: public AST::Visitor {
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
+    /*
+     * TODO
+     * 
+     * Better structure to wrap around errors with context info.
+     * E.g. Line, Col, Meaningful Error Messages.
+     * 
+     */
+
     ST::SymbolTable symbolTable;
 
     /* Construct Symbol Tree */
@@ -87,10 +95,13 @@ int semantic_check(node * ast) {
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
     symbolTable.printScopeLeaves();
 
-    /* Symbol Type Look Up */
+    /* Symbol Look Up */
     SA::SymbolLUVisitor symbolLUVisitor(symbolTable);
     static_cast<AST::ASTNode *>(ast)->visit(symbolLUVisitor);
     symbolTable.printSymbolReference();
+
+    /* Type Inference */
+    // should combine with symbol look-up?
 
     return 1;
 }
