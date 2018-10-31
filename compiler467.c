@@ -39,7 +39,7 @@
 #define DEFAULT_RUN_INPUT_FILE stdin
 
 void  getOpts   (int numargs, char **argstr);
-FILE *fileOpen  (char *fileName, char *fileMode, FILE *defaultFile);
+FILE *fileOpen  (const char *fileName, const char *fileMode, FILE *defaultFile);
 void  sourceDump(void);
 
 /* Phase 1: Scanner Interface. For phase 2 and after these declarations
@@ -244,7 +244,7 @@ void getOpts (int numargs, char **argstr) {
 /***********************************************************************
  * Utility for opening files 
  **********************************************************************/
-FILE *fileOpen (char *fileName, char *fileMode, FILE *defaultFile) {
+FILE *fileOpen (const char *fileName, const char *fileMode, FILE *defaultFile) {
   FILE * fTemp;
 
   if ((fTemp = fopen (fileName, fileMode)) != NULL)
