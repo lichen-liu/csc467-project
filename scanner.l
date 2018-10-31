@@ -5,6 +5,7 @@
 
 
 #include "common.h"
+#include "ast.h"
 #include "parser.tab.h"
 #include "string.h"
 

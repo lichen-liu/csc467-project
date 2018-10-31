@@ -23,7 +23,8 @@
 #include "common.h"
 
 /* Phases 3,4: Uncomment following includes as needed */
-//#include "ast.h"
+#include "ast.h"
+#include "semantic.h"
 //#include "codegen.h"
 
 /***********************************************************************
@@ -38,16 +39,16 @@
 #define DEFAULT_RUN_INPUT_FILE stdin
 
 void  getOpts   (int numargs, char **argstr);
-FILE *fileOpen  (char *fileName, const char *fileMode, FILE *defaultFile);
+FILE *fileOpen  (const char *fileName, const char *fileMode, FILE *defaultFile);
 void  sourceDump(void);
 
 /* Phase 1: Scanner Interface. For phase 2 and after these declarations
  * are removed */
-
+/*
 extern int   yylex(void);
 extern char *yytext;
 extern int   yyline;
-
+ */
 
 /* Phase 2: Parser Interface. Merely uncomment the following line */
 extern int yyparse(void);
@@ -75,32 +76,40 @@ int main (int argc, char *argv[]) {
 
 /* Phase 1: Scanner. In phase 2 and after the following code should be
  * removed */
-
-  // while (yylex())
-  //   if (errorOccurred)
-  //     break;
- 
+/*
+  while (yylex())
+    if (errorOccurred)
+      break;
+ */
 
 /* Phase 2: Parser -- should allocate an AST, storing the reference in the
  * global variable "ast", and build the AST there. */
-  yyparse();
+  if(1 == yyparse()) {
+    return 0; // parse failed
+  }
 
 /* Phase 3: Call the AST dumping routine if requested */
- // if (dumpAST)
- //   printAST(ast);
+  if (dumpAST)
+    ast_print(ast);
+
+/* Phase 3: Semantic Analysis */
+if(0 == semantic_check(ast)) {
+  return 0; // semantic analysis failed
+}
+
 /* Phase 4: Add code to call the code generation routine */
 /* TODO: call your code generation routine here */
-//  if (errorOccurred)
-//    fprintf(outputFile,"Failed to compile\n");
-//  else 
-//    genCode(ast);
-
+  if (errorOccurred)
+    fprintf(outputFile,"Failed to compile\n");
+  else 
+   // genCode(ast);
+    ;
 /***********************************************************************
  * Post Compilation Cleanup
  **********************************************************************/
 
 /* Make calls to any cleanup or finalization routines here. */
-//	freeAST(ast);
+  ast_free(ast);
 
   /* Clean up files if necessary */
   if (inputFile != DEFAULT_INPUT_FILE)
@@ -187,8 +196,10 @@ void getOpts (int numargs, char **argstr) {
           if (optarg[2] == 0) {
             i += 1;
             outputFile = fileOpen (argstr[i], "w", DEFAULT_OUTPUT_FILE);
+          printf("%s\n",argstr[i]);
           } else
             outputFile = fileOpen (&optarg[2], "w", DEFAULT_OUTPUT_FILE);
+          printf("%s\n",&optarg[2]);
           break;
         case 'E': /* Alternative error message file */
           if (optarg[2] == 0) {
@@ -233,7 +244,7 @@ void getOpts (int numargs, char **argstr) {
 /***********************************************************************
  * Utility for opening files 
  **********************************************************************/
-FILE *fileOpen (char *fileName, const char *fileMode, FILE *defaultFile) {
+FILE *fileOpen (const char *fileName, const char *fileMode, FILE *defaultFile) {
   FILE * fTemp;
 
   if ((fTemp = fopen (fileName, fileMode)) != NULL)
