@@ -18,6 +18,141 @@ node *ast = NULL;
 
 namespace AST{ /* START NAMESPACE */
 
+void Visitor::nodeVisit(ExpressionNode *expressionNode) {
+
+}
+
+void Visitor::nodeVisit(ExpressionsNode *expressionsNode) {
+    for(ExpressionNode *expr: expressionsNode->getExpressionList()) {
+        expr->visit(*this);
+    }
+}
+
+void Visitor::nodeVisit(UnaryExpressionNode *unaryExpressionNode) {
+    unaryExpressionNode->getExpression()->visit(*this);
+}
+
+void Visitor::nodeVisit(BinaryExpressionNode *binaryExpressionNode) {
+    binaryExpressionNode->getLeftExpression()->visit(*this);
+    binaryExpressionNode->getRightExpression()->visit(*this);
+}
+
+void Visitor::nodeVisit(IntLiteralNode *intLiteralNode) {
+
+}
+
+void Visitor::nodeVisit(FloatLiteralNode *floatLiteralNode) {
+
+}
+
+void Visitor::nodeVisit(BooleanLiteralNode *booleanLiteralNode) {
+
+}
+
+void Visitor::nodeVisit(VariableNode *variableNode) {
+
+}
+
+void Visitor::nodeVisit(IdentifierNode *identifierNode) {
+
+}
+
+void Visitor::nodeVisit(IndexingNode *indexingNode) {
+    indexingNode->getIdentifier()->visit(*this);
+    indexingNode->getIndexExpression()->visit(*this);
+}
+
+void Visitor::nodeVisit(FunctionNode *functionNode) {
+    functionNode->getArgumentExpressions()->visit(*this);
+}
+
+void Visitor::nodeVisit(ConstructorNode *constructorNode) {
+    constructorNode->getArgumentExpressions()->visit(*this);
+}
+
+void Visitor::nodeVisit(StatementNode *statementNode) {
+
+}
+
+void Visitor::nodeVisit(StatementsNode *statementsNode) {
+    for(StatementNode *stmt: statementsNode->getStatementList()) {
+        stmt->visit(*this);
+    }
+}
+
+void Visitor::nodeVisit(DeclarationNode *declarationNode) {
+    if(declarationNode->getExpression() != nullptr) {
+        declarationNode->getExpression()->visit(*this);
+    }
+}
+
+void Visitor::nodeVisit(DeclarationsNode *declarationsNode) {
+    for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
+        decl->visit(*this);
+    }
+}
+
+void Visitor::nodeVisit(IfStatementNode *ifStatementNode) {
+    ifStatementNode->getConditionExpression()->visit(*this);
+    ifStatementNode->getThenStatement()->visit(*this);
+    if(ifStatementNode->getElseStatement() != nullptr) {
+        ifStatementNode->getElseStatement()->visit(*this);
+    }
+}
+
+void Visitor::nodeVisit(WhileStatementNode *whileStatementNode) {
+
+}
+
+void Visitor::nodeVisit(AssignmentNode *assignmentNode) {
+    assignmentNode->getVariable()->visit(*this);
+    assignmentNode->getExpression()->visit(*this);
+}
+
+void Visitor::nodeVisit(StallStatementNode *stallStatementNode) {
+
+}
+
+void Visitor::nodeVisit(NestedScopeNode *nestedScopeNode) {
+    nestedScopeNode->getDeclarations()->visit(*this);
+    nestedScopeNode->getStatements()->visit(*this);
+}
+
+void Visitor::nodeVisit(ScopeNode *scopeNode) {
+    scopeNode->getDeclarations()->visit(*this);
+    scopeNode->getStatements()->visit(*this);
+}
+
+#define AST_VISITOR_VISIT                           {                       \
+                                                    preNodeVisit(node);     \
+                                                    nodeVisit(node);        \
+                                                    postNodeVisit(node);    \
+                                                    }
+
+void Visitor::visit(ExpressionNode *node)           AST_VISITOR_VISIT
+void Visitor::visit(ExpressionsNode *node)          AST_VISITOR_VISIT
+void Visitor::visit(UnaryExpressionNode *node)      AST_VISITOR_VISIT
+void Visitor::visit(BinaryExpressionNode *node)     AST_VISITOR_VISIT
+void Visitor::visit(IntLiteralNode *node)           AST_VISITOR_VISIT
+void Visitor::visit(FloatLiteralNode *node)         AST_VISITOR_VISIT
+void Visitor::visit(BooleanLiteralNode *node)       AST_VISITOR_VISIT
+void Visitor::visit(VariableNode *node)             AST_VISITOR_VISIT
+void Visitor::visit(IdentifierNode *node)           AST_VISITOR_VISIT
+void Visitor::visit(IndexingNode *node)             AST_VISITOR_VISIT
+void Visitor::visit(FunctionNode *node)             AST_VISITOR_VISIT
+void Visitor::visit(ConstructorNode *node)          AST_VISITOR_VISIT
+void Visitor::visit(StatementNode *node)            AST_VISITOR_VISIT
+void Visitor::visit(StatementsNode *node)           AST_VISITOR_VISIT
+void Visitor::visit(DeclarationNode *node)          AST_VISITOR_VISIT
+void Visitor::visit(DeclarationsNode *node)         AST_VISITOR_VISIT
+void Visitor::visit(IfStatementNode *node)          AST_VISITOR_VISIT
+void Visitor::visit(WhileStatementNode *node)       AST_VISITOR_VISIT
+void Visitor::visit(AssignmentNode *node)           AST_VISITOR_VISIT
+void Visitor::visit(StallStatementNode *node)       AST_VISITOR_VISIT
+void Visitor::visit(NestedScopeNode *node)          AST_VISITOR_VISIT
+void Visitor::visit(ScopeNode *node)                AST_VISITOR_VISIT
+
+
 int IntLiteralNode::getExpressionType() const {
     return INT_T;
 }
@@ -29,6 +164,7 @@ int FloatLiteralNode::getExpressionType() const {
 int BooleanLiteralNode::getExpressionType() const {
     return BOOL_T;
 }
+
 
 class PrintVisitor: public Visitor {
     public:
@@ -83,15 +219,15 @@ class PrintVisitor: public Visitor {
         void enterScope() { indentSize += indentIncr; }
         void exitScope() { indentSize -= indentIncr; }
 
-    public:
-        virtual void visit(ExpressionsNode *expressionsNode) {
+    private:
+        virtual void nodeVisit(ExpressionsNode *expressionsNode) {
             for(ExpressionNode *expr: expressionsNode->getExpressionList()) {
                 printf(" ");
                 expr->visit(*this);
             }
         }
 
-        virtual void visit(UnaryExpressionNode *unaryExpressionNode) {
+        virtual void nodeVisit(UnaryExpressionNode *unaryExpressionNode) {
             // (UNARY type op expr)
             printf("(UNARY ");
             printf("%s ", getTypeString(unaryExpressionNode->getExpressionType()).c_str());
@@ -100,7 +236,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(BinaryExpressionNode *binaryExpressionNode) {
+        virtual void nodeVisit(BinaryExpressionNode *binaryExpressionNode) {
             // (BINARY type op left right)
             printf("(BINARY ");
             printf("%s ", getTypeString(binaryExpressionNode->getExpressionType()).c_str());
@@ -111,27 +247,27 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(IntLiteralNode *intLiteralNode) {
+        virtual void nodeVisit(IntLiteralNode *intLiteralNode) {
             // <literal>
             printf("%d", intLiteralNode->getVal());
         }
 
-        virtual void visit(FloatLiteralNode *floatLiteralNode) {
+        virtual void nodeVisit(FloatLiteralNode *floatLiteralNode) {
             // <literal>
             printf("%f", floatLiteralNode->getVal());
         }
 
-        virtual void visit(BooleanLiteralNode *booleanLiteralNode) {
+        virtual void nodeVisit(BooleanLiteralNode *booleanLiteralNode) {
             // <literal>
             printf("%s", (booleanLiteralNode->getVal() ? "true":"false"));
         }
 
-        virtual void visit(IdentifierNode *identifierNode) {
+        virtual void nodeVisit(IdentifierNode *identifierNode) {
             // <identifier>
             printf("%s", identifierNode->getName().c_str());
         }
 
-        virtual void visit(IndexingNode *indexingNode) {
+        virtual void nodeVisit(IndexingNode *indexingNode) {
             // (INDEX type id index)
             printf("(INDEX ");
             printf("%s ", getTypeString(indexingNode->getExpressionType()).c_str());
@@ -141,7 +277,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(FunctionNode *functionNode) {
+        virtual void nodeVisit(FunctionNode *functionNode) {
             // (CALL name ...)
             printf("(CALL ");
             printf("%s", functionNode->getName().c_str());
@@ -149,7 +285,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(ConstructorNode *constructorNode) {
+        virtual void nodeVisit(ConstructorNode *constructorNode) {
             // (CALL name ...)
             printf("(CALL ");
             printf("%s", getTypeString(constructorNode->getExpressionType()).c_str());
@@ -157,7 +293,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(StatementsNode *statementsNode) {
+        virtual void nodeVisit(StatementsNode *statementsNode) {
             // (STATEMENTS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
             printf("(STATEMENTS\n");
@@ -172,7 +308,7 @@ class PrintVisitor: public Visitor {
             printf(")\n");
         }
 
-        virtual void visit(DeclarationNode *declarationNode) {
+        virtual void nodeVisit(DeclarationNode *declarationNode) {
             // (DECLARATION variable-name type-name initial-value?)
             printf("(DECLARATION ");
             printf("%s ", declarationNode->getName().c_str());
@@ -185,7 +321,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(DeclarationsNode *declarationsNode) {
+        virtual void nodeVisit(DeclarationsNode *declarationsNode) {
             // (DECLARATIONS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
             printf("(DECLARATIONS\n");
@@ -200,7 +336,7 @@ class PrintVisitor: public Visitor {
             printf(")\n");
         }
 
-        virtual void visit(IfStatementNode *ifStatementNode) {
+        virtual void nodeVisit(IfStatementNode *ifStatementNode) {
             // (IF cond then-stmt else-stmt?)
             printf("(IF ");
             ifStatementNode->getConditionExpression()->visit(*this);
@@ -213,7 +349,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(AssignmentNode *assignmentNode) {
+        virtual void nodeVisit(AssignmentNode *assignmentNode) {
             // (ASSIGN type variable-name new-value)
             printf("(ASSIGN ");
             printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
@@ -223,7 +359,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(NestedScopeNode *nestedScopeNode) {
+        virtual void nodeVisit(NestedScopeNode *nestedScopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
             printf("(SCOPE\n");
             enterScope();
@@ -234,7 +370,7 @@ class PrintVisitor: public Visitor {
             printf(")");
         }
 
-        virtual void visit(ScopeNode *scopeNode) {
+        virtual void nodeVisit(ScopeNode *scopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
             printf("(SCOPE\n");
             enterScope();

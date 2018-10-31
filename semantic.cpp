@@ -11,11 +11,15 @@ class SymbolDeclVisitor: public AST::Visitor {
         SymbolDeclVisitor(ST::SymbolTable &symbolTable):
             m_symbolTable(symbolTable) {}
 
-    public:
-        virtual void visit(AST::IdentifierNode *identifierNode) {}
-        virtual void visit(AST::DeclarationNode *declarationNode) {}
-        virtual void visit(AST::NestedScopeNode *nestedScopeNode) {}
-        virtual void visit(AST::ScopeNode *scopeNode) {}
+    private:
+        // virtual void visit(AST::IdentifierNode *identifierNode) {}
+        // virtual void visit(AST::DeclarationNode *declarationNode) {}
+        // virtual void visit(AST::NestedScopeNode *nestedScopeNode) {}
+        // virtual void visit(AST::ScopeNode *scopeNode) {
+        //     // m_symbolTable.enterScope();
+        //     // scopeNode->getDeclarations()->
+        //     // m_symbolTable.exitScope();
+        // }
 };
 
 } /* END NAMESPACE */
