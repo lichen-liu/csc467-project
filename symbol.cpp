@@ -20,6 +20,9 @@ class SymbolNode {
 
 };
 
+SymbolTable::SymbolTable() = default;
+SymbolTable::~SymbolTable() = default;
+
 void SymbolTable::clear() {
     m_symbolNodes.clear();
     m_scope.clear();

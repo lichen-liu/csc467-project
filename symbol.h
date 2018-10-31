@@ -21,7 +21,10 @@ class SymbolTable {
     private:
         std::unordered_map<AST::IdentifierNode *, SymbolNode *> m_positionOfRef;
                                                                     // Position of reference of Identifier
-    
+    public:
+        SymbolTable();
+        ~SymbolTable();
+
     public:
         void clear();
 
