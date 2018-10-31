@@ -244,6 +244,7 @@ class PrintVisitor: public Visitor {
             printf(")\n");
         }
 };
+
 } /* END NAMESPACE */
 
 //////////////////////////////////////////////////////////////////

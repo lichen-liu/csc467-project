@@ -497,6 +497,7 @@ class ScopeNode: public ASTNode {
 
     VISIT_THIS_NODE
 };
+
 }
 
 
