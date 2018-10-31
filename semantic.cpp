@@ -46,7 +46,7 @@ int semantic_check(node * ast) {
 
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
 
-    symbolTable.printFromLeaves();
+    symbolTable.printScopeLeaves();
 
     return 1;
 }

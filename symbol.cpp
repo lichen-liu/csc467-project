@@ -8,16 +8,17 @@ class SymbolNode {
     private:
         SymbolNode *m_prevSymbolNode = nullptr;                     // Link to the previous SymbolNode in SymbolTable
         AST::DeclarationNode *m_decl = nullptr;                     // Reference to the DeclarationNode in AST
+        bool m_isFirstInScope        = false;                       // Whether this node is the first symbol of a new scope
 
     public:
         SymbolNode() = default;
-        SymbolNode(SymbolNode *prevSymbolNode, AST::DeclarationNode *decl):
-            m_prevSymbolNode(prevSymbolNode), m_decl(decl) {}
+        SymbolNode(SymbolNode *prevSymbolNode, AST::DeclarationNode *decl, bool isFirstInScope):
+            m_prevSymbolNode(prevSymbolNode), m_decl(decl), m_isFirstInScope(isFirstInScope) {}
     
     public:
         SymbolNode *getPrevSymbolNode() const { return m_prevSymbolNode; }
         AST::DeclarationNode *getDecl() const { return m_decl; }
-
+        bool isFirstInScope() const { return m_isFirstInScope; }
 };
 
 SymbolTable::SymbolTable() = default;
@@ -26,7 +27,8 @@ SymbolTable::~SymbolTable() = default;
 void SymbolTable::clear() {
     m_symbolNodes.clear();
     m_scope.clear();
-    m_symbolTreeLeaves.clear();
+    m_symbolTreeScopeLeaves.clear();
+    m_encounterNewScope = false;
     m_currentHead = nullptr;
     m_positionOfRef.clear();
 }
@@ -34,13 +36,15 @@ void SymbolTable::clear() {
 void SymbolTable::enterScope() {
     /* Push the last symbol (currentHead) of a scope onto the stack */
     m_scope.push_front(m_currentHead);
+    m_encounterNewScope = true;
 }
 
 void SymbolTable::exitScope() {
     /* Pop the last symbol of a scope from the stack, and make it the currentHead */
-    m_symbolTreeLeaves.push_back(m_currentHead);
+    m_symbolTreeScopeLeaves.push_back(m_currentHead);
     m_currentHead = m_scope.front();
     m_scope.pop_front();
+    m_encounterNewScope = false;
 }
 
 bool SymbolTable::declareSymbol(AST::DeclarationNode *decl) {
@@ -51,7 +55,8 @@ bool SymbolTable::declareSymbol(AST::DeclarationNode *decl) {
         return false;
     }
 
-    std::unique_ptr<SymbolNode> uptr(new SymbolNode(m_currentHead, decl));
+    std::unique_ptr<SymbolNode> uptr(new SymbolNode(m_currentHead, decl, m_encounterNewScope));
+    m_encounterNewScope = false;
     m_currentHead = uptr.get();
     m_symbolNodes.push_back(std::move(uptr));
 
@@ -86,22 +91,37 @@ AST::DeclarationNode *SymbolTable::getSymbolDecl(AST::IdentifierNode *ident) con
     return resultDecl;
 }
 
-void printFromLeavesHelper(SymbolNode *node) {
+int printScopeLeavesHelper(SymbolNode *node) {
     if(node == nullptr) {
-        return;
+        return 0;
     }
-    printFromLeavesHelper(node->getPrevSymbolNode());
+    int scopeCount = printScopeLeavesHelper(node->getPrevSymbolNode());
+    if(node->isFirstInScope()) {
+        scopeCount++;
+        printf("%s", std::string(scopeCount * 3 - 2, ' ').c_str());
+        printf("`--<%d>------------------------------------\n", scopeCount - 1);
+        printf("%s", std::string(scopeCount * 3 - 1, ' ').c_str());
+        printf("`--");
+    } else {
+        printf("%s", std::string(scopeCount * 3, ' ').c_str());
+        printf("|-");
+    }
+
     ast_print(node->getDecl());
     printf("\n");
+    return scopeCount;
 }
 
-void SymbolTable::printFromLeaves() const {
-    printf("Symbol Table From Leaves\n");
+void SymbolTable::printScopeLeaves() const {
+    printf("### Symbol Table Scope Leaves: %d Leaves ###\n", m_symbolTreeScopeLeaves.size());
     int i = 0;
-    for(SymbolNode *node: m_symbolTreeLeaves) {
-        printf("==========\n");
-        printf("Leaf[%d]:\n", i);
-        printFromLeavesHelper(node);
+    for(SymbolNode *node: m_symbolTreeScopeLeaves) {
+        printf("========================================\n");
+        printf("Root\n");
+        int scopeCount = printScopeLeavesHelper(node);
+        printf("%s", std::string(scopeCount * 3, ' ').c_str());
+        printf("   `==>");
+        printf("Leaf[%d]\n", i);
         i++;
     }
 }

@@ -9,7 +9,21 @@
     v3[1] = 5.5;
 
     if(a == 2) {
+        int c;
         b = 2;
     } else
         b = 3;
+
+    {
+        int l1;
+        {
+            int l2;
+            {
+                int l3;
+                {
+                    int l4;
+                }
+            }
+        }
+    }
 }
