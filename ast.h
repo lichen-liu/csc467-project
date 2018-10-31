@@ -166,6 +166,8 @@ class ExpressionNode: public ASTNode {
     public:
         virtual int getExpressionType() const = 0;      // pure virtual
         virtual void setExpressionType(int type) {}     // provide default definition
+        virtual bool isConst() const = 0;               // pure virtual
+        virtual void setConst(bool isConst) {}          // provide default definition
     protected:
         virtual ~ExpressionNode() {}
 };
@@ -195,6 +197,7 @@ class ExpressionsNode: public ASTNode {
 class UnaryExpressionNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        bool m_isConst = false;                         // whether expression is const
         int m_op;                                       // unary operators defined in parser.tab.h
         ExpressionNode *m_expr;                         // sub-expression
     public:
@@ -203,6 +206,8 @@ class UnaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+        virtual bool isConst() const { return m_isConst; }
+        virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
         int getOperator() const { return m_op; }
         ExpressionNode *getExpression() const { return m_expr; }
@@ -217,6 +222,7 @@ class UnaryExpressionNode: public ExpressionNode {
 class BinaryExpressionNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        bool m_isConst = false;                         // whether expression is const
         int m_op;                                       // binary operators defined in parser.tab.h
         ExpressionNode *m_leftExpr;                     // left sub-expression
         ExpressionNode *m_rightExpr;                    // right sub-expression
@@ -226,6 +232,8 @@ class BinaryExpressionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+        virtual bool isConst() const { return m_isConst; }
+        virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
         int getOperator() const { return m_op; }
         ExpressionNode *getLeftExpression() const { return m_leftExpr; }
@@ -247,6 +255,7 @@ class IntLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const;
+        virtual bool isConst() const { return true; }
     public:
         int getVal() const { return m_val; }
     protected:
@@ -263,6 +272,7 @@ class FloatLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const;
+        virtual bool isConst() const { return true; }
     public:
         float getVal() const { return m_val; }
     protected:
@@ -279,6 +289,7 @@ class BooleanLiteralNode: public ExpressionNode {
             m_val(val) {}
     public:
         virtual int getExpressionType() const;
+        virtual bool isConst() const { return true; }
     public:
         bool getVal() const { return m_val; }
     protected:
@@ -294,15 +305,22 @@ class VariableNode: public ExpressionNode {
 class IdentifierNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        bool m_isConst = false;                         // whether expression is const
         std::string m_id;                               // name of this identifier
+
+        const DeclarationNode *m_decl = nullptr;        // declaration of this IdentifierNode
     public:
         IdentifierNode(const std::string &id):
             m_id(id) {}
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+        virtual bool isConst() const { return m_isConst; }
+        virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
         const std::string &getName() const { return m_id; }
+        const DeclarationNode *getDeclaration() const { return m_decl; }
+        void setDeclaration(const DeclarationNode *decl) { m_decl = decl; }
     protected:
         virtual ~IdentifierNode() {}
 
@@ -312,6 +330,7 @@ class IdentifierNode: public VariableNode {
 class IndexingNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        bool m_isConst = false;                         // whether expression is const
         IdentifierNode *m_identifier;                   // identifier node of the vector variable
         ExpressionNode *m_indexExpr;                    // index expression node
     public:
@@ -320,6 +339,8 @@ class IndexingNode: public VariableNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+        virtual bool isConst() const { return m_isConst; }
+        virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
         IdentifierNode *getIdentifier() const { return m_identifier; }
         ExpressionNode *getIndexExpression() const { return m_indexExpr; }
@@ -343,6 +364,7 @@ class FunctionNode: public ExpressionNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
+        virtual bool isConst() const { return false; }
     public:
         const std::string &getName() const { return m_functionName; }
         ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
@@ -357,12 +379,15 @@ class FunctionNode: public ExpressionNode {
 class ConstructorNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        bool m_isConst = false;                         // whether expression is const
         ExpressionsNode *m_argExprs;                    // argument expressions of this constructor
     public:
         ConstructorNode(int type, ExpressionsNode *argExprs):
             m_type(type), m_argExprs(argExprs) {}
     public:
         virtual int getExpressionType() const { return m_type; }
+        virtual bool isConst() const { return m_isConst; }
+        virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
         ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:

@@ -91,11 +91,11 @@ AST::DeclarationNode *SymbolTable::getSymbolDecl(AST::IdentifierNode *ident) con
     return resultDecl;
 }
 
-int SymbolTable::printSymbolTreeTo(SymbolNode *node) {
+int SymbolTable::printSymbolTreeTo(SymbolNode *node, const AST::DeclarationNode *markDecl) {
     if(node == nullptr) {
         return 0;
     }
-    int scopeCount = printSymbolTreeTo(node->getPrevSymbolNode());
+    int scopeCount = printSymbolTreeTo(node->getPrevSymbolNode(), markDecl);
     if(node->isFirstInScope()) {
         scopeCount++;
         printf("%s", std::string(scopeCount * 3 - 2, ' ').c_str());
@@ -108,6 +108,9 @@ int SymbolTable::printSymbolTreeTo(SymbolNode *node) {
     }
 
     ast_print(node->getDecl());
+    if(node->getDecl() == markDecl) {
+        printf("        <-");
+    }
     printf("\n");
     return scopeCount;
 }
@@ -133,12 +136,13 @@ void SymbolTable::printSymbolReference() const {
     for(const auto &idSymPair: m_positionOfRef) {
         printf("========================================\n");
         printf("Root\n");
-        int scopeCount = printSymbolTreeTo(idSymPair.second);
+        AST::IdentifierNode *identNode = idSymPair.first;
+        int scopeCount = printSymbolTreeTo(idSymPair.second, identNode->getDeclaration());
         printf("%s", std::string(scopeCount * 3, ' ').c_str());
         printf("   `==>");
-        printf("Ref[%d]:", i);
-        AST::IdentifierNode *identNode = idSymPair.first;
-        printf("<%s>", AST::getTypeString(identNode->getExpressionType()).c_str());
+        printf("Ref[%d]: ", i);
+        printf("<%s", identNode->isConst() ? "const " : "");
+        printf("%s> ", AST::getTypeString(identNode->getExpressionType()).c_str());
         printf("%s\n", identNode->getName().c_str());
 
         i++;

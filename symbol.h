@@ -50,7 +50,7 @@ class SymbolTable {
         /* Return redecl if redeclaration under current scope; otherwise nullptr */
         AST::DeclarationNode *findRedeclaration(AST::DeclarationNode *decl) const;
         static bool checkSymbolMatch(AST::DeclarationNode *decl, AST::IdentifierNode *ident);
-        static int printSymbolTreeTo(SymbolNode *node);
+        static int printSymbolTreeTo(SymbolNode *node, const AST::DeclarationNode *markDecl = nullptr);
 };
 
 }

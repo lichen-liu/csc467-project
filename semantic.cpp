@@ -3,6 +3,8 @@
 #include "ast.h"
 #include "symbol.h"
 
+#include <cassert>
+
 namespace SA{ /* START NAMESPACE */
 
 class SymbolDeclVisitor: public AST::Visitor {
@@ -19,7 +21,16 @@ class SymbolDeclVisitor: public AST::Visitor {
 
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode) {
             // Traverse the possible evaluation on rhs before the declaration of symbol
-            m_symbolTable.declareSymbol(declarationNode);
+            bool successful = m_symbolTable.declareSymbol(declarationNode);
+
+            /// TODO: print error
+            if(!successful) {
+                printf("Error: Redeclaration for DeclarationNode(%p):\n");
+                ast_print(declarationNode);
+                printf("\n");
+
+                return;
+            }
         }
 
         virtual void preNodeVisit(AST::NestedScopeNode *nestedScopeNode) {
@@ -46,7 +57,23 @@ class SymbolLUVisitor: public AST::Visitor {
     
     private:
         virtual void preNodeVisit(AST::IdentifierNode *identifierNode) {
-            m_symbolTable.getSymbolDecl(identifierNode);
+            AST::DeclarationNode *decl = m_symbolTable.getSymbolDecl(identifierNode);
+
+            /// TODO: print error
+            if(decl == nullptr) {
+                printf("Error: Missing Declaration for IdentifierNode(%p)\n", identifierNode);
+                ast_print(identifierNode);
+                printf("\n");
+
+                return;
+            }
+
+            assert(decl->getName() == identifierNode->getName());
+
+            // Update info in identifierNode
+            identifierNode->setExpressionType(decl->getType());
+            identifierNode->setConst(decl->isConst());
+            identifierNode->setDeclaration(decl);
         }
 };
 
@@ -58,7 +85,7 @@ int semantic_check(node * ast) {
     /* Construct Symbol Tree */
     SA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
-    // symbolTable.printScopeLeaves();
+    symbolTable.printScopeLeaves();
 
     /* Symbol Type Look Up */
     SA::SymbolLUVisitor symbolLUVisitor(symbolTable);

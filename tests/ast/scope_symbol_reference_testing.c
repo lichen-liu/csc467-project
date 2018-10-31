@@ -1,7 +1,7 @@
 {
     int a;
     int b = a;
-    int c = a;
+    const int c = 5;
     {
         a = 5;
         {
@@ -9,7 +9,7 @@
             {
                 int e = d;
 
-                a = b;
+                a = c;
             }
         }
     }
