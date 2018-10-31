@@ -168,45 +168,6 @@ int BooleanLiteralNode::getExpressionType() const {
 
 class PrintVisitor: public Visitor {
     public:
-        static std::string getTypeString(int type) {
-            switch(type) {
-                case ANY_TYPE:      return "ANY_TYPE";
-                case BOOL_T:        return "bool";
-                case BVEC2_T:       return "bvec2";
-                case BVEC3_T:       return "bvec3";
-                case BVEC4_T:       return "bvec4";
-                case INT_T:         return "int";
-                case IVEC2_T:       return "ivec2";
-                case IVEC3_T:       return "ivec3";
-                case IVEC4_T:       return "ivec4";
-                case FLOAT_T:       return "float";
-                case VEC2_T:        return "vec2";
-                case VEC3_T:        return "vec3";
-                case VEC4_T:        return "vec4";
-                default:            return "ERROR";
-            }
-        }
-
-        static std::string getOperatorString(int op) {
-            switch(op) {
-                case NOT:           return "!";
-                case AND:           return "&&";
-                case OR:            return "||";
-                case PLUS:          return "+";
-                case MINUS:         return "-";
-                case TIMES:         return "*";
-                case SLASH:         return "/";
-                case EXP:           return "^";
-                case EQL:           return "==";
-                case NEQ:           return "!=";
-                case LSS:           return "<";
-                case LEQ:           return "<=";
-                case GTR:           return ">";
-                case GEQ:           return ">=";
-                default:            return "Error";
-            }
-        }
-
         static std::string getIndentSpaceString(int indentSize) {
             return std::string(indentSize, ' ');
         }
@@ -380,6 +341,45 @@ class PrintVisitor: public Visitor {
             printf(")\n");
         }
 };
+
+std::string getTypeString(int type) {
+    switch(type) {
+        case ANY_TYPE:      return "ANY_TYPE";
+        case BOOL_T:        return "bool";
+        case BVEC2_T:       return "bvec2";
+        case BVEC3_T:       return "bvec3";
+        case BVEC4_T:       return "bvec4";
+        case INT_T:         return "int";
+        case IVEC2_T:       return "ivec2";
+        case IVEC3_T:       return "ivec3";
+        case IVEC4_T:       return "ivec4";
+        case FLOAT_T:       return "float";
+        case VEC2_T:        return "vec2";
+        case VEC3_T:        return "vec3";
+        case VEC4_T:        return "vec4";
+        default:            return "ERROR";
+    }
+}
+
+std::string getOperatorString(int op) {
+    switch(op) {
+        case NOT:           return "!";
+        case AND:           return "&&";
+        case OR:            return "||";
+        case PLUS:          return "+";
+        case MINUS:         return "-";
+        case TIMES:         return "*";
+        case SLASH:         return "/";
+        case EXP:           return "^";
+        case EQL:           return "==";
+        case NEQ:           return "!=";
+        case LSS:           return "<";
+        case LEQ:           return "<=";
+        case GTR:           return ">";
+        case GEQ:           return ">=";
+        default:            return "Error";
+    }
+}
 
 } /* END NAMESPACE */
 

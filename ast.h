@@ -577,6 +577,9 @@ class ScopeNode: public ASTNode {
     AST_VISIT_THIS_NODE
 };
 
+std::string getTypeString(int type);
+std::string getOperatorString(int op);
+
 }
 
 

@@ -37,16 +37,33 @@ class SymbolDeclVisitor: public AST::Visitor {
         }
 };
 
+class SymbolLUVisitor: public AST::Visitor {
+    private:
+        ST::SymbolTable &m_symbolTable;
+    public:
+        SymbolLUVisitor(ST::SymbolTable &symbolTable):
+            m_symbolTable(symbolTable) {}
+    
+    private:
+        virtual void preNodeVisit(AST::IdentifierNode *identifierNode) {
+            m_symbolTable.getSymbolDecl(identifierNode);
+        }
+};
+
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
     ST::SymbolTable symbolTable;
 
+    /* Construct Symbol Tree */
     SA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
-
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
+    // symbolTable.printScopeLeaves();
 
-    symbolTable.printScopeLeaves();
+    /* Symbol Type Look Up */
+    SA::SymbolLUVisitor symbolLUVisitor(symbolTable);
+    static_cast<AST::ASTNode *>(ast)->visit(symbolLUVisitor);
+    symbolTable.printSymbolReference();
 
     return 1;
 }

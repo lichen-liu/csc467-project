@@ -43,12 +43,14 @@ class SymbolTable {
     
     public:
         void printScopeLeaves() const;
+        void printSymbolReference() const;
 
     private:
         /* Helper Functions */
         /* Return redecl if redeclaration under current scope; otherwise nullptr */
         AST::DeclarationNode *findRedeclaration(AST::DeclarationNode *decl) const;
         static bool checkSymbolMatch(AST::DeclarationNode *decl, AST::IdentifierNode *ident);
+        static int printSymbolTreeTo(SymbolNode *node);
 };
 
 }
