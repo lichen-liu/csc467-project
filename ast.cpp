@@ -249,7 +249,7 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(ConstructorNode *constructorNode) {
             // (CALL name ...)
             printf("(CALL ");
-            printf("%s", getTypeString(constructorNode->getExpressionType()).c_str());
+            printf("%s", getTypeString(constructorNode->getConstructorType()).c_str());
             constructorNode->getArgumentExpressions()->visit(*this);
             printf(")");
         }
@@ -488,9 +488,9 @@ node *ast_allocate(node_kind kind, ...) {
         }
 
         case CONSTRUCTOR_NODE: {
-            int type = va_arg(args, int);
+            int constructorType = va_arg(args, int);
             AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
-            astNode = new AST::ConstructorNode(type, argExprs);
+            astNode = new AST::ConstructorNode(constructorType, argExprs);
             break;
         }
 

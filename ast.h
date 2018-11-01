@@ -378,17 +378,20 @@ class FunctionNode: public ExpressionNode {
 
 class ConstructorNode: public ExpressionNode {
     private:
-        int m_type = ANY_TYPE;                          // types defined in parser.tab.h
+        int m_type = ANY_TYPE;                          // inferred expression type, types defined in parser.tab.h
+        int m_constructorType = ANY_TYPE;               // actual type of this constructor
         bool m_isConst = false;                         // whether expression is const
         ExpressionsNode *m_argExprs;                    // argument expressions of this constructor
     public:
-        ConstructorNode(int type, ExpressionsNode *argExprs):
-            m_type(type), m_argExprs(argExprs) {}
+        ConstructorNode(int constructorType, ExpressionsNode *argExprs):
+            m_constructorType(constructorType), m_argExprs(argExprs) {}
     public:
         virtual int getExpressionType() const { return m_type; }
+        virtual void setExpressionType(int type) { m_type = type; }
         virtual bool isConst() const { return m_isConst; }
         virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
+        int getConstructorType() const { return m_constructorType; }
         ExpressionsNode *getArgumentExpressions() const { return m_argExprs; }
     protected:
         virtual ~ConstructorNode() {

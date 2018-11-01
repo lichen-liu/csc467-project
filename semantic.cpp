@@ -429,7 +429,23 @@ class TypeInferenceVisitor: public AST::Visitor {
             functionNode->setExpressionType(resultDataType);
         }
 
-        virtual void postNodeVisit(AST::ConstructorNode *constructorNode){}
+        virtual void postNodeVisit(AST::ConstructorNode *constructorNode){
+            /*
+            * Constructors for basic types (bool, int, float) must have one argument that exactly
+            * matches that type. Constructors for vector types must have as many arguments as there
+            * are elements in the vector, and the types of each argument must be exactly the type of the
+            * basic type corresponding to the vector type. For example, bvec2(true,false) is valid ,
+            * whereas bvec2(1,true) is invalid.
+            */
+            bool resultIsConst = true;
+            int resultDataType = ANY_TYPE;
+
+            // todo
+            
+            constructorNode->setExpressionType(resultDataType);
+            constructorNode->setConst(resultIsConst);
+        }
+
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}
         virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode){}
         virtual void postNodeVisit(AST::AssignmentNode *assignmentNode){}
