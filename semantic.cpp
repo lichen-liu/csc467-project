@@ -64,6 +64,11 @@ class SymbolLUVisitor: public AST::Visitor {
 
             /// TODO: print error
             if(decl == nullptr) {
+                // Update info in identifierNode
+                identifierNode->setExpressionType(ANY_TYPE);
+                identifierNode->setConst(false);
+                identifierNode->setDeclaration(nullptr);
+
                 printf("Error: Missing Declaration for IdentifierNode(%p)\n", identifierNode);
                 ast_print(identifierNode);
                 printf("\n");
@@ -377,7 +382,53 @@ class TypeInferenceVisitor: public AST::Visitor {
             indexingNode->setConst(identifierIsConst);
         }
 
-        virtual void postNodeVisit(AST::FunctionNode *functionNode){}
+        virtual void postNodeVisit(AST::FunctionNode *functionNode){
+            int resultDataType = ANY_TYPE;
+
+            const std::string &funcName = functionNode->getName();
+            AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
+            const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+            if(funcName == "rsq") {
+                if(args.size() == 1) {
+                    const AST::ExpressionNode *arg1 = args.front();
+                    int arg1Type = arg1->getExpressionType();
+                    if(arg1Type == FLOAT_T || arg1Type == INT_T) {
+                        // float rsq(float);
+                        // float rsq(int);
+                        resultDataType = FLOAT_T;
+                    }
+                }
+            } else if (funcName == "dp3") {
+                if(args.size() == 2) {
+                    const AST::ExpressionNode *arg1 = args[0];
+                    int arg1Type = arg1->getExpressionType();
+                    const AST::ExpressionNode *arg2 = args[1];
+                    int arg2Type = arg2->getExpressionType();
+
+                    if(arg1Type == arg2Type) {
+                        if(arg1Type == VEC3_T || arg1Type == VEC4_T || arg1Type == IVEC3_T || arg1Type == IVEC4_T) {
+                            // float dp3(vec4, vec4);
+                            // float dp3(vec3, vec3);
+                            // float dp3(ivec4, ivec4);
+                            // float dp3(ivec3, ivec3);
+                            resultDataType = FLOAT_T;
+                        }
+                    }
+                }
+            } else if (funcName == "lit") {
+                if(args.size() == 1) {
+                    const AST::ExpressionNode *arg1 = args.front();
+                    int arg1Type = arg1->getExpressionType();
+                    if(arg1Type == VEC4_T) {
+                        // vec4 lit(vec4);
+                        resultDataType = VEC4_T;
+                    }
+                }
+            }
+
+            functionNode->setExpressionType(resultDataType);
+        }
+
         virtual void postNodeVisit(AST::ConstructorNode *constructorNode){}
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}
         virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode){}
