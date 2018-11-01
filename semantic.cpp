@@ -8,7 +8,7 @@
 
 #include <cassert>
 
-namespace SA{ /* START NAMESPACE */
+namespace SEMA{ /* START NAMESPACE */
 
 class SymbolDeclVisitor: public AST::Visitor {
     private:
@@ -185,6 +185,60 @@ int inferDataType(int op, int rhsDataType) {
     return ANY_TYPE;
 }
 
+int inferDataType(int op, int lhsDataType, int rhsDataType) {
+    /* Binary Operator Type Inference */
+    /*
+     * +, - ss, vv Arithmetic
+     */
+
+    if(lhsDataType == ANY_TYPE || rhsDataType == ANY_TYPE) {
+        return ANY_TYPE;
+    }
+
+    if(getDataTypeBaseType(lhsDataType) != getDataTypeBaseType(rhsDataType)) {
+        /*
+         * Both operands of a binary operator must have exactly the same base type (e.g. it
+         * is valid to multiple an int and an ivec3)
+         */
+        return ANY_TYPE;
+    }
+
+    int lhsTypeOrder = getDataTypeOrder(lhsDataType);
+    int rhsTypeOrder = getDataTypeOrder(rhsDataType);
+    if(lhsTypeOrder > 1 && rhsTypeOrder > 1) {
+       if(lhsTypeOrder != rhsTypeOrder) {
+            /*
+            * If both arguments to a binary operator are vectors, then they must be vectors of the
+            * same order. For example, it is not valid to add an ivec2 with an ivec3
+            */
+           return ANY_TYPE;
+       }
+    }
+
+    DataTypeCategory lhsTypeCateg = getDataTypeCategory(lhsDataType);
+    DataTypeCategory rhsTypeCateg = getDataTypeCategory(rhsDataType);
+    switch(op) {
+        case PLUS:
+        case MINUS: {
+            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+                if(lhsTypeOrder == rhsTypeOrder) {
+                    // Same base type
+                    // Both arithmetic type
+                    // Same type order
+                    assert(lhsDataType == rhsDataType);
+                    return lhsDataType;
+                }
+            }
+            break;
+        }
+
+        default:
+            assert(0);
+    }
+
+    return ANY_TYPE;
+}
+
 class TypeInferenceVisitor: public AST::Visitor {    
     private:
         virtual void postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode){
@@ -225,17 +279,17 @@ int semantic_check(node * ast) {
     ST::SymbolTable symbolTable;
 
     /* Construct Symbol Tree */
-    SA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
+    SEMA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
     // symbolTable.printScopeLeaves();
 
     /* Symbol Look Up */
-    SA::SymbolLUVisitor symbolLUVisitor(symbolTable);
+    SEMA::SymbolLUVisitor symbolLUVisitor(symbolTable);
     static_cast<AST::ASTNode *>(ast)->visit(symbolLUVisitor);
     // symbolTable.printSymbolReference();
 
     /* Type Inference */
-    SA::TypeInferenceVisitor typeInferenceVisitor;
+    SEMA::TypeInferenceVisitor typeInferenceVisitor;
     static_cast<AST::ASTNode *>(ast)->visit(typeInferenceVisitor);
     ast_print(ast);
 
