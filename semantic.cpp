@@ -81,7 +81,7 @@ class SymbolLUVisitor: public AST::Visitor {
 };
 
 enum class DataTypeCategory {
-    logical,
+    boolean,
     arithmetic
 };
 
@@ -91,7 +91,7 @@ DataTypeCategory getDataTypeCategory(int dataType) {
         case BVEC2_T:
         case BVEC3_T:
         case BVEC4_T:
-            return DataTypeCategory::logical;
+            return DataTypeCategory::boolean;
         case INT_T:
         case IVEC2_T:
         case IVEC3_T:
@@ -172,7 +172,7 @@ int inferDataType(int op, int rhsDataType) {
             break;
         }
         case NOT: {
-            if(typeCateg == DataTypeCategory::logical) {
+            if(typeCateg == DataTypeCategory::boolean) {
                 return rhsDataType;
             }
 
@@ -189,6 +189,11 @@ int inferDataType(int op, int lhsDataType, int rhsDataType) {
     /* Binary Operator Type Inference */
     /*
      * +, - ss, vv Arithmetic
+     * * ss, vv, sv, vs Arithmetic
+     * /, ˆ ss Arithmetic
+     * &&, || ss, vv Logical
+     * <, <=, >, >= ss Comparison
+     * ==, != ss, vv Comparison
      */
 
     if(lhsDataType == ANY_TYPE || rhsDataType == ANY_TYPE) {
@@ -232,6 +237,79 @@ int inferDataType(int op, int lhsDataType, int rhsDataType) {
             break;
         }
 
+        case TIMES: {
+            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+                if(lhsTypeOrder > rhsTypeOrder) {
+                    // Same base type
+                    // Both arithmetic type
+                    // If both vector, same type order; otherwise, any order combination eg. ss and sv
+                    // Return the larger order one
+                    return lhsDataType;
+                } else {
+                    return rhsDataType;
+                }
+            }
+            break;
+        }
+
+        case SLASH:
+        case EXP: {
+            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+                if(lhsTypeOrder == 1 && rhsTypeOrder == 1) {
+                    // Same base type
+                    // Both arithmetic type
+                    // Both scalar type
+                    assert(lhsDataType == rhsDataType);
+                    return lhsDataType;
+                }
+            }
+            break;
+        }
+
+        case AND:
+        case OR: {
+            if(lhsTypeCateg == DataTypeCategory::boolean && rhsTypeCateg == DataTypeCategory::boolean) {
+                if(lhsTypeOrder == rhsTypeOrder) {
+                    // Same base type
+                    // Both boolean type
+                    // Same type order
+                    assert(lhsDataType == rhsDataType);
+                    return lhsDataType;
+                }
+            }
+            break;
+        }
+
+        case LSS:
+        case LEQ:
+        case GTR:
+        case GEQ: {
+            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+                if(lhsTypeOrder == 1 && rhsTypeOrder == 1) {
+                    // Same base type
+                    // Both arithmetic type
+                    // Both scalar type
+                    assert(lhsDataType == rhsDataType);
+                    return lhsDataType;
+                }
+            }
+            break;
+        }
+
+        case EQL:
+        case NEQ: {
+            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+                if(lhsTypeOrder == rhsTypeOrder) {
+                    // Same base type
+                    // Both arithmetic type
+                    // Same type order
+                    assert(lhsDataType == rhsDataType);
+                    return lhsDataType;
+                }
+            }
+            break;
+        }
+
         default:
             assert(0);
     }
@@ -252,7 +330,23 @@ class TypeInferenceVisitor: public AST::Visitor {
             unaryExpressionNode->setConst(rhsIsConst);
         }
 
-        virtual void postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode){}
+        virtual void postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode){
+            const AST::ExpressionNode *lhsExpr = binaryExpressionNode->getLeftExpression();
+            const AST::ExpressionNode *rhsExpr = binaryExpressionNode->getRightExpression();
+            
+            int lhsDataType = lhsExpr->getExpressionType();
+            int rhsDataType = rhsExpr->getExpressionType();
+
+            bool lhsIsConst = lhsExpr->isConst();
+            bool rhsIsConst = rhsExpr->isConst();
+
+            int op = binaryExpressionNode->getOperator();
+
+            int resultDataType = inferDataType(op, lhsDataType, rhsDataType);
+            binaryExpressionNode->setExpressionType(resultDataType);
+            binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
+        }
+
         virtual void postNodeVisit(AST::IntLiteralNode *intLiteralNode){}
         virtual void postNodeVisit(AST::FloatLiteralNode *floatLiteralNode){}
         virtual void postNodeVisit(AST::BooleanLiteralNode *booleanLiteralNode){}
