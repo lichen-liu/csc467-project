@@ -347,11 +347,36 @@ class TypeInferenceVisitor: public AST::Visitor {
             binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
         }
 
-        virtual void postNodeVisit(AST::IntLiteralNode *intLiteralNode){}
-        virtual void postNodeVisit(AST::FloatLiteralNode *floatLiteralNode){}
-        virtual void postNodeVisit(AST::BooleanLiteralNode *booleanLiteralNode){}
-        virtual void postNodeVisit(AST::IdentifierNode *identifierNode){}
-        virtual void postNodeVisit(AST::IndexingNode *indexingNode){}
+        virtual void postNodeVisit(AST::IndexingNode *indexingNode){
+            /*
+             * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
+             * has type veci. For example, the maximum index into a variable of type vec2 is 1.
+             * - The result type of indexing into a vector is the base type associated with that vector’s
+             * type. For example, if v has type bvec2 then v[0] has type bool.
+             */
+            int resultDataType = ANY_TYPE;
+
+            const AST::IdentifierNode *identifier = indexingNode->getIdentifier();            
+            int identifierDataType = identifier->getExpressionType();
+            int identifierIsConst = identifier->isConst();
+            // Identifier must be a vector
+            int identifierTypeOrder = getDataTypeOrder(identifierDataType);
+            if(identifierTypeOrder > 1) {
+                const AST::IntLiteralNode *index = 
+                    dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
+                int indexVal = index->getVal();
+                // Index must be valid
+                if(indexVal >= 0 && indexVal < identifierTypeOrder) {
+                    // The type of this indexing node is the base type for identifier node
+                    int identifierBaseType = getDataTypeBaseType(identifierDataType);
+                    resultDataType = identifierBaseType;
+                }
+            }
+
+            indexingNode->setExpressionType(resultDataType);
+            indexingNode->setConst(identifierIsConst);
+        }
+
         virtual void postNodeVisit(AST::FunctionNode *functionNode){}
         virtual void postNodeVisit(AST::ConstructorNode *constructorNode){}
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}

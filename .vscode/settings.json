@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.y": "c",
+        "common.h": "c",
+        "symbol.h": "c",
+        "ast.h": "c"
+    }
+}
