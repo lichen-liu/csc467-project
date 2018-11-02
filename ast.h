@@ -379,7 +379,7 @@ class FunctionNode: public ExpressionNode {
 class ConstructorNode: public ExpressionNode {
     private:
         int m_type = ANY_TYPE;                          // inferred expression type, types defined in parser.tab.h
-        int m_constructorType = ANY_TYPE;               // actual type of this constructor
+        int m_constructorType;                          // actual type of this constructor
         bool m_isConst = false;                         // whether expression is const
         ExpressionsNode *m_argExprs;                    // argument expressions of this constructor
     public:

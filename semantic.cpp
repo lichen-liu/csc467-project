@@ -314,7 +314,39 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
     constructorNode->setConst(resultIsConst);
 }
 
-void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {}
+void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
+    /*
+     * Initialization
+     * 
+     * - const qualified variables must be initialized with a literal value or with a uniform
+     * variable, not an expression.
+     * - The value assigned to a variable (this includes variables declared with an initial value)
+     * must have the same type as that variable, or a type that can be widened to the correct type.
+     */
+    const AST::ExpressionNode *initExpr = declarationNode->getExpression();
+    if(declarationNode->isConst()) {
+        if(initExpr == nullptr) {
+            /// TODO: print error
+            printf("Error: Const qualified variable must have initialization.\n");
+        } else if (!initExpr->isConst()) {
+            /// TODO: print error
+            printf("Error: Const qualified variable must be assigned a const value.\n");
+        }
+    }
+
+    if(initExpr != nullptr) {
+        int rhsDataType = initExpr->getExpressionType();
+        int lhsDataType = declarationNode->getType();
+
+        if(rhsDataType == ANY_TYPE) {
+            /// TODO: print error
+            printf("Error: Variable declaration has undetermined type during initialization.\n");
+        } else if(lhsDataType != rhsDataType) {
+            /// TODO: print error
+            printf("Error: Variable declaration has non-compatible type during initialization.\n");
+        }
+    }
+}
 
 void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
     /*
@@ -346,7 +378,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assignmentLegal = false;
         
         /// TODO: print error
-        printf("Error: Assignment has undetermined type inside.\n");
+        printf("Error: Assignment has undetermined type.\n");
     } else {
         assert(rhsDataType != ANY_TYPE);
         assert(lhsDataType != ANY_TYPE);
@@ -355,7 +387,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             assignmentLegal = false;
 
             /// TODO: print error
-            printf("Error: Assignment has non-compatible types inside.\n");
+            printf("Error: Assignment has non-compatible type.\n");
         }
     }
 
