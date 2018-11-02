@@ -166,19 +166,41 @@ int BooleanLiteralNode::getExpressionType() const {
 }
 
 
-class PrintVisitor: public Visitor {
+class Printer: public Visitor {
     public:
         static std::string getIndentSpaceString(int indentSize) {
             return std::string(indentSize, ' ');
         }
+
+        static std::string getSourceLocationString(const SourceLocation &srcLoc) {
+            return (std::string("Line ") +
+                    std::to_string(srcLoc.firstLine) +
+                    std::string(":") +
+                    std::to_string(srcLoc.firstColumn) +
+                    std::string(" to ") +
+                    std::to_string(srcLoc.lastLine) +
+                    std::string(":") +
+                    std::to_string(srcLoc.lastColumn));
+        }
     
     private:
-        int indentSize = 0;
-        static constexpr int indentIncr = 4;
+        bool m_printSourceLocation = false;
+    public:
+        void setPrintSourceLocation(bool printSourceLocation) { m_printSourceLocation = printSourceLocation; }
     private:
-        int getIndentSize() const { return indentSize; }
-        void enterScope() { indentSize += indentIncr; }
-        void exitScope() { indentSize -= indentIncr; }
+        void printSourceLocation(const ASTNode *node) const {
+            if(m_printSourceLocation) {
+                printf("<%s>", getSourceLocationString(node->getSourceLocation()).c_str());
+            }
+        }
+    
+    private:
+        int m_indentSize = 0;
+        static constexpr int m_indentIncr = 4;
+    private:
+        int getIndentSize() const { return m_indentSize; }
+        void enterScope() { m_indentSize += m_indentIncr; }
+        void exitScope() { m_indentSize -= m_indentIncr; }
 
     private:
         virtual void nodeVisit(ExpressionsNode *expressionsNode) {
@@ -190,7 +212,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(UnaryExpressionNode *unaryExpressionNode) {
             // (UNARY type op expr)
-            printf("(UNARY ");
+            printf("(UNARY");
+            printSourceLocation(unaryExpressionNode);
+            printf(" ");
             printf("%s ", getTypeString(unaryExpressionNode->getExpressionType()).c_str());
             printf("%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
             unaryExpressionNode->getExpression()->visit(*this);
@@ -199,7 +223,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(BinaryExpressionNode *binaryExpressionNode) {
             // (BINARY type op left right)
-            printf("(BINARY ");
+            printf("(BINARY");
+            printSourceLocation(binaryExpressionNode);
+            printf(" ");
             printf("%s ", getTypeString(binaryExpressionNode->getExpressionType()).c_str());
             printf("%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
             binaryExpressionNode->getLeftExpression()->visit(*this);
@@ -211,26 +237,32 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(IntLiteralNode *intLiteralNode) {
             // <literal>
             printf("%d", intLiteralNode->getVal());
+            printSourceLocation(intLiteralNode);
         }
 
         virtual void nodeVisit(FloatLiteralNode *floatLiteralNode) {
             // <literal>
             printf("%f", floatLiteralNode->getVal());
+            printSourceLocation(floatLiteralNode);
         }
 
         virtual void nodeVisit(BooleanLiteralNode *booleanLiteralNode) {
             // <literal>
             printf("%s", (booleanLiteralNode->getVal() ? "true":"false"));
+            printSourceLocation(booleanLiteralNode);
         }
 
         virtual void nodeVisit(IdentifierNode *identifierNode) {
             // <identifier>
             printf("%s", identifierNode->getName().c_str());
+            printSourceLocation(identifierNode);
         }
 
         virtual void nodeVisit(IndexingNode *indexingNode) {
             // (INDEX type id index)
-            printf("(INDEX ");
+            printf("(INDEX");
+            printSourceLocation(indexingNode);
+            printf(" ");
             printf("%s ", getTypeString(indexingNode->getExpressionType()).c_str());
             indexingNode->getIdentifier()->visit(*this);
             printf(" ");
@@ -240,7 +272,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(FunctionNode *functionNode) {
             // (CALL name ...)
-            printf("(CALL ");
+            printf("(CALL");
+            printSourceLocation(functionNode);
+            printf(" ");
             printf("%s", functionNode->getName().c_str());
             functionNode->getArgumentExpressions()->visit(*this);
             printf(")");
@@ -248,7 +282,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(ConstructorNode *constructorNode) {
             // (CALL name ...)
-            printf("(CALL ");
+            printf("(CALL");
+            printSourceLocation(constructorNode);
+            printf(" ");
             printf("%s", getTypeString(constructorNode->getConstructorType()).c_str());
             constructorNode->getArgumentExpressions()->visit(*this);
             printf(")");
@@ -257,7 +293,9 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(StatementsNode *statementsNode) {
             // (STATEMENTS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(STATEMENTS\n");
+            printf("(STATEMENTS");
+            printSourceLocation(statementsNode);
+            printf("\n");
             enterScope();
             for(StatementNode *stmt: statementsNode->getStatementList()) {
                 printf("%s", getIndentSpaceString(getIndentSize()).c_str());
@@ -271,7 +309,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(DeclarationNode *declarationNode) {
             // (DECLARATION variable-name type-name initial-value?)
-            printf("(DECLARATION ");
+            printf("(DECLARATION");
+            printSourceLocation(declarationNode);
+            printf(" ");
             printf("%s ", declarationNode->getName().c_str());
             printf("%s", (declarationNode->isConst() ? "const ":""));
             printf("%s", getTypeString(declarationNode->getType()).c_str());
@@ -285,7 +325,9 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(DeclarationsNode *declarationsNode) {
             // (DECLARATIONS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(DECLARATIONS\n");
+            printf("(DECLARATIONS");
+            printSourceLocation(declarationsNode);
+            printf("\n");
             enterScope();
             for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
                 printf("%s", getIndentSpaceString(getIndentSize()).c_str());
@@ -299,7 +341,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(IfStatementNode *ifStatementNode) {
             // (IF cond then-stmt else-stmt?)
-            printf("(IF ");
+            printf("(IF");
+            printSourceLocation(ifStatementNode);
+            printf(" ");
             ifStatementNode->getConditionExpression()->visit(*this);
             printf(" ");
             ifStatementNode->getThenStatement()->visit(*this);
@@ -312,7 +356,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(AssignmentNode *assignmentNode) {
             // (ASSIGN type variable-name new-value)
-            printf("(ASSIGN ");
+            printf("(ASSIGN");
+            printSourceLocation(assignmentNode);
+            printf(" ");
             printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
             assignmentNode->getVariable()->visit(*this);
             printf(" ");
@@ -322,7 +368,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(NestedScopeNode *nestedScopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE\n");
+            printf("(SCOPE");
+            printSourceLocation(nestedScopeNode);
+            printf("\n");
             enterScope();
             nestedScopeNode->getDeclarations()->visit(*this);
             nestedScopeNode->getStatements()->visit(*this);
@@ -333,7 +381,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(ScopeNode *scopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE\n");
+            printf("(SCOPE");
+            printSourceLocation(scopeNode);
+            printf("\n");
             enterScope();
             scopeNode->getDeclarations()->visit(*this);
             scopeNode->getStatements()->visit(*this);
@@ -510,7 +560,7 @@ node *ast_allocate(node_kind kind, ...) {
             AST::ExpressionNode *indexExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             
             AST::IdentifierNode *idNode = new AST::IdentifierNode(id);
-            
+
             YYLTYPE *idLoc = va_arg(args, YYLTYPE *);
             idNode->setSourceLocation(AST::SourceLocation{idLoc->first_line, idLoc->first_column, idLoc->last_line, idLoc->last_column});
 
@@ -670,7 +720,8 @@ void ast_free(node *ast) {
 
 void ast_print(node *ast) {
     if(ast != nullptr) {
-        AST::PrintVisitor printer;
+        AST::Printer printer;
+        printer.setPrintSourceLocation(true);
         static_cast<AST::ASTNode *>(ast)->visit(printer);
     }
 }
