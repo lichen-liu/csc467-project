@@ -6,6 +6,7 @@
 #include "common.h"
 #include "parser.tab.h"
 
+#include <algorithm>
 #include <vector>
 #include <unordered_map>
 #include <sstream>
@@ -13,6 +14,36 @@
 #include <cassert>
 
 namespace SEMA{ /* START NAMESPACE */
+
+class SourceLocation {
+    private:
+        std::vector<std::string> m_sourceFile;
+
+    public:
+        SourceLocation(FILE *f);
+    
+    public:
+        const std::vector<std::string> &getSource() const { return m_sourceFile; }
+        const std::string &getLine(int line) const { return m_sourceFile.at(line - 1); }
+};
+
+SourceLocation::SourceLocation(FILE *f) {
+    assert(f != nullptr);
+
+    char *line;
+    size_t len = 0;
+
+    rewind(f);
+    while(getline(&line, &len, f) != -1) {
+        std::string str(line);
+        str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+        m_sourceFile.push_back(std::move(str));
+    }
+
+    if(line) {
+        free(line);
+    }
+}
 
 class SemanticAnalyzer {
     public:
@@ -751,6 +782,7 @@ int semantic_check(node * ast) {
 
     ST::SymbolTable symbolTable;
     SEMA::SemanticAnalyzer semaAnalyzer;
+    SEMA::SourceLocation sourceLocation(inputFile);
 
     /* Construct Symbol Tree */
     SEMA::SymbolDeclVisitor symbolDeclVisitor(symbolTable, semaAnalyzer);
@@ -767,6 +799,34 @@ int semantic_check(node * ast) {
     int numEvents = semaAnalyzer.getNumberEvents();
     for(int id = 0; id < numEvents; id++) {
         const SEMA::SemanticAnalyzer::Event &event = semaAnalyzer.getEvent(id);
+        const AST::SourceLocation &srcLoc = event.astNode->getSourceLocation();
+        
+        printf("\n");
+        printf("----------------------------------------------------------\n");
+        printf("\n");
+ 
+        if(srcLoc.firstLine == srcLoc.lastLine) {
+            const std::string &line = sourceLocation.getLine(srcLoc.firstLine);
+            const std::string tenSpace(10, ' ');
+            const std::string sevenSpace(7, ' ');
+            printf("%7d:%s%s\n", srcLoc.firstLine, tenSpace.c_str(), line.c_str());
+            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                if(colNumber >= srcLoc.firstColumn - 1 && colNumber <= srcLoc.lastColumn - 1) {
+                    printf("~");
+                } else {
+                    printf(" ");
+                }
+            }
+        } else {
+            for(int lineNumber = srcLoc.firstLine; lineNumber <= srcLoc.lastLine; lineNumber++) {
+                const std::string &line = sourceLocation.getLine(lineNumber);
+                const std::string tenSpace(10, ' ');
+                printf("%7d:%s%s\n", lineNumber, tenSpace.c_str(), line.c_str());
+            }
+        }
+        
+        printf("\n");
         printf("\n");
         std::string header;
         if(event.eventType == SEMA::SemanticAnalyzer::EventType::Error) {
@@ -775,7 +835,6 @@ int semantic_check(node * ast) {
             header = "Warning";
         }
         printf("%s(%d): %s\n", header.c_str(), id, event.message.c_str());
-        ast_print(const_cast<AST::ASTNode *>(event.astNode));
         printf("\n");
     }
 
