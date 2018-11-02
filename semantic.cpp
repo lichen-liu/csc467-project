@@ -325,11 +325,57 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
 
     /// TODO: print error
     if(cond->getExpressionType() != BOOL_T) {
-        printf("Error: if statement condition must be of boolean type.\n");
+        printf("Error: If-statement condition must be of boolean type.\n");
     }
 }
 
-void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {}
+void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
+    /*
+     * The value assigned to a variable (this includes variables declared with an initial value)
+     * must have the same type as that variable, or a type that can be widened to the correct type.
+     */
+    const AST::ExpressionNode *rhsExpr = assignmentNode->getExpression();
+    const AST::VariableNode *lhsVar = assignmentNode->getVariable();
+    int rhsDataType = rhsExpr->getExpressionType();
+    int lhsDataType = lhsVar->getExpressionType();
+
+    int resultDataType = ANY_TYPE;
+    bool assignmentLegal = true;
+
+    if(lhsDataType == ANY_TYPE || rhsDataType == ANY_TYPE) {
+        assignmentLegal = false;
+        
+        /// TODO: print error
+        printf("Error: Assignment has undetermined type inside.\n");
+    } else {
+        assert(rhsDataType != ANY_TYPE);
+        assert(lhsDataType != ANY_TYPE);
+
+        if(lhsDataType != rhsDataType) {
+            assignmentLegal = false;
+
+            /// TODO: print error
+            printf("Error: Assignment has non-compatible types inside.\n");
+        }
+    }
+
+    if(lhsVar->isConst()) {
+        assignmentLegal = false;
+
+        /// TODO: print error
+        printf("Error: Cannot reassign value to const variable.\n");
+    }
+
+    if(assignmentLegal) {
+        assert(rhsDataType != ANY_TYPE);
+        assert(lhsDataType != ANY_TYPE);
+        assert(lhsDataType == rhsDataType);
+
+        resultDataType = lhsDataType;
+    }
+
+    assignmentNode->setExpressionType(resultDataType);
+}
 
 int TypeChecker::inferDataType(int op, int rhsDataType) {
     /* Unary Operator Type Inference */

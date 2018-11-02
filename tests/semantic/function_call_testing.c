@@ -28,15 +28,17 @@
     floata = dp3(vec3a, vec3a);
     floata = dp3(ivec4a, ivec4a);
     floata = dp3(ivec3a, ivec3a);
+    vec4a = lit(vec4b);
 
     {
         /* Invalid Function Calls */
         floata = rsq(floata, floata);
         floata = rsq(vec4a);
-        floata = rsq(inta);
         floata = dp3(vec4a, ivec4a);
         floata = dp3(vec4a, vec3a);
         floata = dp3(ivec4a, inta);
         floata = dp3(ivec3a);
+        vec4a = lit(vec3a);
+        vec3a = lit(vec4a);
     }
 }
