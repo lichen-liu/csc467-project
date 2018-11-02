@@ -401,6 +401,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::ScopeNode(decls, stmts);
+            
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -420,6 +424,10 @@ node *ast_allocate(node_kind kind, ...) {
                 exprs->pushBackExpression(expr);
             }
             astNode = exprs;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -427,6 +435,10 @@ node *ast_allocate(node_kind kind, ...) {
             int op = va_arg(args, int);
             AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::UnaryExpressionNode(op, expr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -435,24 +447,40 @@ node *ast_allocate(node_kind kind, ...) {
             AST::ExpressionNode *leftExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             AST::ExpressionNode *rightExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::BinaryExpressionNode(op, leftExpr, rightExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case INT_C_NODE: {
             int val = va_arg(args, int);
             astNode = new AST::IntLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case FLOAT_C_NODE: {
             double val = va_arg(args, double);
             astNode = new AST::FloatLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case BOOL_C_NODE: {
             bool val = static_cast<bool>(va_arg(args, int));
             astNode = new AST::BooleanLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -465,6 +493,10 @@ node *ast_allocate(node_kind kind, ...) {
         case ID_NODE: {
             const char *id = va_arg(args, char *);
             astNode = new AST::IdentifierNode(id);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -476,7 +508,17 @@ node *ast_allocate(node_kind kind, ...) {
              */
             const char *id = va_arg(args, char *);
             AST::ExpressionNode *indexExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
-            astNode = new AST::IndexingNode(new AST::IdentifierNode(id), indexExpr);
+            
+            AST::IdentifierNode *idNode = new AST::IdentifierNode(id);
+            
+            YYLTYPE *idLoc = va_arg(args, YYLTYPE *);
+            idNode->setSourceLocation(AST::SourceLocation{idLoc->first_line, idLoc->first_column, idLoc->last_line, idLoc->last_column});
+
+            astNode = new AST::IndexingNode(idNode, indexExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -484,6 +526,10 @@ node *ast_allocate(node_kind kind, ...) {
             const char *functionName = va_arg(args, char *);
             AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::FunctionNode(functionName, argExprs);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -491,6 +537,10 @@ node *ast_allocate(node_kind kind, ...) {
             int constructorType = va_arg(args, int);
             AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::ConstructorNode(constructorType, argExprs);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -505,6 +555,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::StatementNode *thenStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementNode *elseStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::IfStatementNode(condExpr, thenStmt, elseStmt);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -512,6 +566,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementNode *bodyStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::WhileStatementNode(condExpr, bodyStmt);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -519,6 +577,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::VariableNode *var = static_cast<AST::VariableNode *>(va_arg(args, AST::ASTNode *));
             AST::ExpressionNode *newValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::AssignmentNode(var, newValExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -526,11 +588,19 @@ node *ast_allocate(node_kind kind, ...) {
             /* Argument ScopeNode is destructed and converted to NestedScopeNode */
             AST::ScopeNode *scopeNode = static_cast<AST::ScopeNode *>(va_arg(args, AST::ASTNode *));
             astNode = AST::ScopeNode::convertToNestedScopeNode(scopeNode);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case STALL_STATEMENT_NODE: {
             astNode = new AST::StallStatementNode();
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -544,6 +614,10 @@ node *ast_allocate(node_kind kind, ...) {
                 stmts->pushBackStatement(stmt);
             }
             astNode = stmts;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -553,6 +627,10 @@ node *ast_allocate(node_kind kind, ...) {
             int type = va_arg(args, int);
             AST::ExpressionNode *initValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::DeclarationNode(varName, static_cast<bool>(isConst), type, initValExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -566,6 +644,10 @@ node *ast_allocate(node_kind kind, ...) {
                 decls->pushBackDeclaration(decl);
             }
             astNode = decls;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
