@@ -344,16 +344,19 @@ class TypeChecker: public AST::Visitor {
 void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
     AST::DeclarationNode *decl = m_symbolTable.getSymbolDecl(identifierNode);
 
-    /// TODO: print error
     if(decl == nullptr) {
         // Update info in identifierNode
         identifierNode->setExpressionType(ANY_TYPE);
         identifierNode->setConst(false);
         identifierNode->setDeclaration(nullptr);
 
-        printf("Error: Missing Declaration for IdentifierNode(%p)\n", identifierNode);
-        ast_print(identifierNode);
-        printf("\n");
+        std::stringstream ss;
+        ss << "Missing declaration for symbol'" << identifierNode->getName() <<
+        "' at " << AST::getSourceLocationString(identifierNode->getSourceLocation()) << ".";
+
+        m_semaAnalyzer.createEvent(identifierNode,
+                                   SemanticAnalyzer::EventType::Error,
+                                   ss.str());
 
         return;
     }
@@ -812,7 +815,7 @@ int semantic_check(node * ast) {
             printf("%7d:%s%s\n", srcLoc.firstLine, tenSpace.c_str(), line.c_str());
             printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
             for(int colNumber = 0; colNumber < line.length(); colNumber++) {
-                if(colNumber >= srcLoc.firstColumn - 1 && colNumber <= srcLoc.lastColumn - 1) {
+                if(colNumber >= srcLoc.firstColumn - 1 && colNumber < srcLoc.lastColumn - 1) {
                     printf("~");
                 } else {
                     printf(" ");
