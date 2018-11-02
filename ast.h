@@ -619,6 +619,7 @@ class ScopeNode: public ASTNode {
 
 std::string getTypeString(int type);
 std::string getOperatorString(int op);
+std::string getSourceLocationString(const SourceLocation &srcLoc);
 
 }
 

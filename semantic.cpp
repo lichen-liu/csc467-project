@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <sstream>
 
 #include <cassert>
 
@@ -41,6 +42,21 @@ class SemanticAnalyzer {
         bool m_tempEventValid = false;
     
     public:
+        void resetAnalyzer() {
+            m_eventList.clear();
+            m_astEventLU.clear();
+            m_errorEventList.clear();
+            m_warningEventList.clear();
+            m_tempEvent.reset();
+            m_tempEventValid = false;
+        }
+    
+    public:
+        int getNumberEvents() const { return m_eventList.size(); }
+        int getNumberErrors() const { return m_errorEventList.size(); }
+        int getNumberWarnings() const { return m_warningEventList.size(); }
+
+    public:
         EventID createEvent(const AST::ASTNode *astNode, EventType eventType, std::string message = "");
 
         EventType getEventType(EventID eventID) const;
@@ -50,6 +66,7 @@ class SemanticAnalyzer {
         void setEventMessage(EventID eventID, const std::string &message);
         const Event &getEvent(EventID eventID) const;
 
+    public:
         void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown, std::string message = "");
         void throwTempEvent();
         EventID promoteTempEvent();
@@ -153,9 +170,10 @@ const SemanticAnalyzer::Event &SemanticAnalyzer::getTempEvent() const {
 class SymbolDeclVisitor: public AST::Visitor {
     private:
         ST::SymbolTable &m_symbolTable;
+        SEMA::SemanticAnalyzer &m_semaAnalyzer;
     public:
-        SymbolDeclVisitor(ST::SymbolTable &symbolTable):
-            m_symbolTable(symbolTable) {}
+        SymbolDeclVisitor(ST::SymbolTable &symbolTable, SEMA::SemanticAnalyzer &semaAnalyzer):
+            m_symbolTable(symbolTable), m_semaAnalyzer(semaAnalyzer) {}
 
     private:
         virtual void preNodeVisit(AST::IdentifierNode *identifierNode) {
@@ -164,13 +182,17 @@ class SymbolDeclVisitor: public AST::Visitor {
 
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode) {
             // Traverse the possible evaluation on rhs before the declaration of symbol
-            bool successful = m_symbolTable.declareSymbol(declarationNode);
+            AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
 
-            /// TODO: print error
-            if(!successful) {
-                printf("Error: Redeclaration for DeclarationNode(%p):\n");
-                ast_print(declarationNode);
-                printf("\n");
+            if(redecl != nullptr) {
+                std::stringstream ss;
+                ss << "Duplicate declaration of '" << AST::getTypeString(declarationNode->getType()) <<
+                    " " << declarationNode->getName() << "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ". " <<
+                    "Previously declared at " << AST::getSourceLocationString(redecl->getSourceLocation()) << ".";
+
+                m_semaAnalyzer.createEvent(declarationNode,
+                                           SemanticAnalyzer::EventType::Error,
+                                           ss.str());
 
                 return;
             }
@@ -265,9 +287,10 @@ int getDataTypeBaseType(int dataType) {
 class TypeChecker: public AST::Visitor {
     private:
         ST::SymbolTable &m_symbolTable;
+        SEMA::SemanticAnalyzer &m_semaAnalyzer;
     public:
-        TypeChecker(ST::SymbolTable &symbolTable):
-            m_symbolTable(symbolTable) {}
+        TypeChecker(ST::SymbolTable &symbolTable, SEMA::SemanticAnalyzer &semaAnalyzer):
+            m_symbolTable(symbolTable), m_semaAnalyzer(semaAnalyzer) {}
     
     private:
         virtual void preNodeVisit(AST::IdentifierNode *identifierNode);
@@ -727,17 +750,34 @@ int semantic_check(node * ast) {
      */
 
     ST::SymbolTable symbolTable;
+    SEMA::SemanticAnalyzer semaAnalyzer;
 
     /* Construct Symbol Tree */
-    SEMA::SymbolDeclVisitor symbolDeclVisitor(symbolTable);
+    SEMA::SymbolDeclVisitor symbolDeclVisitor(symbolTable, semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
     // symbolTable.printScopeLeaves();
 
     /* Type Checker */
-    SEMA::TypeChecker typeChecker(symbolTable);
+    SEMA::TypeChecker typeChecker(symbolTable, semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(typeChecker);
     // symbolTable.printSymbolReference();
     ast_print(ast);
+
+    /* Analyzing Semantic Analysis Result */
+    int numEvents = semaAnalyzer.getNumberEvents();
+    for(int id = 0; id < numEvents; id++) {
+        const SEMA::SemanticAnalyzer::Event &event = semaAnalyzer.getEvent(id);
+        printf("\n");
+        std::string header;
+        if(event.eventType == SEMA::SemanticAnalyzer::EventType::Error) {
+            header = "Error";
+        } else {
+            header = "Warning";
+        }
+        printf("%s(%d): %s\n", header.c_str(), id, event.message.c_str());
+        ast_print(const_cast<AST::ASTNode *>(event.astNode));
+        printf("\n");
+    }
 
     return 1;
 }

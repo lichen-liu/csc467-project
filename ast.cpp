@@ -171,17 +171,6 @@ class Printer: public Visitor {
         static std::string getIndentSpaceString(int indentSize) {
             return std::string(indentSize, ' ');
         }
-
-        static std::string getSourceLocationString(const SourceLocation &srcLoc) {
-            return (std::string("Line ") +
-                    std::to_string(srcLoc.firstLine) +
-                    std::string(":") +
-                    std::to_string(srcLoc.firstColumn) +
-                    std::string(" to ") +
-                    std::to_string(srcLoc.lastLine) +
-                    std::string(":") +
-                    std::to_string(srcLoc.lastColumn));
-        }
     
     private:
         bool m_printSourceLocation = false;
@@ -429,6 +418,17 @@ std::string getOperatorString(int op) {
         case GEQ:           return ">=";
         default:            return "Error";
     }
+}
+
+std::string getSourceLocationString(const SourceLocation &srcLoc) {
+    return (std::string("Line ") +
+            std::to_string(srcLoc.firstLine) +
+            std::string(":") +
+            std::to_string(srcLoc.firstColumn) +
+            std::string(" to ") +
+            std::to_string(srcLoc.lastLine) +
+            std::string(":") +
+            std::to_string(srcLoc.lastColumn));
 }
 
 } /* END NAMESPACE */
@@ -721,7 +721,7 @@ void ast_free(node *ast) {
 void ast_print(node *ast) {
     if(ast != nullptr) {
         AST::Printer printer;
-        printer.setPrintSourceLocation(true);
+        printer.setPrintSourceLocation(false);
         static_cast<AST::ASTNode *>(ast)->visit(printer);
     }
 }
