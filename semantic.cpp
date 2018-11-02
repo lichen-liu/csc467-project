@@ -51,40 +51,6 @@ class SymbolDeclVisitor: public AST::Visitor {
         }
 };
 
-class SymbolLUVisitor: public AST::Visitor {
-    private:
-        ST::SymbolTable &m_symbolTable;
-    public:
-        SymbolLUVisitor(ST::SymbolTable &symbolTable):
-            m_symbolTable(symbolTable) {}
-    
-    private:
-        virtual void preNodeVisit(AST::IdentifierNode *identifierNode) {
-            AST::DeclarationNode *decl = m_symbolTable.getSymbolDecl(identifierNode);
-
-            /// TODO: print error
-            if(decl == nullptr) {
-                // Update info in identifierNode
-                identifierNode->setExpressionType(ANY_TYPE);
-                identifierNode->setConst(false);
-                identifierNode->setDeclaration(nullptr);
-
-                printf("Error: Missing Declaration for IdentifierNode(%p)\n", identifierNode);
-                ast_print(identifierNode);
-                printf("\n");
-
-                return;
-            }
-
-            assert(decl->getName() == identifierNode->getName());
-
-            // Update info in identifierNode
-            identifierNode->setExpressionType(decl->getType());
-            identifierNode->setConst(decl->isConst());
-            identifierNode->setDeclaration(decl);
-        }
-};
-
 enum class DataTypeCategory {
     boolean,
     arithmetic
@@ -156,7 +122,200 @@ int getDataTypeBaseType(int dataType) {
     }
 }
 
-int inferDataType(int op, int rhsDataType) {
+class TypeChecker: public AST::Visitor {
+    private:
+        ST::SymbolTable &m_symbolTable;
+    public:
+        TypeChecker(ST::SymbolTable &symbolTable):
+            m_symbolTable(symbolTable) {}
+    
+    private:
+        virtual void preNodeVisit(AST::IdentifierNode *identifierNode);
+
+    private:
+        virtual void postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode);
+        virtual void postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode);
+        virtual void postNodeVisit(AST::IndexingNode *indexingNode);
+        virtual void postNodeVisit(AST::FunctionNode *functionNode);
+        virtual void postNodeVisit(AST::ConstructorNode *constructorNode);
+        /* WIP */
+        virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}
+        virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode){}
+        virtual void postNodeVisit(AST::AssignmentNode *assignmentNode){}
+
+    private:
+        int inferDataType(int op, int rhsDataType);
+        int inferDataType(int op, int lhsDataType, int rhsDataType);
+};
+
+void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
+    AST::DeclarationNode *decl = m_symbolTable.getSymbolDecl(identifierNode);
+
+    /// TODO: print error
+    if(decl == nullptr) {
+        // Update info in identifierNode
+        identifierNode->setExpressionType(ANY_TYPE);
+        identifierNode->setConst(false);
+        identifierNode->setDeclaration(nullptr);
+
+        printf("Error: Missing Declaration for IdentifierNode(%p)\n", identifierNode);
+        ast_print(identifierNode);
+        printf("\n");
+
+        return;
+    }
+
+    assert(decl->getName() == identifierNode->getName());
+
+    // Update info in identifierNode
+    identifierNode->setExpressionType(decl->getType());
+    identifierNode->setConst(decl->isConst());
+    identifierNode->setDeclaration(decl);
+}
+
+void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode){
+    const AST::ExpressionNode *rhsExpr = unaryExpressionNode->getExpression();
+    int rhsDataType = rhsExpr->getExpressionType();
+    bool rhsIsConst = rhsExpr->isConst();
+    int op = unaryExpressionNode->getOperator();
+
+    int resultDataType = inferDataType(op, rhsDataType);
+    unaryExpressionNode->setExpressionType(resultDataType);
+    unaryExpressionNode->setConst(rhsIsConst);
+}
+
+void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode){
+    const AST::ExpressionNode *lhsExpr = binaryExpressionNode->getLeftExpression();
+    const AST::ExpressionNode *rhsExpr = binaryExpressionNode->getRightExpression();
+    
+    int lhsDataType = lhsExpr->getExpressionType();
+    int rhsDataType = rhsExpr->getExpressionType();
+
+    bool lhsIsConst = lhsExpr->isConst();
+    bool rhsIsConst = rhsExpr->isConst();
+
+    int op = binaryExpressionNode->getOperator();
+
+    int resultDataType = inferDataType(op, lhsDataType, rhsDataType);
+    binaryExpressionNode->setExpressionType(resultDataType);
+    binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
+}
+
+void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode){
+    /*
+        * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
+        * has type veci. For example, the maximum index into a variable of type vec2 is 1.
+        * - The result type of indexing into a vector is the base type associated with that vector’s
+        * type. For example, if v has type bvec2 then v[0] has type bool.
+        */
+    int resultDataType = ANY_TYPE;
+
+    const AST::IdentifierNode *identifier = indexingNode->getIdentifier();            
+    int identifierDataType = identifier->getExpressionType();
+    int identifierIsConst = identifier->isConst();
+    // Identifier must be a vector
+    int identifierTypeOrder = getDataTypeOrder(identifierDataType);
+    if(identifierTypeOrder > 1) {
+        const AST::IntLiteralNode *index = 
+            dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
+        int indexVal = index->getVal();
+        // Index must be valid
+        if(indexVal >= 0 && indexVal < identifierTypeOrder) {
+            // The type of this indexing node is the base type for identifier node
+            int identifierBaseType = getDataTypeBaseType(identifierDataType);
+            resultDataType = identifierBaseType;
+        }
+    }
+
+    indexingNode->setExpressionType(resultDataType);
+    indexingNode->setConst(identifierIsConst);
+}
+
+void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode){
+    int resultDataType = ANY_TYPE;
+
+    const std::string &funcName = functionNode->getName();
+    AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
+    const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+    if(funcName == "rsq") {
+        if(args.size() == 1) {
+            const AST::ExpressionNode *arg1 = args.front();
+            int arg1Type = arg1->getExpressionType();
+            if(arg1Type == FLOAT_T || arg1Type == INT_T) {
+                // float rsq(float);
+                // float rsq(int);
+                resultDataType = FLOAT_T;
+            }
+        }
+    } else if (funcName == "dp3") {
+        if(args.size() == 2) {
+            const AST::ExpressionNode *arg1 = args[0];
+            int arg1Type = arg1->getExpressionType();
+            const AST::ExpressionNode *arg2 = args[1];
+            int arg2Type = arg2->getExpressionType();
+
+            if(arg1Type == arg2Type) {
+                if(arg1Type == VEC3_T || arg1Type == VEC4_T || arg1Type == IVEC3_T || arg1Type == IVEC4_T) {
+                    // float dp3(vec4, vec4);
+                    // float dp3(vec3, vec3);
+                    // float dp3(ivec4, ivec4);
+                    // float dp3(ivec3, ivec3);
+                    resultDataType = FLOAT_T;
+                }
+            }
+        }
+    } else if (funcName == "lit") {
+        if(args.size() == 1) {
+            const AST::ExpressionNode *arg1 = args.front();
+            int arg1Type = arg1->getExpressionType();
+            if(arg1Type == VEC4_T) {
+                // vec4 lit(vec4);
+                resultDataType = VEC4_T;
+            }
+        }
+    }
+
+    functionNode->setExpressionType(resultDataType);
+}
+
+void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode){
+    /*
+    * Constructors for basic types (bool, int, float) must have one argument that exactly
+    * matches that type. Constructors for vector types must have as many arguments as there
+    * are elements in the vector, and the types of each argument must be exactly the type of the
+    * basic type corresponding to the vector type. For example, bvec2(true,false) is valid ,
+    * whereas bvec2(1,true) is invalid.
+    */
+    bool resultIsConst = false;
+    int resultDataType = ANY_TYPE;
+
+    int constructorType = constructorNode->getConstructorType();
+    int constructorTypeBase = getDataTypeBaseType(constructorType);
+    int constructorTypeOrder = getDataTypeOrder(constructorType);
+
+    AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
+    const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+
+    if(constructorTypeOrder == args.size()) {
+        resultIsConst = true;
+        bool argLegal = true;
+        for(const AST::ExpressionNode *arg : args) {
+            if(arg->getExpressionType() != constructorTypeBase) {
+                argLegal = false;
+            }
+            resultIsConst &= arg->isConst();
+        }
+
+        if(argLegal) {
+            resultDataType = constructorType;
+        }
+    }
+
+    constructorNode->setExpressionType(resultDataType);
+    constructorNode->setConst(resultIsConst);
+}
+
+int TypeChecker::inferDataType(int op, int rhsDataType) {
     /* Unary Operator Type Inference */
     /*
      * - s, v Arithmetic
@@ -190,7 +349,7 @@ int inferDataType(int op, int rhsDataType) {
     return ANY_TYPE;
 }
 
-int inferDataType(int op, int lhsDataType, int rhsDataType) {
+int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
     /* Binary Operator Type Inference */
     /*
      * +, - ss, vv Arithmetic
@@ -322,155 +481,6 @@ int inferDataType(int op, int lhsDataType, int rhsDataType) {
     return ANY_TYPE;
 }
 
-class TypeInferenceVisitor: public AST::Visitor {    
-    private:
-        virtual void postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode){
-            const AST::ExpressionNode *rhsExpr = unaryExpressionNode->getExpression();
-            int rhsDataType = rhsExpr->getExpressionType();
-            bool rhsIsConst = rhsExpr->isConst();
-            int op = unaryExpressionNode->getOperator();
-
-            int resultDataType = inferDataType(op, rhsDataType);
-            unaryExpressionNode->setExpressionType(resultDataType);
-            unaryExpressionNode->setConst(rhsIsConst);
-        }
-
-        virtual void postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode){
-            const AST::ExpressionNode *lhsExpr = binaryExpressionNode->getLeftExpression();
-            const AST::ExpressionNode *rhsExpr = binaryExpressionNode->getRightExpression();
-            
-            int lhsDataType = lhsExpr->getExpressionType();
-            int rhsDataType = rhsExpr->getExpressionType();
-
-            bool lhsIsConst = lhsExpr->isConst();
-            bool rhsIsConst = rhsExpr->isConst();
-
-            int op = binaryExpressionNode->getOperator();
-
-            int resultDataType = inferDataType(op, lhsDataType, rhsDataType);
-            binaryExpressionNode->setExpressionType(resultDataType);
-            binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
-        }
-
-        virtual void postNodeVisit(AST::IndexingNode *indexingNode){
-            /*
-             * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
-             * has type veci. For example, the maximum index into a variable of type vec2 is 1.
-             * - The result type of indexing into a vector is the base type associated with that vector’s
-             * type. For example, if v has type bvec2 then v[0] has type bool.
-             */
-            int resultDataType = ANY_TYPE;
-
-            const AST::IdentifierNode *identifier = indexingNode->getIdentifier();            
-            int identifierDataType = identifier->getExpressionType();
-            int identifierIsConst = identifier->isConst();
-            // Identifier must be a vector
-            int identifierTypeOrder = getDataTypeOrder(identifierDataType);
-            if(identifierTypeOrder > 1) {
-                const AST::IntLiteralNode *index = 
-                    dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
-                int indexVal = index->getVal();
-                // Index must be valid
-                if(indexVal >= 0 && indexVal < identifierTypeOrder) {
-                    // The type of this indexing node is the base type for identifier node
-                    int identifierBaseType = getDataTypeBaseType(identifierDataType);
-                    resultDataType = identifierBaseType;
-                }
-            }
-
-            indexingNode->setExpressionType(resultDataType);
-            indexingNode->setConst(identifierIsConst);
-        }
-
-        virtual void postNodeVisit(AST::FunctionNode *functionNode){
-            int resultDataType = ANY_TYPE;
-
-            const std::string &funcName = functionNode->getName();
-            AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
-            const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
-            if(funcName == "rsq") {
-                if(args.size() == 1) {
-                    const AST::ExpressionNode *arg1 = args.front();
-                    int arg1Type = arg1->getExpressionType();
-                    if(arg1Type == FLOAT_T || arg1Type == INT_T) {
-                        // float rsq(float);
-                        // float rsq(int);
-                        resultDataType = FLOAT_T;
-                    }
-                }
-            } else if (funcName == "dp3") {
-                if(args.size() == 2) {
-                    const AST::ExpressionNode *arg1 = args[0];
-                    int arg1Type = arg1->getExpressionType();
-                    const AST::ExpressionNode *arg2 = args[1];
-                    int arg2Type = arg2->getExpressionType();
-
-                    if(arg1Type == arg2Type) {
-                        if(arg1Type == VEC3_T || arg1Type == VEC4_T || arg1Type == IVEC3_T || arg1Type == IVEC4_T) {
-                            // float dp3(vec4, vec4);
-                            // float dp3(vec3, vec3);
-                            // float dp3(ivec4, ivec4);
-                            // float dp3(ivec3, ivec3);
-                            resultDataType = FLOAT_T;
-                        }
-                    }
-                }
-            } else if (funcName == "lit") {
-                if(args.size() == 1) {
-                    const AST::ExpressionNode *arg1 = args.front();
-                    int arg1Type = arg1->getExpressionType();
-                    if(arg1Type == VEC4_T) {
-                        // vec4 lit(vec4);
-                        resultDataType = VEC4_T;
-                    }
-                }
-            }
-
-            functionNode->setExpressionType(resultDataType);
-        }
-
-        virtual void postNodeVisit(AST::ConstructorNode *constructorNode){
-            /*
-            * Constructors for basic types (bool, int, float) must have one argument that exactly
-            * matches that type. Constructors for vector types must have as many arguments as there
-            * are elements in the vector, and the types of each argument must be exactly the type of the
-            * basic type corresponding to the vector type. For example, bvec2(true,false) is valid ,
-            * whereas bvec2(1,true) is invalid.
-            */
-            bool resultIsConst = false;
-            int resultDataType = ANY_TYPE;
-
-            int constructorType = constructorNode->getConstructorType();
-            int constructorTypeBase = getDataTypeBaseType(constructorType);
-            int constructorTypeOrder = getDataTypeOrder(constructorType);
-
-            AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
-            const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
-
-            if(constructorTypeOrder == args.size()) {
-                resultIsConst = true;
-                bool argLegal = true;
-                for(const AST::ExpressionNode *arg : args) {
-                    if(arg->getExpressionType() != constructorTypeBase) {
-                        argLegal = false;
-                    }
-                    resultIsConst &= arg->isConst();
-                }
-
-                if(argLegal) {
-                    resultDataType = constructorType;
-                }
-            }
-
-            constructorNode->setExpressionType(resultDataType);
-            constructorNode->setConst(resultIsConst);
-        }
-
-        virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}
-        virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode){}
-        virtual void postNodeVisit(AST::AssignmentNode *assignmentNode){}
-};
-
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
@@ -489,14 +499,10 @@ int semantic_check(node * ast) {
     static_cast<AST::ASTNode *>(ast)->visit(symbolDeclVisitor);
     // symbolTable.printScopeLeaves();
 
-    /* Symbol Look Up */
-    SEMA::SymbolLUVisitor symbolLUVisitor(symbolTable);
-    static_cast<AST::ASTNode *>(ast)->visit(symbolLUVisitor);
+    /* Type Checker */
+    SEMA::TypeChecker typeChecker(symbolTable);
+    static_cast<AST::ASTNode *>(ast)->visit(typeChecker);
     // symbolTable.printSymbolReference();
-
-    /* Type Inference */
-    SEMA::TypeInferenceVisitor typeInferenceVisitor;
-    static_cast<AST::ASTNode *>(ast)->visit(typeInferenceVisitor);
     ast_print(ast);
 
     return 1;
