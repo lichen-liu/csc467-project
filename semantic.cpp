@@ -138,10 +138,9 @@ class TypeChecker: public AST::Visitor {
         virtual void postNodeVisit(AST::IndexingNode *indexingNode);
         virtual void postNodeVisit(AST::FunctionNode *functionNode);
         virtual void postNodeVisit(AST::ConstructorNode *constructorNode);
-        /* WIP */
-        virtual void postNodeVisit(AST::DeclarationNode *declarationNode){}
-        virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode){}
-        virtual void postNodeVisit(AST::AssignmentNode *assignmentNode){}
+        virtual void postNodeVisit(AST::DeclarationNode *declarationNode);
+        virtual void postNodeVisit(AST::IfStatementNode *ifStatementNode);
+        virtual void postNodeVisit(AST::AssignmentNode *assignmentNode);
 
     private:
         int inferDataType(int op, int rhsDataType);
@@ -173,7 +172,7 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
     identifierNode->setDeclaration(decl);
 }
 
-void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode){
+void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
     const AST::ExpressionNode *rhsExpr = unaryExpressionNode->getExpression();
     int rhsDataType = rhsExpr->getExpressionType();
     bool rhsIsConst = rhsExpr->isConst();
@@ -184,7 +183,7 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode){
     unaryExpressionNode->setConst(rhsIsConst);
 }
 
-void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode){
+void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {
     const AST::ExpressionNode *lhsExpr = binaryExpressionNode->getLeftExpression();
     const AST::ExpressionNode *rhsExpr = binaryExpressionNode->getRightExpression();
     
@@ -201,7 +200,7 @@ void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode)
     binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
 }
 
-void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode){
+void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
     /*
         * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
         * has type veci. For example, the maximum index into a variable of type vec2 is 1.
@@ -231,7 +230,7 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode){
     indexingNode->setConst(identifierIsConst);
 }
 
-void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode){
+void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
     int resultDataType = ANY_TYPE;
 
     const std::string &funcName = functionNode->getName();
@@ -278,7 +277,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode){
     functionNode->setExpressionType(resultDataType);
 }
 
-void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode){
+void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
     /*
     * Constructors for basic types (bool, int, float) must have one argument that exactly
     * matches that type. Constructors for vector types must have as many arguments as there
@@ -314,6 +313,23 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode){
     constructorNode->setExpressionType(resultDataType);
     constructorNode->setConst(resultIsConst);
 }
+
+void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {}
+
+void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
+    /*
+     * The expression that determines which branch of an if statement should be taken must
+     * have the type bool (not bvec).
+     */
+    const AST::ExpressionNode *cond = ifStatementNode->getConditionExpression();
+
+    /// TODO: print error
+    if(cond->getExpressionType() != BOOL_T) {
+        printf("Error: if statement condition must be of boolean type.\n");
+    }
+}
+
+void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {}
 
 int TypeChecker::inferDataType(int op, int rhsDataType) {
     /* Unary Operator Type Inference */
