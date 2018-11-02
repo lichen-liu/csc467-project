@@ -143,6 +143,13 @@ class Visitor {
         void visit(ScopeNode *);
 };
 
+struct SourceLocation {
+    int firstLine;
+    int firstColumn;
+    int lastLine;
+    int lastColumn;
+};
+
 #define AST_VISIT_THIS_NODE     public:                                             \
                                 virtual void visit(Visitor &visitor) {              \
                                     visitor.visit(this);                            \
@@ -152,8 +159,13 @@ class Visitor {
  * Base class for AST Nodes
  */
 class ASTNode {
+    private:
+        SourceLocation m_srcLoc = {0};                  // source location for text correspondance of an AST node
     public:
         virtual void visit(Visitor &vistor) = 0;
+    public:
+        const SourceLocation &getSourceLocation() const { return m_srcLoc; }
+        void setSourceLocation(const SourceLocation &srcLoc) { m_srcLoc = srcLoc; }
     protected:
         virtual ~ASTNode() {}
     public:
