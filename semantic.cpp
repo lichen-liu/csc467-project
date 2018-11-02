@@ -523,11 +523,19 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
     const AST::ExpressionNode *initExpr = declarationNode->getExpression();
     if(declarationNode->isConst()) {
         if(initExpr == nullptr) {
-            /// TODO: print error
-            printf("Error: Const qualified variable must have initialization.\n");
+            std::stringstream ss;
+            ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
+                "' is missing initialization at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ".";
+            m_semaAnalyzer.createEvent(declarationNode,
+                                       SemanticAnalyzer::EventType::Error,
+                                       ss.str());
         } else if (!initExpr->isConst()) {
-            /// TODO: print error
-            printf("Error: Const qualified variable must be assigned a const value.\n");
+            std::stringstream ss;
+            ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
+                "' is initialized to a non-const qualified expression at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+            m_semaAnalyzer.createEvent(declarationNode,
+                                       SemanticAnalyzer::EventType::Error,
+                                       ss.str());
         }
     }
 
@@ -536,11 +544,21 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
         int lhsDataType = declarationNode->getType();
 
         if(rhsDataType == ANY_TYPE) {
-            /// TODO: print error
-            printf("Error: Variable declaration has undetermined type during initialization.\n");
+            std::stringstream ss;
+            ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to an unknown type at " <<
+                AST::getSourceLocationString(initExpr->getSourceLocation()) << " due to previous error(s).";
+            m_semaAnalyzer.createEvent(declarationNode,
+                                       SemanticAnalyzer::EventType::Error,
+                                       ss.str());
         } else if(lhsDataType != rhsDataType) {
-            /// TODO: print error
-            printf("Error: Variable declaration has non-compatible type during initialization.\n");
+            std::stringstream ss;
+            ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
+                "' at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+            m_semaAnalyzer.createEvent(declarationNode,
+                                       SemanticAnalyzer::EventType::Error,
+                                       ss.str());
         }
     }
 }
@@ -800,12 +818,14 @@ int semantic_check(node * ast) {
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
+    if(numEvents != 0) {
+        printf("\n");
+    }
     for(int id = 0; id < numEvents; id++) {
         const SEMA::SemanticAnalyzer::Event &event = semaAnalyzer.getEvent(id);
         const AST::SourceLocation &srcLoc = event.astNode->getSourceLocation();
         
-        printf("\n");
-        printf("----------------------------------------------------------\n");
+        printf("--------------------------------------------------------------------------\n");
         printf("\n");
  
         if(srcLoc.firstLine == srcLoc.lastLine) {
@@ -837,8 +857,10 @@ int semantic_check(node * ast) {
         } else {
             header = "Warning";
         }
-        printf("%s(%d): %s\n", header.c_str(), id, event.message.c_str());
-        printf("\n");
+        printf("%s[%d]: %s\n", header.c_str(), id, event.message.c_str());
+    }
+    if(numEvents != 0) {
+        printf("--------------------------------------------------------------------------\n");
     }
 
     return 1;

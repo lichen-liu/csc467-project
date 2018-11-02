@@ -425,7 +425,7 @@ std::string getSourceLocationString(const SourceLocation &srcLoc) {
             std::to_string(srcLoc.firstLine) +
             std::string(":") +
             std::to_string(srcLoc.firstColumn) +
-            std::string(" to ") +
+            std::string(" to Line ") +
             std::to_string(srcLoc.lastLine) +
             std::string(":") +
             std::to_string(srcLoc.lastColumn));

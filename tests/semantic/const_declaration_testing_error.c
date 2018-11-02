@@ -5,5 +5,5 @@
     const int intd = inta;
     const int inte = 1;
     const int intf = inte;
-    const int intg = intf + 1;
+    const int intg = inta + 1;
 }
