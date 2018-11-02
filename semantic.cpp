@@ -437,11 +437,31 @@ class TypeInferenceVisitor: public AST::Visitor {
             * basic type corresponding to the vector type. For example, bvec2(true,false) is valid ,
             * whereas bvec2(1,true) is invalid.
             */
-            bool resultIsConst = true;
+            bool resultIsConst = false;
             int resultDataType = ANY_TYPE;
 
-            // todo
-            
+            int constructorType = constructorNode->getConstructorType();
+            int constructorTypeBase = getDataTypeBaseType(constructorType);
+            int constructorTypeOrder = getDataTypeOrder(constructorType);
+
+            AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
+            const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+
+            if(constructorTypeOrder == args.size()) {
+                resultIsConst = true;
+                bool argLegal = true;
+                for(const AST::ExpressionNode *arg : args) {
+                    if(arg->getExpressionType() != constructorTypeBase) {
+                        argLegal = false;
+                    }
+                    resultIsConst &= arg->isConst();
+                }
+
+                if(argLegal) {
+                    resultDataType = constructorType;
+                }
+            }
+
             constructorNode->setExpressionType(resultDataType);
             constructorNode->setConst(resultIsConst);
         }
