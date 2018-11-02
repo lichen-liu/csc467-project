@@ -6,9 +6,149 @@
 #include "common.h"
 #include "parser.tab.h"
 
+#include <vector>
+#include <unordered_map>
+
 #include <cassert>
 
 namespace SEMA{ /* START NAMESPACE */
+
+class SemanticAnalyzer {
+    public:
+        enum class EventType {
+            Warning,
+            Error,
+            Unknown
+        };
+
+        struct Event {
+            EventType eventType = EventType::Unknown;
+            const AST::ASTNode *astNode = nullptr;
+            std::string message;
+        };
+
+        using EventID = size_t;
+
+    private:
+        std::vector<std::unique_ptr<Event>> m_eventList;
+        std::unordered_map<const AST::ASTNode *, std::vector<EventID>> m_astEventLU;
+
+        std::vector<EventID> m_errorEventList;
+        std::vector<EventID> m_warningEventList;
+
+    private:
+        std::unique_ptr<Event> m_tempEvent = nullptr;
+        bool m_tempEventValid = false;
+    
+    public:
+        EventID createEvent(const AST::ASTNode *astNode, EventType eventType, std::string message = "");
+
+        EventType getEventType(EventID eventID) const;
+        const AST::ASTNode *getEventASTNode(EventID eventID) const;
+        const std::string &getEventMessage(EventID eventID) const;
+        std::string &getEventMessage(EventID eventID);
+        void setEventMessage(EventID eventID, const std::string &message);
+        const Event &getEvent(EventID eventID) const;
+
+        void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown, std::string message = "");
+        void throwTempEvent();
+        EventID promoteTempEvent();
+        Event &getTempEvent();
+        const Event &getTempEvent() const;
+
+        bool isTempEventCreated() const { return m_tempEventValid; }
+};
+
+SemanticAnalyzer::EventID SemanticAnalyzer::createEvent(const AST::ASTNode *astNode, EventType eventType, std::string message) {
+    assert(astNode != nullptr);
+    assert(eventType != EventType::Unknown);
+
+    m_eventList.emplace_back(new Event{eventType, astNode, std::move(message)});
+    EventID id = m_eventList.size() - 1;
+    m_astEventLU[astNode].push_back(id);
+    if(eventType == EventType::Error) {
+        m_errorEventList.push_back(id);
+    } else {
+        m_warningEventList.push_back(id);
+    }
+    
+    return id;
+}
+
+SemanticAnalyzer::EventType SemanticAnalyzer::getEventType(EventID eventID) const {
+    return m_eventList.at(eventID)->eventType;
+}
+
+const AST::ASTNode *SemanticAnalyzer::getEventASTNode(EventID eventID) const {
+    return m_eventList.at(eventID)->astNode;
+}
+
+const std::string &SemanticAnalyzer::getEventMessage(EventID eventID) const {
+    return m_eventList.at(eventID)->message;
+}
+
+std::string &SemanticAnalyzer::getEventMessage(EventID eventID) {
+    return m_eventList.at(eventID)->message;
+}
+
+void SemanticAnalyzer::setEventMessage(EventID eventID, const std::string &message) {
+    m_eventList.at(eventID)->message = message;
+}
+
+const SemanticAnalyzer::Event &SemanticAnalyzer::getEvent(EventID eventID) const {
+    return *(m_eventList.at(eventID));
+}
+
+void SemanticAnalyzer::createTempEvent(const AST::ASTNode *astNode, EventType eventType, std::string message) {
+    assert(m_tempEventValid == false);
+    assert(m_tempEvent == nullptr);
+    m_tempEventValid = true;
+    m_tempEvent.reset(new Event{eventType, astNode, std::move(message)});
+}
+
+void SemanticAnalyzer::throwTempEvent() {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    m_tempEventValid = false;
+    m_tempEvent.reset(nullptr);
+}
+
+SemanticAnalyzer::EventID SemanticAnalyzer::promoteTempEvent() {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+
+    EventType eventType = m_tempEvent->eventType;
+    const AST::ASTNode *astNode = m_tempEvent->astNode;
+    assert(eventType != EventType::Unknown);
+    assert(astNode != nullptr);
+
+    m_tempEventValid = false;
+    m_eventList.push_back(std::move(m_tempEvent));
+    assert(m_tempEvent == nullptr);
+
+    EventID id = m_eventList.size() - 1;
+
+    m_astEventLU[astNode].push_back(id);
+    if(eventType == EventType::Error) {
+        m_errorEventList.push_back(id);
+    } else {
+        m_warningEventList.push_back(id);
+    }
+
+    return id;
+}
+
+SemanticAnalyzer::Event &SemanticAnalyzer::getTempEvent() {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    return *m_tempEvent;
+}
+
+const SemanticAnalyzer::Event &SemanticAnalyzer::getTempEvent() const {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    return *m_tempEvent;
+}
 
 class SymbolDeclVisitor: public AST::Visitor {
     private:
@@ -52,8 +192,8 @@ class SymbolDeclVisitor: public AST::Visitor {
 };
 
 enum class DataTypeCategory {
-    boolean,
-    arithmetic
+    Boolean,
+    Arithmetic
 };
 
 DataTypeCategory getDataTypeCategory(int dataType) {
@@ -62,7 +202,7 @@ DataTypeCategory getDataTypeCategory(int dataType) {
         case BVEC2_T:
         case BVEC3_T:
         case BVEC4_T:
-            return DataTypeCategory::boolean;
+            return DataTypeCategory::Boolean;
         case INT_T:
         case IVEC2_T:
         case IVEC3_T:
@@ -71,7 +211,7 @@ DataTypeCategory getDataTypeCategory(int dataType) {
         case VEC2_T:
         case VEC3_T:
         case VEC4_T:
-            return DataTypeCategory::arithmetic;
+            return DataTypeCategory::Arithmetic;
         default:
             assert(0);
     }
@@ -423,14 +563,14 @@ int TypeChecker::inferDataType(int op, int rhsDataType) {
     DataTypeCategory typeCateg = getDataTypeCategory(rhsDataType);
     switch(op) {
         case MINUS: {
-            if(typeCateg == DataTypeCategory::arithmetic) {
+            if(typeCateg == DataTypeCategory::Arithmetic) {
                 return rhsDataType;
             }
             
             break;
         }
         case NOT: {
-            if(typeCateg == DataTypeCategory::boolean) {
+            if(typeCateg == DataTypeCategory::Boolean) {
                 return rhsDataType;
             }
 
@@ -483,7 +623,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
     switch(op) {
         case PLUS:
         case MINUS: {
-            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+            if(lhsTypeCateg == DataTypeCategory::Arithmetic && rhsTypeCateg == DataTypeCategory::Arithmetic) {
                 if(lhsTypeOrder == rhsTypeOrder) {
                     // Same base type
                     // Both arithmetic type
@@ -496,7 +636,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
         }
 
         case TIMES: {
-            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+            if(lhsTypeCateg == DataTypeCategory::Arithmetic && rhsTypeCateg == DataTypeCategory::Arithmetic) {
                 if(lhsTypeOrder > rhsTypeOrder) {
                     // Same base type
                     // Both arithmetic type
@@ -512,7 +652,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
 
         case SLASH:
         case EXP: {
-            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+            if(lhsTypeCateg == DataTypeCategory::Arithmetic && rhsTypeCateg == DataTypeCategory::Arithmetic) {
                 if(lhsTypeOrder == 1 && rhsTypeOrder == 1) {
                     // Same base type
                     // Both arithmetic type
@@ -526,7 +666,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
 
         case AND:
         case OR: {
-            if(lhsTypeCateg == DataTypeCategory::boolean && rhsTypeCateg == DataTypeCategory::boolean) {
+            if(lhsTypeCateg == DataTypeCategory::Boolean && rhsTypeCateg == DataTypeCategory::Boolean) {
                 if(lhsTypeOrder == rhsTypeOrder) {
                     // Same base type
                     // Both boolean type
@@ -542,7 +682,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
         case LEQ:
         case GTR:
         case GEQ: {
-            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+            if(lhsTypeCateg == DataTypeCategory::Arithmetic && rhsTypeCateg == DataTypeCategory::Arithmetic) {
                 if(lhsTypeOrder == 1 && rhsTypeOrder == 1) {
                     // Same base type
                     // Both arithmetic type
@@ -556,7 +696,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
 
         case EQL:
         case NEQ: {
-            if(lhsTypeCateg == DataTypeCategory::arithmetic && rhsTypeCateg == DataTypeCategory::arithmetic) {
+            if(lhsTypeCateg == DataTypeCategory::Arithmetic && rhsTypeCateg == DataTypeCategory::Arithmetic) {
                 if(lhsTypeOrder == rhsTypeOrder) {
                     // Same base type
                     // Both arithmetic type
