@@ -312,6 +312,9 @@ class BooleanLiteralNode: public ExpressionNode {
 
 class VariableNode: public ExpressionNode {
     /* Pure Virtual Intermediate Layer */
+    public:
+        virtual std::string getName() const = 0;
+        virtual const DeclarationNode *getDeclaration() const = 0;
 };
 
 class IdentifierNode: public VariableNode {
@@ -330,8 +333,9 @@ class IdentifierNode: public VariableNode {
         virtual bool isConst() const { return m_isConst; }
         virtual void setConst(bool isConst) { m_isConst = isConst; }
     public:
-        const std::string &getName() const { return m_id; }
-        const DeclarationNode *getDeclaration() const { return m_decl; }
+        virtual std::string getName() const { return m_id; }
+        virtual const DeclarationNode *getDeclaration() const { return m_decl; }
+    public:
         void setDeclaration(const DeclarationNode *decl) { m_decl = decl; }
     protected:
         virtual ~IdentifierNode() {}
@@ -356,6 +360,11 @@ class IndexingNode: public VariableNode {
     public:
         IdentifierNode *getIdentifier() const { return m_identifier; }
         ExpressionNode *getIndexExpression() const { return m_indexExpr; }
+    public:
+        virtual std::string getName() const {
+            return m_identifier->getName() + "[" + std::to_string(reinterpret_cast<IntLiteralNode *>(m_indexExpr)->getVal()) + "]";
+        }
+        virtual const DeclarationNode *getDeclaration() const { return m_identifier->getDeclaration(); }
     protected:
         virtual ~IndexingNode() {
             ASTNode::destructNode(m_identifier);

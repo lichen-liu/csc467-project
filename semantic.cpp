@@ -727,11 +727,41 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
     int resultDataType = ANY_TYPE;
     bool assignmentLegal = true;
 
-    if(lhsDataType == ANY_TYPE || rhsDataType == ANY_TYPE) {
+    if(lhsDataType == ANY_TYPE && rhsDataType == ANY_TYPE) {
         assignmentLegal = false;
+
+        std::stringstream ss;
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+            ", has unknown type on both sides of assignment operator due to pervious errors.";
         
-        /// TODO: print error
-        printf("Error: Assignment has undetermined type.\n");
+        auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+    } else if (lhsDataType == ANY_TYPE && rhsDataType != ANY_TYPE) {
+        assignmentLegal = false;
+
+        std::stringstream ss;
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+            ", has variable of unknown type at " << AST::getSourceLocationString(lhsVar->getSourceLocation()) << " due to previous error.";
+        
+        auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+    } else if (lhsDataType != ANY_TYPE && rhsDataType == ANY_TYPE) {
+        assignmentLegal = false;
+
+        std::stringstream ss;
+        //  (lhsVar->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " <<
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+            ", has expression of unknown type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << " due to previous error(s).";
+        
+        auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+
+        /// TODO
+        //if(lhsVar->)
+        // m_semaAnalyzer.getEvent(id).setUsingReference(true);
     } else {
         assert(rhsDataType != ANY_TYPE);
         assert(lhsDataType != ANY_TYPE);

@@ -1,6 +1,5 @@
 {
     /* Declaration */
     int inta;
-    const int inta
-     = 2;
+    const int inta = 2;
 }
