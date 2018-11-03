@@ -144,10 +144,18 @@ class Visitor {
 };
 
 struct SourceLocation {
-    int firstLine;
-    int firstColumn;
-    int lastLine;
-    int lastColumn;
+    int firstLine = 0;
+    int firstColumn = 0;
+    int lastLine = 0;
+    int lastColumn = 0;
+
+    friend bool operator==(const SourceLocation& lhs, const SourceLocation& rhs) {
+        return (lhs.firstLine == rhs.firstLine) &&
+               (lhs.firstColumn == rhs.firstColumn) &&
+               (lhs.lastLine == rhs.lastLine) &&
+               (lhs.lastColumn == rhs.lastColumn);
+    }
+    friend bool operator!=(const SourceLocation& lhs, const SourceLocation& rhs){ return !(lhs == rhs); }
 };
 
 #define AST_VISIT_THIS_NODE     public:                                             \

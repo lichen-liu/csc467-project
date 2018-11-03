@@ -63,11 +63,11 @@ class SemanticAnalyzer {
                 const AST::ASTNode *m_astNode = nullptr;
                 EventType m_eventType = EventType::Unknown;
                 
-                AST::SourceLocation m_eventLoc = {1};
+                AST::SourceLocation m_eventLoc;
                 std::string m_message;
 
                 bool m_useRef = false;
-                AST::SourceLocation m_refLoc = {1};
+                AST::SourceLocation m_refLoc;
                 std::string m_refMessage;
 
             public:
@@ -135,7 +135,7 @@ class SemanticAnalyzer {
 
     public:
         void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown);
-        void throwTempEvent();
+        void dropTempEvent();
         EventID promoteTempEvent();
         Event &getTempEvent();
         const Event &getTempEventC() const;
@@ -192,26 +192,28 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
     printf("\033[1;39m: %s\033[0m\n", event.Message().c_str());
 
     // Print event location info
-    if(eventLoc.firstLine == eventLoc.lastLine) {
-        const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
-        printf("\033[0;32m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
-        printf("\033[1;37m%s\033[0m\n", line.c_str());
-        printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
-        for(int colNumber = 0; colNumber < line.length(); colNumber++) {
-            if(colNumber >= eventLoc.firstColumn - 1 && colNumber < eventLoc.lastColumn - 1) {
-                printf("\033[1;31m^\033[0m");
-            } else {
-                printf(" ");
+    if(AST::SourceLocation() != eventLoc) {
+        if(eventLoc.firstLine == eventLoc.lastLine) {
+            const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
+            printf("\033[0;32m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
+            printf("\033[1;37m%s\033[0m\n", line.c_str());
+            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                if(colNumber >= eventLoc.firstColumn - 1 && colNumber < eventLoc.lastColumn - 1) {
+                    printf("\033[1;31m^\033[0m");
+                } else {
+                    printf(" ");
+                }
+            }
+        } else {
+            for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
+                const std::string &line = sourceLocation.getLine(lineNumber);
+                printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+                printf("\033[1;37m%s\033[0m\n", line.c_str());
             }
         }
-    } else {
-        for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
-            const std::string &line = sourceLocation.getLine(lineNumber);
-            printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
-            printf("\033[1;37m%s\033[0m\n", line.c_str());
-        }
+        printf("\n");
     }
-    printf("\n");
 
     // Print reference location info and reference message
     if(event.isUsingReference()) {
@@ -224,26 +226,28 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
         printf("\033[1;39m: %s\033[0m\n", event.RefMessage().c_str());
 
         // Print reference location info
-        if(refLoc.firstLine == refLoc.lastLine) {
-            const std::string &line = sourceLocation.getLine(refLoc.firstLine);
-            printf("\033[0;32m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
-            printf("\033[1;37m%s\033[0m\n", line.c_str());
-            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
-            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
-                if(colNumber >= refLoc.firstColumn - 1 && colNumber < refLoc.lastColumn - 1) {
-                    printf("\033[1;33m~\033[0m");
-                } else {
-                    printf(" ");
+        if(AST::SourceLocation() != refLoc) {
+            if(refLoc.firstLine == refLoc.lastLine) {
+                const std::string &line = sourceLocation.getLine(refLoc.firstLine);
+                printf("\033[0;32m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
+                printf("\033[1;37m%s\033[0m\n", line.c_str());
+                printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+                for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                    if(colNumber >= refLoc.firstColumn - 1 && colNumber < refLoc.lastColumn - 1) {
+                        printf("\033[1;33m~\033[0m");
+                    } else {
+                        printf(" ");
+                    }
+                }
+            } else {
+                for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
+                    const std::string &line = sourceLocation.getLine(lineNumber);
+                    printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+                    printf("\033[1;37m%s\033[0m\n", line.c_str());
                 }
             }
-        } else {
-            for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
-                const std::string &line = sourceLocation.getLine(lineNumber);
-                printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
-                printf("\033[1;37m%s\033[0m\n", line.c_str());
-            }
+            printf("\n");
         }
-        printf("\n");
     }
 }
 
@@ -266,7 +270,7 @@ void SemanticAnalyzer::setTempEventEventType(EventType eventType) {
     m_tempEvent->m_eventType = eventType;
 }
 
-void SemanticAnalyzer::throwTempEvent() {
+void SemanticAnalyzer::dropTempEvent() {
     assert(m_tempEventValid == true);
     assert(m_tempEvent != nullptr);
     m_tempEventValid = false;
@@ -497,7 +501,26 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
     bool rhsIsConst = rhsExpr->isConst();
     int op = unaryExpressionNode->getOperator();
 
-    int resultDataType = inferDataType(op, rhsDataType);
+    int resultDataType = ANY_TYPE;
+    if(rhsDataType != ANY_TYPE) {
+        m_semaAnalyzer.createTempEvent(unaryExpressionNode, SemanticAnalyzer::EventType::Error);
+
+        resultDataType = inferDataType(op, rhsDataType);
+        
+        if(resultDataType == ANY_TYPE) {
+            std::stringstream ss;
+            ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
+                ", has non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+
+            m_semaAnalyzer.getTempEvent().Message() = std::move(ss.str());
+            m_semaAnalyzer.getTempEvent().EventLoc() = rhsExpr->getSourceLocation();
+
+            m_semaAnalyzer.promoteTempEvent();
+        } else {
+            m_semaAnalyzer.dropTempEvent();
+        }
+    }
+    
     unaryExpressionNode->setExpressionType(resultDataType);
     unaryExpressionNode->setConst(rhsIsConst);
 }
@@ -837,11 +860,21 @@ int TypeChecker::inferDataType(int op, int rhsDataType) {
                 return rhsDataType;
             }
             
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                m_semaAnalyzer.getTempEvent().RefMessage() = "Expecting arithmetic type on right-hand side of operator '-'";
+            }
+
             break;
         }
         case NOT: {
             if(typeCateg == DataTypeCategory::Boolean) {
                 return rhsDataType;
+            }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                m_semaAnalyzer.getTempEvent().RefMessage() = "Expecting boolean type on right-hand side of operator '!'";
             }
 
             break;
