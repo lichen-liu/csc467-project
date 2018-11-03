@@ -194,7 +194,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
     // Print event location info
     if(eventLoc.firstLine == eventLoc.lastLine) {
         const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
-        printf("\033[0;37m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
+        printf("\033[0;32m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
         printf("\033[1;37m%s\033[0m\n", line.c_str());
         printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
         for(int colNumber = 0; colNumber < line.length(); colNumber++) {
@@ -207,7 +207,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
     } else {
         for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
             const std::string &line = sourceLocation.getLine(lineNumber);
-            printf("\033[0;37m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+            printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
             printf("\033[1;37m%s\033[0m\n", line.c_str());
         }
     }
@@ -226,7 +226,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
         // Print reference location info
         if(refLoc.firstLine == refLoc.lastLine) {
             const std::string &line = sourceLocation.getLine(refLoc.firstLine);
-            printf("\033[0;37m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
+            printf("\033[0;32m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
             printf("\033[1;37m%s\033[0m\n", line.c_str());
             printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
             for(int colNumber = 0; colNumber < line.length(); colNumber++) {
@@ -239,7 +239,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
         } else {
             for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
                 const std::string &line = sourceLocation.getLine(lineNumber);
-                printf("\033[0;37m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+                printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
                 printf("\033[1;37m%s\033[0m\n", line.c_str());
             }
         }
@@ -751,17 +751,12 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assignmentLegal = false;
 
         std::stringstream ss;
-        //  (lhsVar->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " <<
         ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
             ", has expression of unknown type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << " due to previous error(s).";
         
         auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
         m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
-
-        /// TODO
-        //if(lhsVar->)
-        // m_semaAnalyzer.getEvent(id).setUsingReference(true);
     } else {
         assert(rhsDataType != ANY_TYPE);
         assert(lhsDataType != ANY_TYPE);
@@ -769,16 +764,48 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         if(lhsDataType != rhsDataType) {
             assignmentLegal = false;
 
-            /// TODO: print error
-            printf("Error: Assignment has non-compatible type.\n");
+            std::stringstream ss;
+            ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+                ", has expression of non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+            
+            auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+
+            const AST::DeclarationNode *decl = lhsVar->getDeclaration();
+            assert(decl != nullptr);
+            ss.str(std::string());
+            ss << "Variable '" << lhsVar->getName() << "' at " << getSourceLocationString(lhsVar->getSourceLocation()) <<
+                " has type '" << (lhsVar->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << "', and is declared at " <<
+                AST::getSourceLocationString(decl->getSourceLocation()) << ":";
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).RefLoc() = decl->getSourceLocation();
         }
     }
 
     if(lhsVar->isConst()) {
         assignmentLegal = false;
 
-        /// TODO: print error
-        printf("Error: Cannot reassign value to const variable.\n");
+        std::stringstream ss;
+        ss << "Invalid variable assignment for const-qualified variable '" << lhsVar->getName() << "' at " <<
+            AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+        
+        auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = lhsVar->getSourceLocation();
+
+        const AST::DeclarationNode *decl = lhsVar->getDeclaration();
+        assert(decl != nullptr);
+        ss.str(std::string());
+        ss << "Variable '" << lhsVar->getName() << "' at " << getSourceLocationString(lhsVar->getSourceLocation()) <<
+            " has type 'const " << AST::getTypeString(lhsDataType) << "', and is declared at " <<
+            AST::getSourceLocationString(decl->getSourceLocation()) << ":";
+
+        m_semaAnalyzer.getEvent(id).setUsingReference(true);
+        m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).RefLoc() = decl->getSourceLocation();
     }
 
     if(assignmentLegal) {
