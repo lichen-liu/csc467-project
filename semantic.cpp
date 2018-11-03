@@ -774,7 +774,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
 
             const AST::DeclarationNode *decl = lhsVar->getDeclaration();
             assert(decl != nullptr);
-            ss.str(std::string());
+            ss = std::stringstream();
             ss << "Variable '" << lhsVar->getName() << "' at " << getSourceLocationString(lhsVar->getSourceLocation()) <<
                 " has type '" << (lhsVar->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << "', and is declared at " <<
                 AST::getSourceLocationString(decl->getSourceLocation()) << ":";
@@ -988,14 +988,6 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
-    /*
-     * TODO
-     * 
-     * Better structure to wrap around errors with context info.
-     * E.g. Line, Col, Meaningful Error Messages.
-     * 
-     */
-
     ST::SymbolTable symbolTable;
     SEMA::SemanticAnalyzer semaAnalyzer;
     SEMA::SourceLocation sourceLocation(inputFile);
