@@ -10,7 +10,7 @@
     if(boola)
         ;
     
-    if(inta)
+    if(inta + 2.0)
         ;
 
     if(floata)

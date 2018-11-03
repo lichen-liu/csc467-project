@@ -23,14 +23,14 @@ class SourceLocation {
         SourceLocation(FILE *f);
     
     public:
-        const std::vector<std::string> &getSource() const { return m_sourceFile; }
+        const std::vector<std::string> &getLines() const { return m_sourceFile; }
         const std::string &getLine(int line) const { return m_sourceFile.at(line - 1); }
 };
 
 SourceLocation::SourceLocation(FILE *f) {
     assert(f != nullptr);
 
-    char *line;
+    char *line = NULL;
     size_t len = 0;
 
     rewind(f);
@@ -53,10 +53,46 @@ class SemanticAnalyzer {
             Unknown
         };
 
-        struct Event {
-            EventType eventType = EventType::Unknown;
-            const AST::ASTNode *astNode = nullptr;
-            std::string message;
+    public: /* Forward declarations for friend declaration */
+        void setTempEventASTNode(const AST::ASTNode *astNode);
+        void setTempEventEventType(EventType eventType);
+    
+    public:
+        class Event {
+            private:
+                const AST::ASTNode *m_astNode = nullptr;
+                EventType m_eventType = EventType::Unknown;
+                
+                AST::SourceLocation m_eventLoc = {1};
+                std::string m_message;
+
+                bool m_useRef = false;
+                AST::SourceLocation m_refLoc = {1};
+                std::string m_refMessage;
+
+            public:
+                Event(const AST::ASTNode *astNode, EventType eventType):
+                    m_astNode(astNode), m_eventType(eventType) {}
+            
+            public:
+                friend void SemanticAnalyzer::setTempEventASTNode(const AST::ASTNode *astNode);
+                friend void SemanticAnalyzer::setTempEventEventType(EventType eventType);
+
+            public:
+                const AST::ASTNode *getASTNode() const { return m_astNode; }
+                EventType getEventType() const { return m_eventType; }
+
+                std::string &Message() { return m_message; }
+                const std::string &Message()const { return m_message; }
+                AST::SourceLocation &EventLoc() { return m_eventLoc; }
+                const AST::SourceLocation &EventLoc()const { return m_eventLoc; }
+                
+                bool isUsingReference() const { return m_useRef; }
+                void setUsingReference(bool useRef) { m_useRef = useRef; }
+                std::string &RefMessage() { return m_refMessage; }
+                const std::string &RefMessage() const { return m_refMessage; }
+                AST::SourceLocation &RefLoc() { return m_refLoc; }
+                const AST::SourceLocation &RefLoc() const { return m_refLoc; }
         };
 
         using EventID = size_t;
@@ -88,30 +124,31 @@ class SemanticAnalyzer {
         int getNumberWarnings() const { return m_warningEventList.size(); }
 
     public:
-        EventID createEvent(const AST::ASTNode *astNode, EventType eventType, std::string message = "");
+        EventID createEvent(const AST::ASTNode *astNode, EventType eventType);
 
-        EventType getEventType(EventID eventID) const;
-        const AST::ASTNode *getEventASTNode(EventID eventID) const;
-        const std::string &getEventMessage(EventID eventID) const;
-        std::string &getEventMessage(EventID eventID);
-        void setEventMessage(EventID eventID, const std::string &message);
+        Event &getEvent(EventID eventID);
+        const Event &getEventC(EventID eventID) const;
         const Event &getEvent(EventID eventID) const;
 
     public:
-        void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown, std::string message = "");
+        void printEvent(EventID eventID, const SourceLocation &sourceLocation) const;
+
+    public:
+        void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown);
         void throwTempEvent();
         EventID promoteTempEvent();
         Event &getTempEvent();
+        const Event &getTempEventC() const;
         const Event &getTempEvent() const;
 
         bool isTempEventCreated() const { return m_tempEventValid; }
 };
 
-SemanticAnalyzer::EventID SemanticAnalyzer::createEvent(const AST::ASTNode *astNode, EventType eventType, std::string message) {
+SemanticAnalyzer::EventID SemanticAnalyzer::createEvent(const AST::ASTNode *astNode, EventType eventType) {
     assert(astNode != nullptr);
     assert(eventType != EventType::Unknown);
 
-    m_eventList.emplace_back(new Event{eventType, astNode, std::move(message)});
+    m_eventList.emplace_back(new Event(astNode, eventType));
     EventID id = m_eventList.size() - 1;
     m_astEventLU[astNode].push_back(id);
     if(eventType == EventType::Error) {
@@ -123,35 +160,110 @@ SemanticAnalyzer::EventID SemanticAnalyzer::createEvent(const AST::ASTNode *astN
     return id;
 }
 
-SemanticAnalyzer::EventType SemanticAnalyzer::getEventType(EventID eventID) const {
-    return m_eventList.at(eventID)->eventType;
+SemanticAnalyzer::Event &SemanticAnalyzer::getEvent(EventID eventID) {
+    return *(m_eventList.at(eventID));
 }
 
-const AST::ASTNode *SemanticAnalyzer::getEventASTNode(EventID eventID) const {
-    return m_eventList.at(eventID)->astNode;
-}
-
-const std::string &SemanticAnalyzer::getEventMessage(EventID eventID) const {
-    return m_eventList.at(eventID)->message;
-}
-
-std::string &SemanticAnalyzer::getEventMessage(EventID eventID) {
-    return m_eventList.at(eventID)->message;
-}
-
-void SemanticAnalyzer::setEventMessage(EventID eventID, const std::string &message) {
-    m_eventList.at(eventID)->message = message;
+const SemanticAnalyzer::Event &SemanticAnalyzer::getEventC(EventID eventID) const {
+    return *(m_eventList.at(eventID));
 }
 
 const SemanticAnalyzer::Event &SemanticAnalyzer::getEvent(EventID eventID) const {
     return *(m_eventList.at(eventID));
 }
 
-void SemanticAnalyzer::createTempEvent(const AST::ASTNode *astNode, EventType eventType, std::string message) {
+void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceLocation) const {
+    static const std::string tenSpace(10, ' ');
+    static const std::string sevenSpace(7, ' ');
+
+    const Event &event = getEvent(eventID);
+    const AST::SourceLocation &eventLoc = event.EventLoc();
+    
+    printf("--------------------------------------------------------------------------\n");
+
+    // Print event message
+    std::string header;
+    if(event.getEventType() == EventType::Error) {
+        header = "Error";
+    } else {
+        header = "Warning";
+    }
+    printf("\033[1;31m%s-%d\033[0m", header.c_str(), eventID);
+    printf("\033[1;39m: %s\033[0m\n", event.Message().c_str());
+
+    // Print event location info
+    if(eventLoc.firstLine == eventLoc.lastLine) {
+        const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
+        printf("\033[0;37m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
+        printf("\033[1;37m%s\033[0m\n", line.c_str());
+        printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+        for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+            if(colNumber >= eventLoc.firstColumn - 1 && colNumber < eventLoc.lastColumn - 1) {
+                printf("\033[1;31m^\033[0m");
+            } else {
+                printf(" ");
+            }
+        }
+    } else {
+        for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
+            const std::string &line = sourceLocation.getLine(lineNumber);
+            printf("\033[0;37m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+            printf("\033[1;37m%s\033[0m\n", line.c_str());
+        }
+    }
+    printf("\n");
+
+    // Print reference location info and reference message
+    if(event.isUsingReference()) {
+        const AST::SourceLocation &refLoc = event.RefLoc();
+
+        printf("\n");
+
+        // Print reference message
+        printf("\033[1;37mInfo\033[0m");
+        printf("\033[1;39m: %s\033[0m\n", event.RefMessage().c_str());
+
+        // Print reference location info
+        if(refLoc.firstLine == refLoc.lastLine) {
+            const std::string &line = sourceLocation.getLine(refLoc.firstLine);
+            printf("\033[0;37m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
+            printf("\033[1;37m%s\033[0m\n", line.c_str());
+            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                if(colNumber >= refLoc.firstColumn - 1 && colNumber < refLoc.lastColumn - 1) {
+                    printf("\033[1;33m~\033[0m");
+                } else {
+                    printf(" ");
+                }
+            }
+        } else {
+            for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
+                const std::string &line = sourceLocation.getLine(lineNumber);
+                printf("\033[0;37m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
+                printf("\033[1;37m%s\033[0m\n", line.c_str());
+            }
+        }
+        printf("\n");
+    }
+}
+
+void SemanticAnalyzer::createTempEvent(const AST::ASTNode *astNode, EventType eventType) {
     assert(m_tempEventValid == false);
     assert(m_tempEvent == nullptr);
     m_tempEventValid = true;
-    m_tempEvent.reset(new Event{eventType, astNode, std::move(message)});
+    m_tempEvent.reset(new Event(astNode, eventType));
+}
+
+void SemanticAnalyzer::setTempEventASTNode(const AST::ASTNode *astNode) {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    m_tempEvent->m_astNode = astNode;
+}
+
+void SemanticAnalyzer::setTempEventEventType(EventType eventType) {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    m_tempEvent->m_eventType = eventType;
 }
 
 void SemanticAnalyzer::throwTempEvent() {
@@ -165,8 +277,8 @@ SemanticAnalyzer::EventID SemanticAnalyzer::promoteTempEvent() {
     assert(m_tempEventValid == true);
     assert(m_tempEvent != nullptr);
 
-    EventType eventType = m_tempEvent->eventType;
-    const AST::ASTNode *astNode = m_tempEvent->astNode;
+    EventType eventType = m_tempEvent->getEventType();
+    const AST::ASTNode *astNode = m_tempEvent->getASTNode();
     assert(eventType != EventType::Unknown);
     assert(astNode != nullptr);
 
@@ -187,6 +299,12 @@ SemanticAnalyzer::EventID SemanticAnalyzer::promoteTempEvent() {
 }
 
 SemanticAnalyzer::Event &SemanticAnalyzer::getTempEvent() {
+    assert(m_tempEventValid == true);
+    assert(m_tempEvent != nullptr);
+    return *m_tempEvent;
+}
+
+const SemanticAnalyzer::Event &SemanticAnalyzer::getTempEventC() const {
     assert(m_tempEventValid == true);
     assert(m_tempEvent != nullptr);
     return *m_tempEvent;
@@ -217,13 +335,17 @@ class SymbolDeclVisitor: public AST::Visitor {
 
             if(redecl != nullptr) {
                 std::stringstream ss;
-                ss << "Duplicate declaration of '" << AST::getTypeString(declarationNode->getType()) <<
+                ss << "Duplicate declaration of '" << (declarationNode->isConst()? "const " : "") << AST::getTypeString(declarationNode->getType()) <<
                     " " << declarationNode->getName() << "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ". " <<
                     "Previously declared at " << AST::getSourceLocationString(redecl->getSourceLocation()) << ".";
 
-                m_semaAnalyzer.createEvent(declarationNode,
-                                           SemanticAnalyzer::EventType::Error,
-                                           ss.str());
+                auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+                m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+                m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
+
+                m_semaAnalyzer.getEvent(id).setUsingReference(true);
+                m_semaAnalyzer.getEvent(id).RefMessage() = "Previously declared here:";
+                m_semaAnalyzer.getEvent(id).RefLoc() = redecl->getSourceLocation();
 
                 return;
             }
@@ -354,9 +476,9 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
         ss << "Missing declaration for symbol'" << identifierNode->getName() <<
         "' at " << AST::getSourceLocationString(identifierNode->getSourceLocation()) << ".";
 
-        m_semaAnalyzer.createEvent(identifierNode,
-                                   SemanticAnalyzer::EventType::Error,
-                                   ss.str());
+        auto id = m_semaAnalyzer.createEvent(identifierNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = identifierNode->getSourceLocation();
 
         return;
     }
@@ -526,16 +648,19 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
             std::stringstream ss;
             ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
                 "' is missing initialization at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ".";
-            m_semaAnalyzer.createEvent(declarationNode,
-                                       SemanticAnalyzer::EventType::Error,
-                                       ss.str());
+
+            auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
+
         } else if (!initExpr->isConst()) {
             std::stringstream ss;
             ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
                 "' is initialized to a non-const qualified expression at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
-            m_semaAnalyzer.createEvent(declarationNode,
-                                       SemanticAnalyzer::EventType::Error,
-                                       ss.str());
+
+            auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
         }
     }
 
@@ -548,17 +673,19 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
             ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
                 "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to an unknown type at " <<
                 AST::getSourceLocationString(initExpr->getSourceLocation()) << " due to previous error(s).";
-            m_semaAnalyzer.createEvent(declarationNode,
-                                       SemanticAnalyzer::EventType::Error,
-                                       ss.str());
+            
+            auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
         } else if(lhsDataType != rhsDataType) {
             std::stringstream ss;
             ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
                 "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
                 "' at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
-            m_semaAnalyzer.createEvent(declarationNode,
-                                       SemanticAnalyzer::EventType::Error,
-                                       ss.str());
+
+            auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
         }
     }
 }
@@ -570,9 +697,20 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
      */
     const AST::ExpressionNode *cond = ifStatementNode->getConditionExpression();
 
-    /// TODO: print error
-    if(cond->getExpressionType() != BOOL_T) {
-        printf("Error: If-statement condition must be of boolean type.\n");
+    int condExprType = cond->getExpressionType();
+    if(condExprType != BOOL_T) {
+        std::stringstream ss;
+        ss << "If-statement condition expression has ";
+        if(condExprType == ANY_TYPE) {
+            ss << "unknown type ";
+        } else {
+            ss << "type '" << AST::getTypeString(condExprType) << "' ";
+        }
+        ss << "at " << AST::getSourceLocationString(cond->getSourceLocation()) << ". Expecting type 'bool'.";
+
+        auto id = m_semaAnalyzer.createEvent(ifStatementNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = cond->getSourceLocation();
     }
 }
 
@@ -822,42 +960,7 @@ int semantic_check(node * ast) {
         printf("\n");
     }
     for(int id = 0; id < numEvents; id++) {
-        const SEMA::SemanticAnalyzer::Event &event = semaAnalyzer.getEvent(id);
-        const AST::SourceLocation &srcLoc = event.astNode->getSourceLocation();
-        
-        printf("--------------------------------------------------------------------------\n");
-        printf("\n");
- 
-        if(srcLoc.firstLine == srcLoc.lastLine) {
-            const std::string &line = sourceLocation.getLine(srcLoc.firstLine);
-            const std::string tenSpace(10, ' ');
-            const std::string sevenSpace(7, ' ');
-            printf("%7d:%s%s\n", srcLoc.firstLine, tenSpace.c_str(), line.c_str());
-            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
-            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
-                if(colNumber >= srcLoc.firstColumn - 1 && colNumber < srcLoc.lastColumn - 1) {
-                    printf("~");
-                } else {
-                    printf(" ");
-                }
-            }
-        } else {
-            for(int lineNumber = srcLoc.firstLine; lineNumber <= srcLoc.lastLine; lineNumber++) {
-                const std::string &line = sourceLocation.getLine(lineNumber);
-                const std::string tenSpace(10, ' ');
-                printf("%7d:%s%s\n", lineNumber, tenSpace.c_str(), line.c_str());
-            }
-        }
-        
-        printf("\n");
-        printf("\n");
-        std::string header;
-        if(event.eventType == SEMA::SemanticAnalyzer::EventType::Error) {
-            header = "Error";
-        } else {
-            header = "Warning";
-        }
-        printf("%s[%d]: %s\n", header.c_str(), id, event.message.c_str());
+        semaAnalyzer.printEvent(id, sourceLocation);
     }
     if(numEvents != 0) {
         printf("--------------------------------------------------------------------------\n");
