@@ -1188,6 +1188,37 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assert(rhsDataType != ANY_TYPE);
         assert(lhsDataType != ANY_TYPE);
 
+        // Firstly, check whether lhs is Read-Only
+        if(lhsVar->isReadOnly()) {
+            std::stringstream ss;
+            ss << "Invalid variable assignment for Read-Only variable '"<< lhsVar->getName() <<
+                "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+            
+            auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+
+            ss = std::stringstream();
+            std::string qualifierTypeStr;
+            if(lhsVar->isUniformType()) {
+                qualifierTypeStr = "uniform";
+            } else if(lhsVar->isAttributeType()) {
+                qualifierTypeStr = "attribute";
+            } else {
+                assert(0);
+            }
+            const AST::DeclarationNode *decl = lhsVar->getDeclaration();
+            assert(decl != nullptr);
+            ss << "Predefined Variable: '" << qualifierTypeStr << " " << AST::getTypeString(lhsVar->getExpressionType()) << " " << decl->getName() + "'.";
+            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).RefLoc() = lhsVar->getSourceLocation();
+        }
+
+        // Secondly, check whether lhs is Write-Only and is not in if-else-statement scope
+
+        // Thirdly, check for type
         if(lhsDataType != rhsDataType) {
             assignmentLegal = false;
 
