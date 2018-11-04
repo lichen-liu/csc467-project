@@ -510,10 +510,10 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
         if(resultDataType == ANY_TYPE) {
             std::stringstream ss;
             ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
-                ", has non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+                " has non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
 
             m_semaAnalyzer.getTempEvent().Message() = std::move(ss.str());
-            m_semaAnalyzer.getTempEvent().EventLoc() = rhsExpr->getSourceLocation();
+            m_semaAnalyzer.getTempEvent().EventLoc() = unaryExpressionNode->getSourceLocation();
 
             m_semaAnalyzer.promoteTempEvent();
         } else {
@@ -537,7 +537,26 @@ void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode)
 
     int op = binaryExpressionNode->getOperator();
 
-    int resultDataType = inferDataType(op, lhsDataType, rhsDataType);
+    int resultDataType = ANY_TYPE;
+    if(lhsDataType != ANY_TYPE && rhsDataType != ANY_TYPE) {
+        m_semaAnalyzer.createTempEvent(binaryExpressionNode, SemanticAnalyzer::EventType::Error);
+
+        resultDataType = inferDataType(op, lhsDataType, rhsDataType);
+
+        if(resultDataType == ANY_TYPE) {
+            std::stringstream ss;
+            ss << "Operands in binary expression at " << AST::getSourceLocationString(binaryExpressionNode->getSourceLocation()) <<
+                " have non-compatible type.";
+
+            m_semaAnalyzer.getTempEvent().Message() = std::move(ss.str());
+            m_semaAnalyzer.getTempEvent().EventLoc() = binaryExpressionNode->getSourceLocation();
+
+            m_semaAnalyzer.promoteTempEvent();
+        } else {
+            m_semaAnalyzer.dropTempEvent();
+        }
+    }
+
     binaryExpressionNode->setExpressionType(resultDataType);
     binaryExpressionNode->setConst(lhsIsConst && rhsIsConst);
 }
@@ -906,6 +925,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
          * Both operands of a binary operator must have exactly the same base type (e.g. it
          * is valid to multiple an int and an ivec3)
          */
+
+        if(m_semaAnalyzer.isTempEventCreated()) {
+            m_semaAnalyzer.getTempEvent().setUsingReference(true);
+            std::stringstream ss;
+            ss << "Expecting operands on both sides of operator '";
+            ss << AST::getOperatorString(op);
+            ss << "' to have same base type. Now they are '";
+            ss << AST::getTypeString(lhsDataType);
+            ss << "' and '";
+            ss << AST::getTypeString(rhsDataType);
+            ss << "'.";
+            m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+        }
+
         return ANY_TYPE;
     }
 
@@ -917,6 +950,18 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
             * If both arguments to a binary operator are vectors, then they must be vectors of the
             * same order. For example, it is not valid to add an ivec2 with an ivec3
             */
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting vector operands on both sides of operator to have same order. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
            return ANY_TYPE;
        }
     }
@@ -935,6 +980,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return lhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to have arithmetic type and same order. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 
@@ -950,6 +1009,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return rhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to have arithmetic type. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 
@@ -964,6 +1037,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return lhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to be scalar and have arithmetic type. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 
@@ -978,6 +1065,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return lhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to have boolean type and same order. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 
@@ -994,6 +1095,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return lhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to be scalar and have arithmetic type. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 
@@ -1008,6 +1123,20 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     return lhsDataType;
                 }
             }
+
+            if(m_semaAnalyzer.isTempEventCreated()) {
+                m_semaAnalyzer.getTempEvent().setUsingReference(true);
+                std::stringstream ss;
+                ss << "Expecting operands on both sides of operator '";
+                ss << AST::getOperatorString(op);
+                ss << "' to have arithmetic type and same order. Now they are '";
+                ss << AST::getTypeString(lhsDataType);
+                ss << "' and '";
+                ss << AST::getTypeString(rhsDataType);
+                ss << "'.";
+                m_semaAnalyzer.getTempEvent().RefMessage() = std::move(ss.str());
+            }
+
             break;
         }
 

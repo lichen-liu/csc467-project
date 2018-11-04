@@ -11,6 +11,7 @@
     ivec3 ivec3a = ivec3(10, 20, 30);
     ivec3 ivec3b;
     ivec3 ivec3c;
+    ivec4 ivec4a;
     int inta;
 
     /* scalar */
@@ -21,6 +22,7 @@
     /* vec */
     ivec3a = ivec3c + ivec3b;
     ivec3a = ivec3b - ivec3(10, 20, -30);
+    ivec3a = ivec3a + ivec4a;
 
     /* mix scalar and vec */
     vec3a = vec3a - floata;
