@@ -14,6 +14,12 @@ python ./tests/test_lexer.py
 python ./tests/test_parser.py
 ```
 
+### To Test SEMANTIC ANALYSIS
+``` bash
+./compiler467 -Tp ./tests/semantic/*.c
+python ./tests/test_semantic.py
+```
+
 ### To Count Lines
 ``` bash
 wc -l ast.cpp ast.h semantic.cpp semantic.h symbol.cpp symbol.h
