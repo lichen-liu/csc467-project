@@ -1345,13 +1345,22 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             const AST::DeclarationNode *decl = lhsVar->getDeclaration();
             assert(decl != nullptr);
             ss = std::stringstream();
-            ss << "Variable '" << lhsVar->getName() << "' at " << lhsVar->getSourceLocationString() <<
-                " has type '" << decl->getQualifierString() << AST::getTypeString(lhsDataType) << "', and is declared at " <<
-                decl->getSourceLocationString() << ":";
-
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
-            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
-            m_semaAnalyzer.getEvent(id).RefLoc() = decl->getSourceLocation();
+            
+            if(lhsVar->isOrdinaryType()) {
+                ss << "Variable '" << lhsVar->getName() << "' at " << lhsVar->getSourceLocationString() <<
+                    " has type '" << decl->getQualifierString() << AST::getTypeString(lhsDataType) << "', and is declared at " <<
+                    decl->getSourceLocationString() << ":";
+
+                m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+                m_semaAnalyzer.getEvent(id).RefLoc() = decl->getSourceLocation();
+            } else {
+                // predefined variables
+                ss << "Variable '" << lhsVar->getName() << "' at " << lhsVar->getSourceLocationString() <<
+                    " has type '" << decl->getQualifierString() << AST::getTypeString(lhsDataType) << "', and is a predefined variable.";
+
+                m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+            }
         }
     }
 
@@ -1699,7 +1708,7 @@ int semantic_check(node * ast) {
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
-    semaAnalyzer.setColorPrintEnabled(true);
+    semaAnalyzer.setColorPrintEnabled(false);
     if(numEvents != 0) {
         printf("\n");
     }

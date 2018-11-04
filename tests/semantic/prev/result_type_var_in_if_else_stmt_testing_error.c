@@ -13,19 +13,30 @@
         (DECLARATION env1 uniform vec4)
         (DECLARATION env2 uniform vec4)
         (DECLARATION env3 uniform vec4)
+        (DECLARATION vec4a vec4)
     )
     (STATEMENTS
-        (ASSIGN bool gl_FragDepth true)
+        (ASSIGN vec4 gl_FragColor vec4a)
         (IF true (ASSIGN bool gl_FragDepth false))
+        (IF false (ASSIGN bool gl_FragDepth true))
+        (ASSIGN vec4 gl_FragColor vec4a)
     )
 )
 
 --------------------------------------------------------------------------
-Error-0: Invalid variable assignment for Write-Only Result variable 'gl_FragDepth' in the scope of an if or else statement at Line 5:9 to Line 5:30.
-      5:                  gl_FragDepth = false;
+Error-0: Invalid variable assignment for Write-Only Result variable 'gl_FragDepth' in the scope of an if or else statement at Line 6:9 to Line 6:30.
+      6:                  gl_FragDepth = false;
                           ^^^^^^^^^^^^^^^^^^^^^
 
 Info: Predefined Variable: 'result bool gl_FragDepth'.
-      5:                  gl_FragDepth = false;
+      6:                  gl_FragDepth = false;
                           ~~~~~~~~~~~~         
+--------------------------------------------------------------------------
+Error-1: Invalid variable assignment for Write-Only Result variable 'gl_FragDepth' in the scope of an if or else statement at Line 8:13 to Line 8:33.
+      8:                      gl_FragDepth = true;
+                              ^^^^^^^^^^^^^^^^^^^^
+
+Info: Predefined Variable: 'result bool gl_FragDepth'.
+      8:                      gl_FragDepth = true;
+                              ~~~~~~~~~~~~        
 --------------------------------------------------------------------------
