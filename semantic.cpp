@@ -510,10 +510,10 @@ class SymbolDeclVisitor: public AST::Visitor {
             AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
 
             if(redecl != nullptr) {
-                std::stringstream ss;
-                ss << "Duplicate declaration of '" << (declarationNode->isConst()? "const " : "") << AST::getTypeString(declarationNode->getType()) <<
-                    " " << declarationNode->getName() << "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ". " <<
-                    "Previously declared at " << AST::getSourceLocationString(redecl->getSourceLocation()) << ".";
+                std::stringstream ss; /// WIP
+                ss << "Duplicate declaration of '" << declarationNode->getQualifierString() << declarationNode->getTypeString() <<
+                    " " << declarationNode->getName() << "' at " << declarationNode->getSourceLocationString() << ". " <<
+                    "Previously declared at " << redecl->getSourceLocationString() << ".";
 
                 auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
                 m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -523,19 +523,10 @@ class SymbolDeclVisitor: public AST::Visitor {
                 if(redecl->isOrdinaryType()) {
                     m_semaAnalyzer.getEvent(id).RefMessage() = "Previously declared here:";
                     m_semaAnalyzer.getEvent(id).RefLoc() = redecl->getSourceLocation();
-                } else if (redecl->isAttributeType()){
-                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'attribute " +
-                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
-                } else if (redecl->isUniformType()){
-                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'uniform " +
-                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
-                } else if (redecl->isResultType()){
-                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'result " +
-                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
                 } else {
-                    assert(0);
+                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: '" + redecl->getQualifierString() +
+                        redecl->getTypeString() + " " + redecl->getName() + "'.";
                 }
-
                 return;
             }
         }

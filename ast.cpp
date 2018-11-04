@@ -156,13 +156,13 @@ void Visitor::visit(ScopeNode *node)                AST_VISITOR_VISIT
 
 std::string DeclarationNode::getQualifierString() const {
     if(isOrdinaryType()) {
-        return isConst() ? "const" : "";
+        return isConst() ? "const " : "";
     } else if(isResultType()) {
-        return "result";
+        return "result ";
     } else if(isAttributeType()) {
-        return "attribute";
+        return "attribute ";
     } else if(isUniformType()) {
-        return "uniform";
+        return "uniform ";
     } else {
         assert(0);
     }
