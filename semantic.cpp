@@ -582,12 +582,15 @@ class TypeChecker: public AST::Visitor {
     private:
         ST::SymbolTable &m_symbolTable;
         SEMA::SemanticAnalyzer &m_semaAnalyzer;
+
+        int m_ifScopeCount = 0;
     public:
         TypeChecker(ST::SymbolTable &symbolTable, SEMA::SemanticAnalyzer &semaAnalyzer):
             m_symbolTable(symbolTable), m_semaAnalyzer(semaAnalyzer) {}
     
     private:
         virtual void preNodeVisit(AST::IdentifierNode *identifierNode);
+        virtual void preNodeVisit(AST::IfStatementNode *ifStatementNode);
 
     private:
         virtual void postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode);
@@ -628,6 +631,11 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
     // Update info in identifierNode
     identifierNode->setExpressionType(decl->getType());
     identifierNode->setDeclaration(decl);
+}
+
+void TypeChecker::preNodeVisit(AST::IfStatementNode *ifStatementNode) {
+    assert(m_ifScopeCount >= 0);
+    m_ifScopeCount++;
 }
 
 void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
@@ -1139,6 +1147,9 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
         m_semaAnalyzer.getEvent(id).EventLoc() = cond->getSourceLocation();
     }
+
+    m_ifScopeCount--;
+    assert(m_ifScopeCount >= 0);
 }
 
 void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
@@ -1217,6 +1228,24 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         }
 
         // Secondly, check whether lhs is Write-Only and is not in if-else-statement scope
+        if(m_ifScopeCount > 0 && lhsVar->isWriteOnly()) {
+            std::stringstream ss;
+            ss << "Invalid variable assignment for Write-Only Result variable '"<< lhsVar->getName() <<
+                "' in the scope of an if or else statement at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+            
+            auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = assignmentNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+
+            ss = std::stringstream();
+            const AST::DeclarationNode *decl = lhsVar->getDeclaration();
+            assert(decl != nullptr);
+            ss << "Predefined Variable: 'result " << AST::getTypeString(lhsVar->getExpressionType()) << " " << decl->getName() + "'.";
+            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).RefLoc() = lhsVar->getSourceLocation();
+        }
 
         // Thirdly, check for type
         if(lhsDataType != rhsDataType) {
