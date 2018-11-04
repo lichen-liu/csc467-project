@@ -1355,7 +1355,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         }
     }
 
-    if(lhsVar->isConst()) {
+    if(lhsVar->isOrdinaryType() && lhsVar->isConst()) {
         assignmentLegal = false;
 
         std::stringstream ss;
@@ -1699,7 +1699,7 @@ int semantic_check(node * ast) {
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
-    semaAnalyzer.setColorPrintEnabled(false);
+    semaAnalyzer.setColorPrintEnabled(true);
     if(numEvents != 0) {
         printf("\n");
     }
