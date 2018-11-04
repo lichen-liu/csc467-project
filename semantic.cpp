@@ -1017,7 +1017,7 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
      * - The value assigned to a variable (this includes variables declared with an initial value)
      * must have the same type as that variable, or a type that can be widened to the correct type.
      */
-    const AST::ExpressionNode *initExpr = declarationNode->getExpression();
+    AST::ExpressionNode *initExpr = declarationNode->getExpression();
     if(declarationNode->isConst()) {
         if(initExpr == nullptr) {
             std::stringstream ss;
@@ -1052,15 +1052,37 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
             auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
             m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
-        } else if(lhsDataType != rhsDataType) {
-            std::stringstream ss;
-            ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
-                "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
-                "' at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+        } else {
+            // Firstly, check for Write-Only
+            WriteOnlyFinder writeOnlyFinder;
+            initExpr->visit(writeOnlyFinder);
+            const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+            if(!writeOnlyVars.empty()) {
+                std::stringstream ss;
+                ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                    "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a write-only Result type at " <<
+                    AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
 
-            auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
-            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
-            m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
+                auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+                m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+                m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
+
+                m_semaAnalyzer.getEvent(id).setUsingReference(true);
+                m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+                m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+            }
+
+            // Secondly, Type check
+            if(lhsDataType != rhsDataType) {
+                std::stringstream ss;
+                ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                    "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
+                    "' at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+
+                auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
+                m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+                m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
+            }
         }
     }
 }
