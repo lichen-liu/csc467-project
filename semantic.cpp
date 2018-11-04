@@ -440,8 +440,21 @@ class SymbolDeclVisitor: public AST::Visitor {
                 m_semaAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
 
                 m_semaAnalyzer.getEvent(id).setUsingReference(true);
-                m_semaAnalyzer.getEvent(id).RefMessage() = "Previously declared here:";
-                m_semaAnalyzer.getEvent(id).RefLoc() = redecl->getSourceLocation();
+                if(redecl->isOrdinaryType()) {
+                    m_semaAnalyzer.getEvent(id).RefMessage() = "Previously declared here:";
+                    m_semaAnalyzer.getEvent(id).RefLoc() = redecl->getSourceLocation();
+                } else if (redecl->isAttributeType()){
+                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'attribute " +
+                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
+                } else if (redecl->isUniformType()){
+                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'uniform " +
+                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
+                } else if (redecl->isResultType()){
+                    m_semaAnalyzer.getEvent(id).RefMessage() = "Predefined Variable: 'result " +
+                        AST::getTypeString(redecl->getType()) + " " + redecl->getName() + "'.";
+                } else {
+                    assert(0);
+                }
 
                 return;
             }
