@@ -7,4 +7,5 @@
     b = ivec3a[1];
     b = ivec3a[2];
     b = ivec3a[3];
+    b = b[2];
 }

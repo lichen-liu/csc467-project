@@ -334,6 +334,7 @@ class SymbolDeclVisitor: public AST::Visitor {
         }
 
         virtual void postNodeVisit(AST::DeclarationNode *declarationNode) {
+            /// TODO: change to preNodeVisit, declare symbol then evaluate rhs
             // Traverse the possible evaluation on rhs before the declaration of symbol
             AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
 
@@ -563,11 +564,11 @@ void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode)
 
 void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
     /*
-        * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
-        * has type veci. For example, the maximum index into a variable of type vec2 is 1.
-        * - The result type of indexing into a vector is the base type associated with that vector’s
-        * type. For example, if v has type bvec2 then v[0] has type bool.
-        */
+     * - The index into a vector (e.g. 1 in foo[1]) must be in the range [0, i1] if the vector
+     * has type veci. For example, the maximum index into a variable of type vec2 is 1.
+     * - The result type of indexing into a vector is the base type associated with that vector’s
+     * type. For example, if v has type bvec2 then v[0] has type bool.
+     */
     int resultDataType = ANY_TYPE;
 
     const AST::IdentifierNode *identifier = indexingNode->getIdentifier();            
@@ -584,7 +585,30 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
             // The type of this indexing node is the base type for identifier node
             int identifierBaseType = getDataTypeBaseType(identifierDataType);
             resultDataType = identifierBaseType;
+        } else {
+            std::stringstream ss;
+            ss << "Invalid indexing of vector variable '" << identifier->getName() << 
+                "' of type '" << (identifierIsConst ? "const " : "") << AST::getTypeString(identifierDataType) << "' at " <<
+                AST::getSourceLocationString(indexingNode->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(indexingNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = indexingNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            ss = std::stringstream();
+            ss << "Expecting an index value between 0 to " << (identifierTypeOrder - 1) << ".";
+            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
         }
+    } else {
+        std::stringstream ss;
+        ss << "Invalid indexing of non-vector variable '" << identifier->getName() << 
+            "' of type '" << (identifierIsConst ? "const " : "") << AST::getTypeString(identifierDataType) << "' at " <<
+            AST::getSourceLocationString(indexingNode->getSourceLocation()) << ".";
+
+        auto id = m_semaAnalyzer.createEvent(indexingNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = indexingNode->getSourceLocation();
     }
 
     indexingNode->setExpressionType(resultDataType);
