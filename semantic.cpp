@@ -644,7 +644,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
 
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
-            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting 'float' or 'int'.";
+            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting function argument 'float' or 'int'.";
         }
     } else if (funcName == "dp3") {
         bool isLegal = false;
@@ -677,7 +677,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
 
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
             m_semaAnalyzer.getEvent(id).RefMessage() =
-                "Expecting 'vec4, vec4' or 'vec3, vec3' or 'ivec4, ivec4' or 'ivec3, ivec3'.";
+                "Expecting function arguments 'vec4, vec4' or 'vec3, vec3' or 'ivec4, ivec4' or 'ivec3, ivec3'.";
         }
     } else if (funcName == "lit") {
         bool isLegal = false;
@@ -701,7 +701,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
 
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
-            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting 'vec4'.";
+            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting function argument 'vec4'.";
         }
     }
 
@@ -726,9 +726,10 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
     AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
     const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
 
+    bool argLegal = false;
     if(constructorTypeOrder == args.size()) {
         resultIsConst = true;
-        bool argLegal = true;
+        argLegal = true;
         for(const AST::ExpressionNode *arg : args) {
             if(arg->getExpressionType() != constructorTypeBase) {
                 argLegal = false;
@@ -739,6 +740,27 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
         if(argLegal) {
             resultDataType = constructorType;
         }
+    }
+
+    if(!argLegal) {
+        std::stringstream ss;
+        ss << "Unmatched constructor parameters when calling constructor for '" << AST::getTypeString(constructorType) << "' at " <<
+            AST::getSourceLocationString(constructorNode->getSourceLocation()) << ".";
+
+        auto id = m_semaAnalyzer.createEvent(constructorNode, SemanticAnalyzer::EventType::Error);
+        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semaAnalyzer.getEvent(id).EventLoc() = constructorNode->getSourceLocation();
+
+        m_semaAnalyzer.getEvent(id).setUsingReference(true);
+        ss = std::stringstream();
+        ss << "Expecting constructor argument" << (constructorTypeOrder > 1 ? "s" : "") << " '";
+        std::string ctorTypeBaseStr = AST::getTypeString(constructorTypeBase);
+        ss << ctorTypeBaseStr;
+        for(int i = 1; i < constructorTypeOrder; i++) {
+            ss << "," << ctorTypeBaseStr;
+        }
+        ss << "'.";
+        m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
     }
 
     constructorNode->setExpressionType(resultDataType);
