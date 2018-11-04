@@ -133,6 +133,7 @@ class SemanticAnalyzer {
 
     public:
         void printEvent(EventID eventID, const SourceLocation &sourceLocation) const;
+        void colorPrintEvent(EventID eventID, const SourceLocation &sourceLocation) const;
 
     public:
         void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown);
@@ -174,6 +175,85 @@ const SemanticAnalyzer::Event &SemanticAnalyzer::getEvent(EventID eventID) const
 }
 
 void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceLocation) const {
+    static const std::string tenSpace(10, ' ');
+    static const std::string sevenSpace(7, ' ');
+
+    const Event &event = getEvent(eventID);
+    const AST::SourceLocation &eventLoc = event.EventLoc();
+    
+    printf("--------------------------------------------------------------------------\n");
+
+    // Print event message
+    std::string header;
+    if(event.getEventType() == EventType::Error) {
+        header = "Error";
+    } else {
+        header = "Warning";
+    }
+    printf("%s-%d", header.c_str(), eventID);
+    printf(": %s\n", event.Message().c_str());
+
+    // Print event location info
+    if(AST::SourceLocation() != eventLoc) {
+        if(eventLoc.firstLine == eventLoc.lastLine) {
+            const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
+            printf("%7d:%s", eventLoc.firstLine, tenSpace.c_str());
+            printf("%s\n", line.c_str());
+            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+            for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                if(colNumber >= eventLoc.firstColumn - 1 && colNumber < eventLoc.lastColumn - 1) {
+                    printf("^");
+                } else {
+                    printf(" ");
+                }
+            }
+        } else {
+            for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
+                const std::string &line = sourceLocation.getLine(lineNumber);
+                printf("%7d:%s", lineNumber, tenSpace.c_str());
+                printf("%s\n", line.c_str());
+            }
+        }
+        printf("\n");
+    }
+
+    // Print reference location info and reference message
+    if(event.isUsingReference()) {
+        const AST::SourceLocation &refLoc = event.RefLoc();
+
+        printf("\n");
+
+        // Print reference message
+        printf("Info");
+        printf(": %s\n", event.RefMessage().c_str());
+
+        // Print reference location info
+        if(AST::SourceLocation() != refLoc) {
+            if(refLoc.firstLine == refLoc.lastLine) {
+                const std::string &line = sourceLocation.getLine(refLoc.firstLine);
+                printf("%7d:%s", refLoc.firstLine, tenSpace.c_str());
+                printf("%s\n", line.c_str());
+                printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+                for(int colNumber = 0; colNumber < line.length(); colNumber++) {
+                    if(colNumber >= refLoc.firstColumn - 1 && colNumber < refLoc.lastColumn - 1) {
+                        printf("~");
+                    } else {
+                        printf(" ");
+                    }
+                }
+            } else {
+                for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
+                    const std::string &line = sourceLocation.getLine(lineNumber);
+                    printf("%7d:%s", lineNumber, tenSpace.c_str());
+                    printf("%s\n", line.c_str());
+                }
+            }
+            printf("\n");
+        }
+    }
+}
+
+void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &sourceLocation) const {
     static const std::string tenSpace(10, ' ');
     static const std::string sevenSpace(7, ' ');
 

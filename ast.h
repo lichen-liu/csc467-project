@@ -159,6 +159,10 @@ struct SourceLocation {
     friend bool operator!=(const SourceLocation& lhs, const SourceLocation& rhs){ return !(lhs == rhs); }
 };
 
+std::string getTypeString(int type);
+std::string getOperatorString(int op);
+std::string getSourceLocationString(const SourceLocation &srcLoc);
+
 #define AST_VISIT_THIS_NODE     public:                                             \
                                 virtual void visit(Visitor &visitor) {              \
                                     visitor.visit(this);                            \
@@ -175,6 +179,7 @@ class ASTNode {
     public:
         const SourceLocation &getSourceLocation() const { return m_srcLoc; }
         void setSourceLocation(const SourceLocation &srcLoc) { m_srcLoc = srcLoc; }
+        std::string getSourceLocationString() const { return AST::getSourceLocationString(m_srcLoc); }
     protected:
         virtual ~ASTNode() {}
     public:
@@ -189,6 +194,9 @@ class ExpressionNode: public ASTNode {
         virtual void setExpressionType(int type) {}     // provide default definition
         virtual bool isConst() const = 0;               // pure virtual
         virtual void setConst(bool isConst) {}          // provide default definition
+    public:
+        std::string getExpressionTypeString() const { return getTypeString(getExpressionType()); }
+        std::string getExpressionQualifierString() const { return isConst() ? "const" : ""; }
     protected:
         virtual ~ExpressionNode() {}
 };
@@ -331,6 +339,7 @@ class DeclarationNode: public ASTNode {
         bool isReadOnly() const { return m_isReadOnly; }
         bool isWriteOnly() const { return m_isWriteOnly; }
         int getType() const { return m_type; }
+        std::string getTypeString() const { return AST::getTypeString(m_type); }
         ExpressionNode *getExpression() const { return m_initValExpr; }
     public:
         /*
@@ -345,6 +354,7 @@ class DeclarationNode: public ASTNode {
         bool isUniformType() const { return (m_isReadOnly == true && m_isConst == true && m_isWriteOnly == false); }
         bool isResultType() const { return (m_isReadOnly == false && m_isConst == false && m_isWriteOnly == true); }
         bool isOrdinaryType() const { return (m_isReadOnly == false && m_isWriteOnly == false); }
+        std::string getQualifierString() const;
     protected:
         virtual ~DeclarationNode() {
             if(m_initValExpr != nullptr) {
@@ -575,6 +585,7 @@ class AssignmentNode: public StatementNode {
     public:
         int getExpressionType() const { return m_type; }
         void setExpressionType(int type) { m_type = type; }
+        std::string getExpressionTypeString() const { return getTypeString(m_type); }
         VariableNode *getVariable() const { return m_var; }
         ExpressionNode *getExpression() const { return m_newValExpr; }
     protected:
@@ -651,10 +662,6 @@ class ScopeNode: public ASTNode {
 
     AST_VISIT_THIS_NODE
 };
-
-std::string getTypeString(int type);
-std::string getOperatorString(int op);
-std::string getSourceLocationString(const SourceLocation &srcLoc);
 
 }
 

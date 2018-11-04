@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cassert>
 
 #include "ast.h"
 #include "common.h"
@@ -153,6 +154,20 @@ void Visitor::visit(NestedScopeNode *node)          AST_VISITOR_VISIT
 void Visitor::visit(ScopeNode *node)                AST_VISITOR_VISIT
 
 
+std::string DeclarationNode::getQualifierString() const {
+    if(isOrdinaryType()) {
+        return isConst() ? "const" : "";
+    } else if(isResultType()) {
+        return "result";
+    } else if(isAttributeType()) {
+        return "attribute";
+    } else if(isUniformType()) {
+        return "uniform";
+    } else {
+        assert(0);
+    }
+}
+
 int IntLiteralNode::getExpressionType() const {
     return INT_T;
 }
@@ -179,7 +194,7 @@ class Printer: public Visitor {
     private:
         void printSourceLocation(const ASTNode *node) const {
             if(m_printSourceLocation) {
-                printf("<%s>", getSourceLocationString(node->getSourceLocation()).c_str());
+                printf("<%s>", node->getSourceLocationString().c_str());
             }
         }
     
@@ -204,7 +219,7 @@ class Printer: public Visitor {
             printf("(UNARY");
             printSourceLocation(unaryExpressionNode);
             printf(" ");
-            printf("%s ", getTypeString(unaryExpressionNode->getExpressionType()).c_str());
+            printf("%s ", unaryExpressionNode->getExpressionTypeString().c_str());
             printf("%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
             unaryExpressionNode->getExpression()->visit(*this);
             printf(")");
@@ -215,7 +230,7 @@ class Printer: public Visitor {
             printf("(BINARY");
             printSourceLocation(binaryExpressionNode);
             printf(" ");
-            printf("%s ", getTypeString(binaryExpressionNode->getExpressionType()).c_str());
+            printf("%s ", binaryExpressionNode->getExpressionTypeString().c_str());
             printf("%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
             binaryExpressionNode->getLeftExpression()->visit(*this);
             printf(" ");
@@ -252,7 +267,7 @@ class Printer: public Visitor {
             printf("(INDEX");
             printSourceLocation(indexingNode);
             printf(" ");
-            printf("%s ", getTypeString(indexingNode->getExpressionType()).c_str());
+            printf("%s ", indexingNode->getExpressionTypeString().c_str());
             indexingNode->getIdentifier()->visit(*this);
             printf(" ");
             indexingNode->getIndexExpression()->visit(*this);
@@ -302,8 +317,8 @@ class Printer: public Visitor {
             printSourceLocation(declarationNode);
             printf(" ");
             printf("%s ", declarationNode->getName().c_str());
-            printf("%s", (declarationNode->isConst() ? "const ":""));
-            printf("%s", getTypeString(declarationNode->getType()).c_str());
+            printf("%s", declarationNode->getQualifierString().c_str());
+            printf("%s", declarationNode->getTypeString().c_str());
             if(declarationNode->getExpression() != nullptr) {
                 printf(" ");
                 declarationNode->getExpression()->visit(*this);
@@ -348,7 +363,7 @@ class Printer: public Visitor {
             printf("(ASSIGN");
             printSourceLocation(assignmentNode);
             printf(" ");
-            printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
+            printf("%s ", assignmentNode->getExpressionTypeString().c_str());
             assignmentNode->getVariable()->visit(*this);
             printf(" ");
             assignmentNode->getExpression()->visit(*this);
