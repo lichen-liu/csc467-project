@@ -798,42 +798,13 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
 
 void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
     int resultDataType = ANY_TYPE;
-    AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
-    const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
 
     bool legalFunctionCall = true;
 
-    // Firstly, check for Write-Only
-    bool allArgTypeValid = true;
-    for(const AST::ExpressionNode *arg: args) {
-        if(arg->getExpressionType() == ANY_TYPE) {
-            allArgTypeValid = false;
-            break;
-        }
-    }
-    if(allArgTypeValid) {
-        WriteOnlyFinder writeOnlyFinder;
-        functionNode->visit(writeOnlyFinder);
-        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
-        if(!writeOnlyVars.empty()) {
-            legalFunctionCall = false;
-
-            std::stringstream ss;
-            ss << "Arguments in function call at " << AST::getSourceLocationString(functionNode->getSourceLocation()) <<
-                " has write-only Result type.";
-
-            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
-            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
-            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
-
-            m_semaAnalyzer.getEvent(id).setUsingReference(true);
-            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
-            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
-        }
-    }
-
-    // Secondly, check for argument type
+    // Firstly, check for argument type
     const std::string &funcName = functionNode->getName();
+    AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
+    const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
     if(funcName == "rsq") {
         bool isLegal = false;
         if(args.size() == 1) {
@@ -922,10 +893,30 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
             m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting function argument 'vec4'.";
         }
+    } else {
+        assert(0);
     }
 
-    if(legalFunctionCall == false) {
-        resultDataType = ANY_TYPE;
+    // Secondly, check for Write-Only
+    if(legalFunctionCall) {
+        WriteOnlyFinder writeOnlyFinder;
+        functionNode->visit(writeOnlyFinder);
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            resultDataType = ANY_TYPE;
+
+            std::stringstream ss;
+            ss << "Arguments in function call at " << AST::getSourceLocationString(functionNode->getSourceLocation()) <<
+                " has write-only Result type.";
+
+            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
     }
 
     functionNode->setExpressionType(resultDataType);
@@ -939,13 +930,15 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
     * basic type corresponding to the vector type. For example, bvec2(true,false) is valid ,
     * whereas bvec2(1,true) is invalid.
     */
-    bool resultIsConst = false;
+
     int resultDataType = ANY_TYPE;
+
+    // Firstly, check for argument type
+    bool resultIsConst = false;
 
     int constructorType = constructorNode->getConstructorType();
     int constructorTypeBase = getDataTypeBaseType(constructorType);
     int constructorTypeOrder = getDataTypeOrder(constructorType);
-
     AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
     const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
 
@@ -980,10 +973,30 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
         std::string ctorTypeBaseStr = AST::getTypeString(constructorTypeBase);
         ss << ctorTypeBaseStr;
         for(int i = 1; i < constructorTypeOrder; i++) {
-            ss << "," << ctorTypeBaseStr;
+            ss << ", " << ctorTypeBaseStr;
         }
         ss << "'.";
         m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+    } else {
+        // Secondly, check for Write-Only
+        WriteOnlyFinder writeOnlyFinder;
+        constructorNode->visit(writeOnlyFinder);
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            resultDataType = ANY_TYPE;
+
+            std::stringstream ss;
+            ss << "Arguments in constructor call at " << AST::getSourceLocationString(constructorNode->getSourceLocation()) <<
+                " has write-only Result type.";
+
+            auto id = m_semaAnalyzer.createEvent(constructorNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = constructorNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
     }
 
     constructorNode->setExpressionType(resultDataType);
