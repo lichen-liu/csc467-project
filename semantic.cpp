@@ -606,10 +606,27 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
 
     int resultDataType = ANY_TYPE;
     if(rhsDataType != ANY_TYPE) {
+        bool isLegal = true;
+
         // Firstly, check for Write-Only
         WriteOnlyFinder writeOnlyFinder;
         unaryExpressionNode->visit(writeOnlyFinder);
-        /// TODO
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            isLegal = false;
+
+            std::stringstream ss;
+            ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
+                " has write-only Result type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(unaryExpressionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = unaryExpressionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
 
         // Secondly, Type check
         m_semaAnalyzer.createTempEvent(unaryExpressionNode, SemanticAnalyzer::EventType::Error);
@@ -617,6 +634,8 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
         resultDataType = inferDataType(op, rhsDataType);
         
         if(resultDataType == ANY_TYPE) {
+            isLegal = false;
+
             std::stringstream ss;
             ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
                 " has non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
@@ -627,6 +646,10 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
             m_semaAnalyzer.promoteTempEvent();
         } else {
             m_semaAnalyzer.dropTempEvent();
+        }
+
+        if(!isLegal) {
+            resultDataType = ANY_TYPE;
         }
     }
     
@@ -875,6 +898,11 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
 }
 
 void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
+    /* Don't check predefined variables */
+    if(!declarationNode->isOrdinaryType()) {
+        return;
+    }
+
     /*
      * Initialization
      * 
