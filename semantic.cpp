@@ -622,6 +622,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
     AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
     const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
     if(funcName == "rsq") {
+        bool isLegal = false;
         if(args.size() == 1) {
             const AST::ExpressionNode *arg1 = args.front();
             int arg1Type = arg1->getExpressionType();
@@ -629,9 +630,24 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
                 // float rsq(float);
                 // float rsq(int);
                 resultDataType = FLOAT_T;
+                isLegal = true;
             }
         }
+
+        if(!isLegal) {
+            std::stringstream ss;
+            ss << "Unmatched function parameters when calling function 'rsq' at " <<
+                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting 'float' or 'int'.";
+        }
     } else if (funcName == "dp3") {
+        bool isLegal = false;
         if(args.size() == 2) {
             const AST::ExpressionNode *arg1 = args[0];
             int arg1Type = arg1->getExpressionType();
@@ -645,17 +661,47 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
                     // float dp3(ivec4, ivec4);
                     // float dp3(ivec3, ivec3);
                     resultDataType = FLOAT_T;
+                    isLegal = true;
                 }
             }
         }
+
+        if(!isLegal) {
+            std::stringstream ss;
+            ss << "Unmatched function parameters when calling function 'dp3' at " <<
+                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() =
+                "Expecting 'vec4, vec4' or 'vec3, vec3' or 'ivec4, ivec4' or 'ivec3, ivec3'.";
+        }
     } else if (funcName == "lit") {
+        bool isLegal = false;
         if(args.size() == 1) {
             const AST::ExpressionNode *arg1 = args.front();
             int arg1Type = arg1->getExpressionType();
             if(arg1Type == VEC4_T) {
                 // vec4 lit(vec4);
                 resultDataType = VEC4_T;
+                isLegal = true;
             }
+        }
+
+        if(!isLegal) {
+            std::stringstream ss;
+            ss << "Unmatched function parameters when calling function 'lit' at " <<
+                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting 'vec4'.";
         }
     }
 
@@ -831,8 +877,10 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             assignmentLegal = false;
 
             std::stringstream ss;
-            ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
-                ", has expression of non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+            ss << "Invalid variable assignment for '" << lhsVar->getName() <<
+                "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+                ", has expression of non-compatible type '" << (rhsExpr->isConst() ? "const " : "") << AST::getTypeString(rhsDataType) <<
+                "' at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
             
             auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
