@@ -484,6 +484,15 @@ class WriteOnlyFinder: public AST::Visitor {
                 m_writeOnlyVars.push_back(identifierNode);
             }
         }
+        virtual void postNodeVisit(AST::IndexingNode *indexingNode) {
+            if(indexingNode->isWriteOnly()) {
+                m_writeOnlyVars.push_back(indexingNode);
+            }
+        }
+    private:
+        virtual void nodeVisit(AST::IndexingNode *indexingNode) {
+            /* Do not traverse into IndexingNode */
+        }
     public:
         const std::vector<const AST::VariableNode *> &getWriteOnlyVars() const { return m_writeOnlyVars; }
 };
