@@ -333,9 +333,8 @@ class SymbolDeclVisitor: public AST::Visitor {
             m_symbolTable.markSymbolRefPos(identifierNode);
         }
 
-        virtual void postNodeVisit(AST::DeclarationNode *declarationNode) {
-            /// TODO: change to preNodeVisit, declare symbol then evaluate rhs
-            // Traverse the possible evaluation on rhs before the declaration of symbol
+        virtual void preNodeVisit(AST::DeclarationNode *declarationNode) {
+            // Declare the symbol before traversing the possible evaluation on rhs
             AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
 
             if(redecl != nullptr) {
