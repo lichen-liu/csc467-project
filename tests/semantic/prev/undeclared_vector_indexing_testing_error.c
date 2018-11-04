@@ -20,7 +20,7 @@
 )
 
 --------------------------------------------------------------------------
-Error-0: Missing declaration for symbol'ivec3a' at Line 2:13 to Line 2:19.
+Error-0: Missing declaration for symbol 'ivec3a' at Line 2:13 to Line 2:19.
       2:              int a = ivec3a[2];
                               ^^^^^^    
 --------------------------------------------------------------------------

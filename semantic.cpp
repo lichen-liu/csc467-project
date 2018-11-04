@@ -16,19 +16,19 @@
 
 namespace SEMA{ /* START NAMESPACE */
 
-class SourceLocation {
+class SourceContext {
     private:
         std::vector<std::string> m_sourceFile;
 
     public:
-        SourceLocation(FILE *f);
+        SourceContext(FILE *f);
     
     public:
         const std::vector<std::string> &getLines() const { return m_sourceFile; }
         const std::string &getLine(int line) const { return m_sourceFile.at(line - 1); }
 };
 
-SourceLocation::SourceLocation(FILE *f) {
+SourceContext::SourceContext(FILE *f) {
     assert(f != nullptr);
 
     char *line = NULL;
@@ -108,6 +108,9 @@ class SemanticAnalyzer {
     private:
         std::unique_ptr<Event> m_tempEvent = nullptr;
         bool m_tempEventValid = false;
+
+    private:
+        bool m_colorPrintEnabled = true;
     
     public:
         void resetAnalyzer() {
@@ -131,9 +134,14 @@ class SemanticAnalyzer {
         const Event &getEventC(EventID eventID) const;
         const Event &getEvent(EventID eventID) const;
 
+    private:
+        void printEventNoColor(EventID eventID, const SourceContext &sourceContext) const;
+        void printEventColor(EventID eventID, const SourceContext &sourceContext) const;
+    
     public:
-        void printEvent(EventID eventID, const SourceLocation &sourceLocation) const;
-        void colorPrintEvent(EventID eventID, const SourceLocation &sourceLocation) const;
+        bool isColorPrintEnabled() const { return m_colorPrintEnabled; }
+        void setColorPrintEnabled(bool flag) { m_colorPrintEnabled = flag; }
+        void printEvent(EventID eventID, const SourceContext &sourceContext) const;
 
     public:
         void createTempEvent(const AST::ASTNode *astNode = nullptr, EventType eventType = EventType::Unknown);
@@ -174,7 +182,7 @@ const SemanticAnalyzer::Event &SemanticAnalyzer::getEvent(EventID eventID) const
     return *(m_eventList.at(eventID));
 }
 
-void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceLocation) const {
+void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &sourceContext) const {
     static const std::string tenSpace(10, ' ');
     static const std::string sevenSpace(7, ' ');
 
@@ -196,7 +204,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
     // Print event location info
     if(AST::SourceLocation() != eventLoc) {
         if(eventLoc.firstLine == eventLoc.lastLine) {
-            const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
+            const std::string &line = sourceContext.getLine(eventLoc.firstLine);
             printf("%7d:%s", eventLoc.firstLine, tenSpace.c_str());
             printf("%s\n", line.c_str());
             printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
@@ -209,7 +217,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
             }
         } else {
             for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
-                const std::string &line = sourceLocation.getLine(lineNumber);
+                const std::string &line = sourceContext.getLine(lineNumber);
                 printf("%7d:%s", lineNumber, tenSpace.c_str());
                 printf("%s\n", line.c_str());
             }
@@ -230,7 +238,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
         // Print reference location info
         if(AST::SourceLocation() != refLoc) {
             if(refLoc.firstLine == refLoc.lastLine) {
-                const std::string &line = sourceLocation.getLine(refLoc.firstLine);
+                const std::string &line = sourceContext.getLine(refLoc.firstLine);
                 printf("%7d:%s", refLoc.firstLine, tenSpace.c_str());
                 printf("%s\n", line.c_str());
                 printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
@@ -243,7 +251,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
                 }
             } else {
                 for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
-                    const std::string &line = sourceLocation.getLine(lineNumber);
+                    const std::string &line = sourceContext.getLine(lineNumber);
                     printf("%7d:%s", lineNumber, tenSpace.c_str());
                     printf("%s\n", line.c_str());
                 }
@@ -253,7 +261,7 @@ void SemanticAnalyzer::printEvent(EventID eventID, const SourceLocation &sourceL
     }
 }
 
-void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &sourceLocation) const {
+void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sourceContext) const {
     static const std::string tenSpace(10, ' ');
     static const std::string sevenSpace(7, ' ');
 
@@ -275,7 +283,7 @@ void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &so
     // Print event location info
     if(AST::SourceLocation() != eventLoc) {
         if(eventLoc.firstLine == eventLoc.lastLine) {
-            const std::string &line = sourceLocation.getLine(eventLoc.firstLine);
+            const std::string &line = sourceContext.getLine(eventLoc.firstLine);
             printf("\033[0;32m%7d:%s\033[0m", eventLoc.firstLine, tenSpace.c_str());
             printf("\033[1;37m%s\033[0m\n", line.c_str());
             printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
@@ -288,7 +296,7 @@ void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &so
             }
         } else {
             for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
-                const std::string &line = sourceLocation.getLine(lineNumber);
+                const std::string &line = sourceContext.getLine(lineNumber);
                 printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
                 printf("\033[1;37m%s\033[0m\n", line.c_str());
             }
@@ -309,7 +317,7 @@ void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &so
         // Print reference location info
         if(AST::SourceLocation() != refLoc) {
             if(refLoc.firstLine == refLoc.lastLine) {
-                const std::string &line = sourceLocation.getLine(refLoc.firstLine);
+                const std::string &line = sourceContext.getLine(refLoc.firstLine);
                 printf("\033[0;32m%7d:%s\033[0m", refLoc.firstLine, tenSpace.c_str());
                 printf("\033[1;37m%s\033[0m\n", line.c_str());
                 printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
@@ -322,13 +330,21 @@ void SemanticAnalyzer::colorPrintEvent(EventID eventID, const SourceLocation &so
                 }
             } else {
                 for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
-                    const std::string &line = sourceLocation.getLine(lineNumber);
+                    const std::string &line = sourceContext.getLine(lineNumber);
                     printf("\033[0;32m%7d:%s\033[0m", lineNumber, tenSpace.c_str());
                     printf("\033[1;37m%s\033[0m\n", line.c_str());
                 }
             }
             printf("\n");
         }
+    }
+}
+
+void SemanticAnalyzer::printEvent(EventID eventID, const SourceContext &sourceContext) const {
+    if(isColorPrintEnabled()) {
+        printEventColor(eventID, sourceContext);
+    } else {
+        printEventNoColor(eventID, sourceContext);
     }
 }
 
@@ -687,7 +703,7 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
         identifierNode->setDeclaration(nullptr);
 
         std::stringstream ss;
-        ss << "Missing declaration for symbol'" << identifierNode->getName() <<
+        ss << "Missing declaration for symbol '" << identifierNode->getName() <<
         "' at " << identifierNode->getSourceLocationString() << ".";
 
         auto id = m_semaAnalyzer.createEvent(identifierNode, SemanticAnalyzer::EventType::Error);
@@ -1664,7 +1680,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
 int semantic_check(node * ast) {
     ST::SymbolTable symbolTable;
     SEMA::SemanticAnalyzer semaAnalyzer;
-    SEMA::SourceLocation sourceLocation(inputFile);
+    SEMA::SourceContext sourceContext(inputFile);
 
     /* Create Predefined Variables */
     SEMA::PredefinedVariableCreater predefinedVariableCreater;
@@ -1683,11 +1699,12 @@ int semantic_check(node * ast) {
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
+    semaAnalyzer.setColorPrintEnabled(false);
     if(numEvents != 0) {
         printf("\n");
     }
     for(int id = 0; id < numEvents; id++) {
-        semaAnalyzer.printEvent(id, sourceLocation);
+        semaAnalyzer.printEvent(id, sourceContext);
     }
     if(numEvents != 0) {
         printf("--------------------------------------------------------------------------\n");

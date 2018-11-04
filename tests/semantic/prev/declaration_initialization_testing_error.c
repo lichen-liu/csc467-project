@@ -37,7 +37,7 @@ Error-2: Variable declaration of 'int intc' at Line 5:5 to Line 5:27, is initial
       5:              int intc = inta + 3.0;
                       ^^^^^^^^^^^^^^^^^^^^^^
 --------------------------------------------------------------------------
-Error-3: Missing declaration for symbol'inte' at Line 6:16 to Line 6:20.
+Error-3: Missing declaration for symbol 'inte' at Line 6:16 to Line 6:20.
       6:              int intd = inte;
                                  ^^^^ 
 --------------------------------------------------------------------------

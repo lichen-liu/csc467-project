@@ -39,7 +39,7 @@ for root, dirs, files in os.walk(test_dir):
                     raise Exception(test_target_file + ' cannot be found in ' + prev_dir)
 
             with open(prev_dir + test_target_file, 'r') as prev_file:
-                prev_total_out = ''.join(prev_file.readlines())
+                prev_total_out = prev_file.read()
                 if prev_total_out == total_out:
                     print '    Passed.'
                     passed_count += 1
@@ -52,9 +52,16 @@ for root, dirs, files in os.walk(test_dir):
                     print '***** EXPECTED *****'
                     print prev_total_out
                     print '********************'
-                    print '----- DIFF -----'
-                    diff = difflib.unified_diff(prev_total_out, total_out, fromfile = 'expected', tofile = 'actual')
-                    print ''.join(diff)
+                    print '----- DIFF(' + test_target_file + ') -----'
+                    total_out_lines = total_out.splitlines()
+                    prev_total_out_lines = prev_total_out.splitlines()
+                    line = 1
+                    for total_out_line in total_out_lines:
+                        if total_out_line != prev_total_out_lines[line-1]:
+                            print "Line: " + str(line) + ":"
+                            print "E:" + prev_total_out_lines[line-1]
+                            print "A:" + total_out_line
+                        line += 1
                     print '----------------'
                     print '\nThere are probably some bugs with the compiler, or update the EXPECTED in ' + prev_dir + test_target_file + '!'
                     print

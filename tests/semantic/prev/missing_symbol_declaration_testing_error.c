@@ -22,7 +22,7 @@
 )
 
 --------------------------------------------------------------------------
-Error-0: Missing declaration for symbol'b' at Line 5:9 to Line 5:10.
+Error-0: Missing declaration for symbol 'b' at Line 5:9 to Line 5:10.
       5:              a = b;
                           ^ 
 --------------------------------------------------------------------------

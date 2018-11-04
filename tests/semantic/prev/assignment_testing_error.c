@@ -31,7 +31,7 @@
 )
 
 --------------------------------------------------------------------------
-Error-0: Missing declaration for symbol'a' at Line 8:5 to Line 8:6.
+Error-0: Missing declaration for symbol 'a' at Line 8:5 to Line 8:6.
       8:              a = 2 + 2.0;
                       ^           
 --------------------------------------------------------------------------
@@ -45,7 +45,7 @@ Error-2: Variable assignment for 'a' at Line 8:5 to Line 8:17, has unknown type 
       8:              a = 2 + 2.0;
                       ^^^^^^^^^^^^
 --------------------------------------------------------------------------
-Error-3: Missing declaration for symbol'a' at Line 9:5 to Line 9:6.
+Error-3: Missing declaration for symbol 'a' at Line 9:5 to Line 9:6.
       9:              a = 2;
                       ^     
 --------------------------------------------------------------------------
