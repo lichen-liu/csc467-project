@@ -475,6 +475,7 @@ class SymbolDeclVisitor: public AST::Visitor {
         }
 };
 
+/* Finds Write-Only Type in Expressions Only */
 class WriteOnlyFinder: public AST::Visitor {
     private:
         std::vector<const AST::VariableNode *> m_writeOnlyVars;
@@ -490,9 +491,18 @@ class WriteOnlyFinder: public AST::Visitor {
             }
         }
     private:
-        virtual void nodeVisit(AST::IndexingNode *indexingNode) {
-            /* Do not traverse into IndexingNode */
-        }
+        /* Do not traverse into */
+        virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
+        virtual void nodeVisit(AST::StatementNode *statementNode) {}
+        virtual void nodeVisit(AST::StatementsNode *statementsNode) {}
+        virtual void nodeVisit(AST::DeclarationNode *declarationNode) {}
+        virtual void nodeVisit(AST::DeclarationsNode *declarationsNode) {}
+        virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {}
+        virtual void nodeVisit(AST::AssignmentNode *assignmentNode) {}
+        virtual void nodeVisit(AST::StallStatementNode *stallStatementNode) {}
+        virtual void nodeVisit(AST::NestedScopeNode *nestedScopeNode) {}
+        virtual void nodeVisit(AST::ScopeNode *scopeNode) {}
+
     public:
         const std::vector<const AST::VariableNode *> &getWriteOnlyVars() const { return m_writeOnlyVars; }
 };
@@ -1092,9 +1102,29 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
      * The expression that determines which branch of an if statement should be taken must
      * have the type bool (not bvec).
      */
-    const AST::ExpressionNode *cond = ifStatementNode->getConditionExpression();
-
+    AST::ExpressionNode *cond = ifStatementNode->getConditionExpression();
     int condExprType = cond->getExpressionType();
+
+    // Firstly, check for Write-Only for condition expression
+    if(condExprType != ANY_TYPE) {
+        WriteOnlyFinder writeOnlyFinder;
+        cond->visit(writeOnlyFinder);
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            std::stringstream ss;
+            ss << "If-statement condition expression has write-only Result type at " <<
+                AST::getSourceLocationString(cond->getSourceLocation()) << ".";
+
+            auto id = m_semaAnalyzer.createEvent(ifStatementNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = cond->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
+    }
+
     if(condExprType != BOOL_T) {
         std::stringstream ss;
         ss << "If-statement condition expression has ";
