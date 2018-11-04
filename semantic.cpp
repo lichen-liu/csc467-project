@@ -798,10 +798,42 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
 
 void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
     int resultDataType = ANY_TYPE;
-
-    const std::string &funcName = functionNode->getName();
     AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
     const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+
+    bool legalFunctionCall = true;
+
+    // Firstly, check for Write-Only
+    bool allArgTypeValid = true;
+    for(const AST::ExpressionNode *arg: args) {
+        if(arg->getExpressionType() == ANY_TYPE) {
+            allArgTypeValid = false;
+            break;
+        }
+    }
+    if(allArgTypeValid) {
+        WriteOnlyFinder writeOnlyFinder;
+        functionNode->visit(writeOnlyFinder);
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            legalFunctionCall = false;
+
+            std::stringstream ss;
+            ss << "Arguments in function call at " << AST::getSourceLocationString(functionNode->getSourceLocation()) <<
+                " has write-only Result type.";
+
+            auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = functionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
+    }
+
+    // Secondly, check for argument type
+    const std::string &funcName = functionNode->getName();
     if(funcName == "rsq") {
         bool isLegal = false;
         if(args.size() == 1) {
@@ -816,6 +848,8 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
         }
 
         if(!isLegal) {
+            legalFunctionCall = false;
+            
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'rsq' at " <<
                 AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
@@ -848,6 +882,8 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
         }
 
         if(!isLegal) {
+            legalFunctionCall = false;
+
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'dp3' at " <<
                 AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
@@ -873,6 +909,8 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
         }
 
         if(!isLegal) {
+            legalFunctionCall = false;
+
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'lit' at " <<
                 AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
@@ -884,6 +922,10 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
             m_semaAnalyzer.getEvent(id).RefMessage() = "Expecting function argument 'vec4'.";
         }
+    }
+
+    if(legalFunctionCall == false) {
+        resultDataType = ANY_TYPE;
     }
 
     functionNode->setExpressionType(resultDataType);
