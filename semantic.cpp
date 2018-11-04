@@ -684,11 +684,36 @@ void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode)
 
     int resultDataType = ANY_TYPE;
     if(lhsDataType != ANY_TYPE && rhsDataType != ANY_TYPE) {
+        bool isLegal = true;
+
+        // Firstly, check for Write-Only
+        WriteOnlyFinder writeOnlyFinder;
+        binaryExpressionNode->visit(writeOnlyFinder);
+        const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
+        if(!writeOnlyVars.empty()) {
+            isLegal = false;
+
+            std::stringstream ss;
+            ss << "Operands in binary expression at " << AST::getSourceLocationString(binaryExpressionNode->getSourceLocation()) <<
+                " has write-only Result type.";
+
+            auto id = m_semaAnalyzer.createEvent(binaryExpressionNode, SemanticAnalyzer::EventType::Error);
+            m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+            m_semaAnalyzer.getEvent(id).EventLoc() = binaryExpressionNode->getSourceLocation();
+
+            m_semaAnalyzer.getEvent(id).setUsingReference(true);
+            m_semaAnalyzer.getEvent(id).RefMessage() = "The first write-only Result variable is '" + writeOnlyVars.front()->getName() + "':";
+            m_semaAnalyzer.getEvent(id).RefLoc() = writeOnlyVars.front()->getSourceLocation();
+        }
+
+        // Secondly, Type check
         m_semaAnalyzer.createTempEvent(binaryExpressionNode, SemanticAnalyzer::EventType::Error);
 
         resultDataType = inferDataType(op, lhsDataType, rhsDataType);
 
         if(resultDataType == ANY_TYPE) {
+            isLegal = false;
+
             std::stringstream ss;
             ss << "Operands in binary expression at " << AST::getSourceLocationString(binaryExpressionNode->getSourceLocation()) <<
                 " have non-compatible type.";
@@ -699,6 +724,10 @@ void TypeChecker::postNodeVisit(AST::BinaryExpressionNode *binaryExpressionNode)
             m_semaAnalyzer.promoteTempEvent();
         } else {
             m_semaAnalyzer.dropTempEvent();
+        }
+
+        if(!isLegal) {
+            resultDataType = ANY_TYPE;
         }
     }
 
@@ -1173,7 +1202,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
             std::stringstream ss;
             ss << "Expecting operands on both sides of operator '";
             ss << AST::getOperatorString(op);
-            ss << "' to have same base type. Now they are '";
+            ss << "' to have same base type, but they are '";
             ss << AST::getTypeString(lhsDataType);
             ss << "' and '";
             ss << AST::getTypeString(rhsDataType);
@@ -1196,7 +1225,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
             if(m_semaAnalyzer.isTempEventCreated()) {
                 m_semaAnalyzer.getTempEvent().setUsingReference(true);
                 std::stringstream ss;
-                ss << "Expecting vector operands on both sides of operator to have same order. Now they are '";
+                ss << "Expecting vector operands on both sides of operator to have same order, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1228,7 +1257,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to have arithmetic type and same order. Now they are '";
+                ss << "' to have arithmetic type and same order, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1257,7 +1286,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to have arithmetic type. Now they are '";
+                ss << "' to have arithmetic type, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1285,7 +1314,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to be scalar and have arithmetic type. Now they are '";
+                ss << "' to be scalar and have arithmetic type, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1313,7 +1342,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to have boolean type and same order. Now they are '";
+                ss << "' to have boolean type and same order, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1343,7 +1372,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to be scalar and have arithmetic type. Now they are '";
+                ss << "' to be scalar and have arithmetic type, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
@@ -1371,7 +1400,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                 std::stringstream ss;
                 ss << "Expecting operands on both sides of operator '";
                 ss << AST::getOperatorString(op);
-                ss << "' to have arithmetic type and same order. Now they are '";
+                ss << "' to have arithmetic type and same order, but they are '";
                 ss << AST::getTypeString(lhsDataType);
                 ss << "' and '";
                 ss << AST::getTypeString(rhsDataType);
