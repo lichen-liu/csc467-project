@@ -196,7 +196,7 @@ class ExpressionNode: public ASTNode {
         virtual void setConst(bool isConst) {}          // provide default definition
     public:
         std::string getExpressionTypeString() const { return getTypeString(getExpressionType()); }
-        std::string getExpressionQualifierString() const { return isConst() ? "const" : ""; }
+        std::string getExpressionQualifierString() const { return isConst() ? "const " : ""; }
     protected:
         virtual ~ExpressionNode() {}
 };

@@ -688,7 +688,7 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
 
         std::stringstream ss;
         ss << "Missing declaration for symbol'" << identifierNode->getName() <<
-        "' at " << AST::getSourceLocationString(identifierNode->getSourceLocation()) << ".";
+        "' at " << identifierNode->getSourceLocationString() << ".";
 
         auto id = m_semaAnalyzer.createEvent(identifierNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -727,8 +727,8 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
             isLegal = false;
 
             std::stringstream ss;
-            ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
-                " has write-only Result type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+            ss << "Operand in unary expression at " << unaryExpressionNode->getSourceLocationString() <<
+                " has write-only Result type at " << rhsExpr->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(unaryExpressionNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -748,8 +748,8 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
             isLegal = false;
 
             std::stringstream ss;
-            ss << "Operand in unary expression at " << AST::getSourceLocationString(unaryExpressionNode->getSourceLocation()) <<
-                " has non-compatible type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+            ss << "Operand in unary expression at " << unaryExpressionNode->getSourceLocationString() <<
+                " has non-compatible type at " << rhsExpr->getSourceLocationString() << ".";
 
             m_semaAnalyzer.getTempEvent().Message() = std::move(ss.str());
             m_semaAnalyzer.getTempEvent().EventLoc() = unaryExpressionNode->getSourceLocation();
@@ -844,42 +844,44 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
 
     const AST::IdentifierNode *identifier = indexingNode->getIdentifier();            
     int identifierDataType = identifier->getExpressionType();
-    int identifierIsConst = identifier->isConst();
-    // Identifier must be a vector
-    int identifierTypeOrder = getDataTypeOrder(identifierDataType);
-    if(identifierTypeOrder > 1) {
-        const AST::IntLiteralNode *index = 
-            dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
-        int indexVal = index->getVal();
-        // Index must be valid
-        if(indexVal >= 0 && indexVal < identifierTypeOrder) {
-            // The type of this indexing node is the base type for identifier node
-            int identifierBaseType = getDataTypeBaseType(identifierDataType);
-            resultDataType = identifierBaseType;
+
+    if(identifierDataType != ANY_TYPE) {
+        // Identifier must be a vector
+        int identifierTypeOrder = getDataTypeOrder(identifierDataType);
+        if(identifierTypeOrder > 1) {
+            const AST::IntLiteralNode *index = 
+                dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
+            int indexVal = index->getVal();
+            // Index must be valid
+            if(indexVal >= 0 && indexVal < identifierTypeOrder) {
+                // The type of this indexing node is the base type for identifier node
+                int identifierBaseType = getDataTypeBaseType(identifierDataType);
+                resultDataType = identifierBaseType;
+            } else {
+                std::stringstream ss;
+                ss << "Invalid indexing of vector variable '" << identifier->getName() << 
+                    "' of type '" << identifier->getDeclaration()->getQualifierString() << AST::getTypeString(identifierDataType) << "' at " <<
+                    indexingNode->getSourceLocationString() << ".";
+
+                auto id = m_semaAnalyzer.createEvent(indexingNode, SemanticAnalyzer::EventType::Error);
+                m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
+                m_semaAnalyzer.getEvent(id).EventLoc() = indexingNode->getSourceLocation();
+
+                m_semaAnalyzer.getEvent(id).setUsingReference(true);
+                ss = std::stringstream();
+                ss << "Expecting an index value between 0 to " << (identifierTypeOrder - 1) << ".";
+                m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
+            }
         } else {
             std::stringstream ss;
-            ss << "Invalid indexing of vector variable '" << identifier->getName() << 
-                "' of type '" << (identifierIsConst ? "const " : "") << AST::getTypeString(identifierDataType) << "' at " <<
-                AST::getSourceLocationString(indexingNode->getSourceLocation()) << ".";
+            ss << "Invalid indexing of non-vector variable '" << identifier->getName() << 
+                "' of type '" << identifier->getDeclaration()->getQualifierString() << AST::getTypeString(identifierDataType) << "' at " <<
+                indexingNode->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(indexingNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
             m_semaAnalyzer.getEvent(id).EventLoc() = indexingNode->getSourceLocation();
-
-            m_semaAnalyzer.getEvent(id).setUsingReference(true);
-            ss = std::stringstream();
-            ss << "Expecting an index value between 0 to " << (identifierTypeOrder - 1) << ".";
-            m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
         }
-    } else {
-        std::stringstream ss;
-        ss << "Invalid indexing of non-vector variable '" << identifier->getName() << 
-            "' of type '" << (identifierIsConst ? "const " : "") << AST::getTypeString(identifierDataType) << "' at " <<
-            AST::getSourceLocationString(indexingNode->getSourceLocation()) << ".";
-
-        auto id = m_semaAnalyzer.createEvent(indexingNode, SemanticAnalyzer::EventType::Error);
-        m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
-        m_semaAnalyzer.getEvent(id).EventLoc() = indexingNode->getSourceLocation();
     }
 
     indexingNode->setExpressionType(resultDataType);
@@ -912,7 +914,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'rsq' at " <<
-                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+                functionNode->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -946,7 +948,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
 
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'dp3' at " <<
-                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+                functionNode->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -973,7 +975,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
 
             std::stringstream ss;
             ss << "Unmatched function parameters when calling function 'lit' at " <<
-                AST::getSourceLocationString(functionNode->getSourceLocation()) << ".";
+                functionNode->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -995,7 +997,7 @@ void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
             resultDataType = ANY_TYPE;
 
             std::stringstream ss;
-            ss << "Arguments in function call at " << AST::getSourceLocationString(functionNode->getSourceLocation()) <<
+            ss << "Arguments in function call at " << functionNode->getSourceLocationString() <<
                 " has write-only Result type.";
 
             auto id = m_semaAnalyzer.createEvent(functionNode, SemanticAnalyzer::EventType::Error);
@@ -1050,7 +1052,7 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
     if(!argLegal) {
         std::stringstream ss;
         ss << "Unmatched constructor parameters when calling constructor for '" << AST::getTypeString(constructorType) << "' at " <<
-            AST::getSourceLocationString(constructorNode->getSourceLocation()) << ".";
+            constructorNode->getSourceLocationString() << ".";
 
         auto id = m_semaAnalyzer.createEvent(constructorNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1075,7 +1077,7 @@ void TypeChecker::postNodeVisit(AST::ConstructorNode *constructorNode) {
             resultDataType = ANY_TYPE;
 
             std::stringstream ss;
-            ss << "Arguments in constructor call at " << AST::getSourceLocationString(constructorNode->getSourceLocation()) <<
+            ss << "Arguments in constructor call at " << constructorNode->getSourceLocationString() <<
                 " has write-only Result type.";
 
             auto id = m_semaAnalyzer.createEvent(constructorNode, SemanticAnalyzer::EventType::Error);
@@ -1110,8 +1112,8 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
     if(declarationNode->isConst()) {
         if(initExpr == nullptr) {
             std::stringstream ss;
-            ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
-                "' is missing initialization at " << AST::getSourceLocationString(declarationNode->getSourceLocation()) << ".";
+            ss << "Const qualified variable 'const " << declarationNode->getTypeString() << " " << declarationNode->getName() <<
+                "' is missing initialization at " << declarationNode->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1119,8 +1121,8 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
 
         } else if (!initExpr->isConst()) {
             std::stringstream ss;
-            ss << "Const qualified variable 'const " << AST::getTypeString(declarationNode->getType()) << " " << declarationNode->getName() <<
-                "' is initialized to a non-const qualified expression at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+            ss << "Const qualified variable 'const " << declarationNode->getTypeString() << " " << declarationNode->getName() <<
+                "' is initialized to a non-const qualified expression at " << initExpr->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1134,9 +1136,9 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
 
         if(rhsDataType == ANY_TYPE) {
             std::stringstream ss;
-            ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
-                "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to an unknown type at " <<
-                AST::getSourceLocationString(initExpr->getSourceLocation()) << " due to previous error(s).";
+            ss << "Variable declaration of '" << declarationNode->getQualifierString() << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                "' at " << declarationNode->getSourceLocationString()  << ", is initialized to an unknown type at " <<
+                initExpr->getSourceLocationString() << " due to previous error(s).";
             
             auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1148,9 +1150,9 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
             const std::vector<const AST::VariableNode *> &writeOnlyVars = writeOnlyFinder.getWriteOnlyVars();
             if(!writeOnlyVars.empty()) {
                 std::stringstream ss;
-                ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
-                    "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a write-only Result type at " <<
-                    AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+                ss << "Variable declaration of '" << declarationNode->getQualifierString() << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                    "' at " << declarationNode->getSourceLocationString()  << ", is initialized to a write-only Result type at " <<
+                    initExpr->getSourceLocationString() << ".";
 
                 auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
                 m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1164,9 +1166,9 @@ void TypeChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
             // Secondly, Type check
             if(lhsDataType != rhsDataType) {
                 std::stringstream ss;
-                ss << "Variable declaration of '" << (declarationNode->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
-                    "' at " << AST::getSourceLocationString(declarationNode->getSourceLocation())  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
-                    "' at " << AST::getSourceLocationString(initExpr->getSourceLocation()) << ".";
+                ss << "Variable declaration of '" << declarationNode->getQualifierString() << AST::getTypeString(lhsDataType) << " " << declarationNode->getName() <<
+                    "' at " << declarationNode->getSourceLocationString()  << ", is initialized to a noncompatible type '"<< AST::getTypeString(rhsDataType) <<
+                    "' at " << initExpr->getSourceLocationString() << ".";
 
                 auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
                 m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1192,7 +1194,7 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
         if(!writeOnlyVars.empty()) {
             std::stringstream ss;
             ss << "If-statement condition expression has write-only Result type at " <<
-                AST::getSourceLocationString(cond->getSourceLocation()) << ".";
+                cond->getSourceLocationString() << ".";
 
             auto id = m_semaAnalyzer.createEvent(ifStatementNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1212,7 +1214,7 @@ void TypeChecker::postNodeVisit(AST::IfStatementNode *ifStatementNode) {
         } else {
             ss << "type '" << AST::getTypeString(condExprType) << "' ";
         }
-        ss << "at " << AST::getSourceLocationString(cond->getSourceLocation()) << ". Expecting type 'bool'.";
+        ss << "at " << cond->getSourceLocationString() << ". Expecting type 'bool'.";
 
         auto id = m_semaAnalyzer.createEvent(ifStatementNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1240,7 +1242,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assignmentLegal = false;
 
         std::stringstream ss;
-        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << assignmentNode->getSourceLocationString() <<
             ", has unknown type on both sides of assignment operator due to pervious errors.";
         
         auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
@@ -1250,8 +1252,8 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assignmentLegal = false;
 
         std::stringstream ss;
-        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
-            ", has variable of unknown type at " << AST::getSourceLocationString(lhsVar->getSourceLocation()) << " due to previous error.";
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << assignmentNode->getSourceLocationString() <<
+            ", has variable of unknown type at " << lhsVar->getSourceLocationString() << " due to previous error.";
         
         auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1260,8 +1262,8 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         assignmentLegal = false;
 
         std::stringstream ss;
-        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
-            ", has expression of unknown type at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << " due to previous error(s).";
+        ss << "Variable assignment for '" << lhsVar->getName() << "' at " << assignmentNode->getSourceLocationString() <<
+            ", has expression of unknown type at " << rhsExpr->getSourceLocationString() << " due to previous error(s).";
         
         auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1274,7 +1276,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         if(lhsVar->isReadOnly()) {
             std::stringstream ss;
             ss << "Invalid variable assignment for Read-Only variable '"<< lhsVar->getName() <<
-                "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+                "' at " << assignmentNode->getSourceLocationString() << ".";
             
             auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1283,17 +1285,9 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
 
             ss = std::stringstream();
-            std::string qualifierTypeStr;
-            if(lhsVar->isUniformType()) {
-                qualifierTypeStr = "uniform";
-            } else if(lhsVar->isAttributeType()) {
-                qualifierTypeStr = "attribute";
-            } else {
-                assert(0);
-            }
             const AST::DeclarationNode *decl = lhsVar->getDeclaration();
             assert(decl != nullptr);
-            ss << "Predefined Variable: '" << qualifierTypeStr << " " << AST::getTypeString(lhsVar->getExpressionType()) << " " << decl->getName() + "'.";
+            ss << "Predefined Variable: '" << decl->getQualifierString() << lhsVar->getExpressionTypeString() << " " << decl->getName() + "'.";
             m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
             m_semaAnalyzer.getEvent(id).RefLoc() = lhsVar->getSourceLocation();
         }
@@ -1302,7 +1296,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         if(m_ifScopeCount > 0 && lhsVar->isWriteOnly()) {
             std::stringstream ss;
             ss << "Invalid variable assignment for Write-Only Result variable '"<< lhsVar->getName() <<
-                "' in the scope of an if or else statement at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+                "' in the scope of an if or else statement at " << assignmentNode->getSourceLocationString() << ".";
             
             auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1313,7 +1307,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             ss = std::stringstream();
             const AST::DeclarationNode *decl = lhsVar->getDeclaration();
             assert(decl != nullptr);
-            ss << "Predefined Variable: 'result " << AST::getTypeString(lhsVar->getExpressionType()) << " " << decl->getName() + "'.";
+            ss << "Predefined Variable: 'result " << lhsVar->getExpressionTypeString() << " " << decl->getName() + "'.";
             m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
             m_semaAnalyzer.getEvent(id).RefLoc() = lhsVar->getSourceLocation();
         }
@@ -1324,9 +1318,9 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
 
             std::stringstream ss;
             ss << "Invalid variable assignment for '" << lhsVar->getName() <<
-                "' at " << AST::getSourceLocationString(assignmentNode->getSourceLocation()) <<
-                ", has expression of non-compatible type '" << (rhsExpr->isConst() ? "const " : "") << AST::getTypeString(rhsDataType) <<
-                "' at " << AST::getSourceLocationString(rhsExpr->getSourceLocation()) << ".";
+                "' at " << assignmentNode->getSourceLocationString() <<
+                ", has expression of non-compatible type '" << rhsExpr->getExpressionQualifierString() << AST::getTypeString(rhsDataType) <<
+                "' at " << rhsExpr->getSourceLocationString() << ".";
             
             auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
             m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1335,9 +1329,9 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
             const AST::DeclarationNode *decl = lhsVar->getDeclaration();
             assert(decl != nullptr);
             ss = std::stringstream();
-            ss << "Variable '" << lhsVar->getName() << "' at " << getSourceLocationString(lhsVar->getSourceLocation()) <<
-                " has type '" << (lhsVar->isConst() ? "const " : "") << AST::getTypeString(lhsDataType) << "', and is declared at " <<
-                AST::getSourceLocationString(decl->getSourceLocation()) << ":";
+            ss << "Variable '" << lhsVar->getName() << "' at " << lhsVar->getSourceLocationString() <<
+                " has type '" << decl->getQualifierString() << AST::getTypeString(lhsDataType) << "', and is declared at " <<
+                decl->getSourceLocationString() << ":";
 
             m_semaAnalyzer.getEvent(id).setUsingReference(true);
             m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
@@ -1350,7 +1344,7 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
 
         std::stringstream ss;
         ss << "Invalid variable assignment for const-qualified variable '" << lhsVar->getName() << "' at " <<
-            AST::getSourceLocationString(assignmentNode->getSourceLocation()) << ".";
+            assignmentNode->getSourceLocationString() << ".";
         
         auto id = m_semaAnalyzer.createEvent(assignmentNode, SemanticAnalyzer::EventType::Error);
         m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());
@@ -1359,9 +1353,9 @@ void TypeChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
         const AST::DeclarationNode *decl = lhsVar->getDeclaration();
         assert(decl != nullptr);
         ss.str(std::string());
-        ss << "Variable '" << lhsVar->getName() << "' at " << getSourceLocationString(lhsVar->getSourceLocation()) <<
-            " has type 'const " << AST::getTypeString(lhsDataType) << "', and is declared at " <<
-            AST::getSourceLocationString(decl->getSourceLocation()) << ":";
+        ss << "Variable '" << lhsVar->getName() << "' at " << lhsVar->getSourceLocationString() <<
+            " has type '" << decl->getQualifierString() << AST::getTypeString(lhsDataType) << "', and is declared at " <<
+            decl->getSourceLocationString() << ":";
 
         m_semaAnalyzer.getEvent(id).setUsingReference(true);
         m_semaAnalyzer.getEvent(id).RefMessage() = std::move(ss.str());
