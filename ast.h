@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 
 //////////////////////////////////////////////////////////////////
 //
@@ -196,12 +197,6 @@ class ExpressionsNode: public ASTNode {
     private:
         std::vector<ExpressionNode *> m_expressions;    // A list of ExpressionNodes
     public:
-        ExpressionsNode(const std::vector<ExpressionNode *> &expressions):
-            m_expressions(expressions) {}
-        ExpressionsNode(std::vector<ExpressionNode *> &&expressions):
-            m_expressions(expressions) {}
-        ExpressionsNode() {}
-    public:
         void pushBackExpression(ExpressionNode *expr) { m_expressions.push_back(expr); }
         const std::vector<ExpressionNode *> &getExpressionList() const { return m_expressions; }
     protected:
@@ -318,19 +313,67 @@ class BooleanLiteralNode: public ExpressionNode {
     AST_VISIT_THIS_NODE
 };
 
+class DeclarationNode: public ASTNode {
+    private:
+        // not using IdentifierNode because the name itself is not yet an expression
+        std::string m_variableName;                     // variable name
+        bool m_isConst;                                 // const qualified
+        bool m_isReadOnly = false;                      // read-only qualified
+        bool m_isWriteOnly = false;                     // write-only qualified
+        int m_type;                                     // types defined in parser.tab.h
+        ExpressionNode *m_initValExpr = nullptr;        // initial value expression (optional)
+    public:
+        DeclarationNode(const std::string &variableName, bool isConst, int type, ExpressionNode *initValExpr = nullptr):
+            m_variableName(variableName), m_isConst(isConst), m_type(type), m_initValExpr(initValExpr) {}
+    public:
+        const std::string &getName() const { return m_variableName; }
+        bool isConst() const { return m_isConst; }
+        bool isReadOnly() const { return m_isReadOnly; }
+        bool isWriteOnly() const { return m_isWriteOnly; }
+        int getType() const { return m_type; }
+        ExpressionNode *getExpression() const { return m_initValExpr; }
+    public:
+        /*
+         * Attribute: Read-only, non-constant.
+         * Uniform: Read-only, constant.
+         * Result: Write-only, cannot be assigned anywhere in the scope of an if or else statement.
+         */
+        void setAttributeType() { m_isReadOnly = true; m_isConst = false; m_isWriteOnly = false; }
+        void setUniformType() { m_isReadOnly = true; m_isConst = true; m_isWriteOnly = false; }
+        void setResultType() { m_isReadOnly = false; m_isConst = false; m_isWriteOnly = true; }
+        bool isAttributeType() const { return (m_isReadOnly == true && m_isConst == false && m_isWriteOnly == false); }
+        bool isUniformType() const { return (m_isReadOnly == true && m_isConst == true && m_isWriteOnly == false); }
+        bool isResultType() const { return (m_isReadOnly == false && m_isConst == false && m_isWriteOnly == true); }
+        bool isOrdinaryType() const { return (m_isReadOnly == false && m_isWriteOnly == false); }
+    protected:
+        virtual ~DeclarationNode() {
+            if(m_initValExpr != nullptr) {
+                ASTNode::destructNode(m_initValExpr);
+            }
+        }
+    
+    AST_VISIT_THIS_NODE
+};
+
 class VariableNode: public ExpressionNode {
     /* Pure Virtual Intermediate Layer */
     public:
         virtual std::string getName() const = 0;
         virtual const DeclarationNode *getDeclaration() const = 0;
+    public:
+        virtual bool isConst() const = 0;
+        virtual bool isReadOnly() const = 0;
+        virtual bool isWriteOnly() const = 0;
+        virtual bool isAttributeType() const = 0;
+        virtual bool isUniformType() const = 0;
+        virtual bool isResultType() const = 0;
+        virtual bool isOrdinaryType() const = 0;
 };
 
 class IdentifierNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
-        bool m_isConst = false;                         // whether expression is const
         std::string m_id;                               // name of this identifier
-
         const DeclarationNode *m_decl = nullptr;        // declaration of this IdentifierNode
     public:
         IdentifierNode(const std::string &id):
@@ -338,8 +381,14 @@ class IdentifierNode: public VariableNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
-        virtual bool isConst() const { return m_isConst; }
-        virtual void setConst(bool isConst) { m_isConst = isConst; }
+    public:
+        virtual bool isConst() const { return m_decl ? m_decl->isConst() : false; }
+        virtual bool isReadOnly() const { return m_decl ? m_decl->isReadOnly() : false; }
+        virtual bool isWriteOnly() const { return m_decl ? m_decl->isWriteOnly() : false; }
+        virtual bool isAttributeType() const { return m_decl ? m_decl->isAttributeType() : false; }
+        virtual bool isUniformType() const { return m_decl ? m_decl->isUniformType() : false; }
+        virtual bool isResultType() const { return m_decl ? m_decl->isResultType() : false; }
+        virtual bool isOrdinaryType() const { return m_decl ? m_decl->isOrdinaryType() : true; }
     public:
         virtual std::string getName() const { return m_id; }
         virtual const DeclarationNode *getDeclaration() const { return m_decl; }
@@ -354,7 +403,6 @@ class IdentifierNode: public VariableNode {
 class IndexingNode: public VariableNode {
     private:
         int m_type = ANY_TYPE;                          // types defined in parser.tab.h
-        bool m_isConst = false;                         // whether expression is const
         IdentifierNode *m_identifier;                   // identifier node of the vector variable
         ExpressionNode *m_indexExpr;                    // index expression node
     public:
@@ -363,8 +411,14 @@ class IndexingNode: public VariableNode {
     public:
         virtual int getExpressionType() const { return m_type; }
         virtual void setExpressionType(int type) { m_type = type; }
-        virtual bool isConst() const { return m_isConst; }
-        virtual void setConst(bool isConst) { m_isConst = isConst; }
+    public:
+        virtual bool isConst() const { return m_identifier->isConst(); }
+        virtual bool isReadOnly() const { return m_identifier->isReadOnly(); }
+        virtual bool isWriteOnly() const { return m_identifier->isWriteOnly(); }
+        virtual bool isAttributeType() const { return m_identifier->isAttributeType(); }
+        virtual bool isUniformType() const { return m_identifier->isUniformType(); }
+        virtual bool isResultType() const { return m_identifier->isResultType(); }
+        virtual bool isOrdinaryType() const { return m_identifier->isOrdinaryType(); }
     public:
         IdentifierNode *getIdentifier() const { return m_identifier; }
         ExpressionNode *getIndexExpression() const { return m_indexExpr; }
@@ -440,12 +494,6 @@ class StatementsNode: public ASTNode {
     private:
         std::vector<StatementNode *> m_statements;      // a list of StatementNodes
     public:
-        StatementsNode(const std::vector<StatementNode *> &statements):
-            m_statements(statements) {}
-        StatementsNode(std::vector<StatementNode *> &&statements):
-            m_statements(statements) {}
-        StatementsNode() {}
-    public:
         void pushBackStatement(StatementNode *stmt) { m_statements.push_back(stmt); }
         const std::vector<StatementNode *> &getStatementList() const { return m_statements; }
     protected:
@@ -458,43 +506,13 @@ class StatementsNode: public ASTNode {
     AST_VISIT_THIS_NODE
 };
 
-class DeclarationNode: public ASTNode {
-    private:
-        // not using IdentifierNode because the name itself is not yet an expression
-        std::string m_variableName;                     // variable name
-        bool m_isConst;                                 // const qualified
-        int m_type;                                     // types defined in parser.tab.h
-        ExpressionNode *m_initValExpr = nullptr;        // initial value expression (optional)
-    public:
-        DeclarationNode(const std::string &variableName, bool isConst, int type, ExpressionNode *initValExpr = nullptr):
-            m_variableName(variableName), m_isConst(isConst), m_type(type), m_initValExpr(initValExpr) {}
-    public:
-        const std::string &getName() const { return m_variableName; }
-        bool isConst() const { return m_isConst; }
-        int getType() const { return m_type; }
-        ExpressionNode *getExpression() const { return m_initValExpr; }
-    protected:
-        virtual ~DeclarationNode() {
-            if(m_initValExpr != nullptr) {
-                ASTNode::destructNode(m_initValExpr);
-            }
-        }
-    
-    AST_VISIT_THIS_NODE
-};
-
 class DeclarationsNode: public ASTNode {
     private:
-        std::vector<DeclarationNode *> m_declarations;  // a list of DeclarationNodes
-    public:
-        DeclarationsNode(const std::vector<DeclarationNode *> &declarations):
-            m_declarations(declarations) {}
-        DeclarationsNode(std::vector<DeclarationNode *> &&declarations):
-            m_declarations(declarations) {}
-        DeclarationsNode() {}
+        std::list<DeclarationNode *> m_declarations;    // a list of DeclarationNodes
     public:
         void pushBackDeclaration(DeclarationNode *decl) { m_declarations.push_back(decl); }
-        const std::vector<DeclarationNode *> &getDeclarationList() const { return m_declarations; }
+        void pushFrontDeclaration(DeclarationNode *decl) { m_declarations.push_front(decl); }
+        const std::list<DeclarationNode *> &getDeclarationList() const { return m_declarations; }
     protected:
         virtual ~DeclarationsNode() {
             for(DeclarationNode *decl: m_declarations) {

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_map>
+#include <list>
 #include <sstream>
 
 #include <cassert>
@@ -320,6 +321,97 @@ const SemanticAnalyzer::Event &SemanticAnalyzer::getTempEvent() const {
     return *m_tempEvent;
 }
 
+class PredefinedVariableCreater: public AST::Visitor {
+    private:
+        virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
+            AST::DeclarationsNode *decls = scopeNode->getDeclarations();
+
+            // Manually add predefined variables onto the AST tree
+            /*
+                result vec4 gl_FragColor ;
+                result bool gl_FragDepth ;
+                result vec4 gl_FragCoord ;
+                attribute vec4 gl_TexCoord ;
+                attribute vec4 gl_Color;
+                attribute vec4 gl_Secondary ;
+                attribute vec4 gl_FogFragCoord ;
+                uniform vec4 gl_Light_Half ;
+                uniform vec4 gl_Light_Ambient ;
+                uniform vec4 gl_Material_Shininess ;
+                uniform vec4 env1;
+                uniform vec4 env2;
+                uniform vec4 env3;
+            */
+
+            // result vec4 gl_FragColor ;
+            AST::DeclarationNode *node_gl_FragColor = new AST::DeclarationNode("gl_FragColor", false, VEC4_T);
+            node_gl_FragColor->setResultType();
+
+            // result bool gl_FragDepth ;
+            AST::DeclarationNode *node_gl_FragDepth = new AST::DeclarationNode("gl_FragDepth", false, BOOL_T);
+            node_gl_FragDepth->setResultType();
+
+            // result vec4 gl_FragCoord ;
+            AST::DeclarationNode *node_gl_FragCoord = new AST::DeclarationNode("gl_FragCoord", false, VEC4_T);
+            node_gl_FragCoord->setResultType();
+
+            // attribute vec4 gl_TexCoord ;
+            AST::DeclarationNode *node_gl_TexCoord = new AST::DeclarationNode("gl_TexCoord", false, VEC4_T);
+            node_gl_TexCoord->setAttributeType();
+
+            // attribute vec4 gl_Color;
+            AST::DeclarationNode *node_gl_Color = new AST::DeclarationNode("gl_Color", false, VEC4_T);
+            node_gl_Color->setAttributeType();
+
+            // attribute vec4 gl_Secondary ;
+            AST::DeclarationNode *node_gl_Secondary = new AST::DeclarationNode("gl_Secondary", false, VEC4_T);
+            node_gl_Secondary->setAttributeType();
+
+            // attribute vec4 gl_FogFragCoord ;
+            AST::DeclarationNode *node_gl_FogFragCoord = new AST::DeclarationNode("gl_FogFragCoord", false, VEC4_T);
+            node_gl_FogFragCoord->setAttributeType();
+
+            // uniform vec4 gl_Light_Half ;
+            AST::DeclarationNode *node_gl_Light_Half = new AST::DeclarationNode("gl_Light_Half", false, VEC4_T);
+            node_gl_Light_Half->setUniformType();
+
+            // uniform vec4 gl_Light_Ambient ;
+            AST::DeclarationNode *node_gl_Light_Ambient = new AST::DeclarationNode("gl_Light_Ambient", false, VEC4_T);
+            node_gl_Light_Ambient->setUniformType();
+
+            // uniform vec4 gl_Material_Shininess ;
+            AST::DeclarationNode *node_gl_Material_Shininess = new AST::DeclarationNode("gl_Material_Shininess", false, VEC4_T);
+            node_gl_Material_Shininess->setUniformType();
+
+            // uniform vec4 env1;
+            AST::DeclarationNode *node_env1 = new AST::DeclarationNode("env1", false, VEC4_T);
+            node_env1->setUniformType();
+
+            // uniform vec4 env2;
+            AST::DeclarationNode *node_env2 = new AST::DeclarationNode("env2", false, VEC4_T);
+            node_env2->setUniformType();
+
+            // uniform vec4 env3;
+            AST::DeclarationNode *node_env3 = new AST::DeclarationNode("env3", false, VEC4_T);
+            node_env3->setUniformType();
+
+            // Insert into AST
+            decls->pushFrontDeclaration(node_env3);
+            decls->pushFrontDeclaration(node_env2);
+            decls->pushFrontDeclaration(node_env1);
+            decls->pushFrontDeclaration(node_gl_Material_Shininess);
+            decls->pushFrontDeclaration(node_gl_Light_Ambient);
+            decls->pushFrontDeclaration(node_gl_Light_Half);
+            decls->pushFrontDeclaration(node_gl_FogFragCoord);
+            decls->pushFrontDeclaration(node_gl_Secondary);
+            decls->pushFrontDeclaration(node_gl_Color);
+            decls->pushFrontDeclaration(node_gl_TexCoord);
+            decls->pushFrontDeclaration(node_gl_FragCoord);
+            decls->pushFrontDeclaration(node_gl_FragDepth);
+            decls->pushFrontDeclaration(node_gl_FragColor);
+        }
+};
+
 class SymbolDeclVisitor: public AST::Visitor {
     private:
         ST::SymbolTable &m_symbolTable;
@@ -368,6 +460,19 @@ class SymbolDeclVisitor: public AST::Visitor {
         virtual void postNodeVisit(AST::ScopeNode *scopeNode) {
             m_symbolTable.exitScope();
         }
+};
+
+class WriteOnlyFinder: public AST::Visitor {
+    private:
+        std::vector<const AST::VariableNode *> m_writeOnlyVars;
+    private:
+        virtual void postNodeVisit(AST::IdentifierNode *identifierNode) {
+            if(identifierNode->isWriteOnly()) {
+                m_writeOnlyVars.push_back(identifierNode);
+            }
+        }
+    public:
+        const std::vector<const AST::VariableNode *> &getWriteOnlyVars() const { return m_writeOnlyVars; }
 };
 
 enum class DataTypeCategory {
@@ -473,7 +578,6 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
     if(decl == nullptr) {
         // Update info in identifierNode
         identifierNode->setExpressionType(ANY_TYPE);
-        identifierNode->setConst(false);
         identifierNode->setDeclaration(nullptr);
 
         std::stringstream ss;
@@ -491,7 +595,6 @@ void TypeChecker::preNodeVisit(AST::IdentifierNode *identifierNode) {
 
     // Update info in identifierNode
     identifierNode->setExpressionType(decl->getType());
-    identifierNode->setConst(decl->isConst());
     identifierNode->setDeclaration(decl);
 }
 
@@ -503,6 +606,12 @@ void TypeChecker::postNodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
 
     int resultDataType = ANY_TYPE;
     if(rhsDataType != ANY_TYPE) {
+        // Firstly, check for Write-Only
+        WriteOnlyFinder writeOnlyFinder;
+        unaryExpressionNode->visit(writeOnlyFinder);
+        /// TODO
+
+        // Secondly, Type check
         m_semaAnalyzer.createTempEvent(unaryExpressionNode, SemanticAnalyzer::EventType::Error);
 
         resultDataType = inferDataType(op, rhsDataType);
@@ -611,7 +720,6 @@ void TypeChecker::postNodeVisit(AST::IndexingNode *indexingNode) {
     }
 
     indexingNode->setExpressionType(resultDataType);
-    indexingNode->setConst(identifierIsConst);
 }
 
 void TypeChecker::postNodeVisit(AST::FunctionNode *functionNode) {
@@ -1246,6 +1354,10 @@ int semantic_check(node * ast) {
     ST::SymbolTable symbolTable;
     SEMA::SemanticAnalyzer semaAnalyzer;
     SEMA::SourceLocation sourceLocation(inputFile);
+
+    /* Create Predefined Variables */
+    SEMA::PredefinedVariableCreater predefinedVariableCreater;
+    static_cast<AST::ASTNode *>(ast)->visit(predefinedVariableCreater);
 
     /* Construct Symbol Tree */
     SEMA::SymbolDeclVisitor symbolDeclVisitor(symbolTable, semaAnalyzer);
