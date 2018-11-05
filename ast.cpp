@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cassert>
 
 #include "ast.h"
 #include "common.h"
@@ -153,6 +154,20 @@ void Visitor::visit(NestedScopeNode *node)          AST_VISITOR_VISIT
 void Visitor::visit(ScopeNode *node)                AST_VISITOR_VISIT
 
 
+std::string DeclarationNode::getQualifierString() const {
+    if(isOrdinaryType()) {
+        return isConst() ? "const " : "";
+    } else if(isResultType()) {
+        return "result ";
+    } else if(isAttributeType()) {
+        return "attribute ";
+    } else if(isUniformType()) {
+        return "uniform ";
+    } else {
+        assert(0);
+    }
+}
+
 int IntLiteralNode::getExpressionType() const {
     return INT_T;
 }
@@ -166,19 +181,30 @@ int BooleanLiteralNode::getExpressionType() const {
 }
 
 
-class PrintVisitor: public Visitor {
+class Printer: public Visitor {
     public:
         static std::string getIndentSpaceString(int indentSize) {
             return std::string(indentSize, ' ');
         }
     
     private:
-        int indentSize = 0;
-        static constexpr int indentIncr = 4;
+        bool m_printSourceLocation = false;
+    public:
+        void setPrintSourceLocation(bool printSourceLocation) { m_printSourceLocation = printSourceLocation; }
     private:
-        int getIndentSize() const { return indentSize; }
-        void enterScope() { indentSize += indentIncr; }
-        void exitScope() { indentSize -= indentIncr; }
+        void printSourceLocation(const ASTNode *node) const {
+            if(m_printSourceLocation) {
+                printf("<%s>", node->getSourceLocationString().c_str());
+            }
+        }
+    
+    private:
+        int m_indentSize = 0;
+        static constexpr int m_indentIncr = 4;
+    private:
+        int getIndentSize() const { return m_indentSize; }
+        void enterScope() { m_indentSize += m_indentIncr; }
+        void exitScope() { m_indentSize -= m_indentIncr; }
 
     private:
         virtual void nodeVisit(ExpressionsNode *expressionsNode) {
@@ -190,8 +216,10 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(UnaryExpressionNode *unaryExpressionNode) {
             // (UNARY type op expr)
-            printf("(UNARY ");
-            printf("%s ", getTypeString(unaryExpressionNode->getExpressionType()).c_str());
+            printf("(UNARY");
+            printSourceLocation(unaryExpressionNode);
+            printf(" ");
+            printf("%s ", unaryExpressionNode->getExpressionTypeString().c_str());
             printf("%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
             unaryExpressionNode->getExpression()->visit(*this);
             printf(")");
@@ -199,8 +227,10 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(BinaryExpressionNode *binaryExpressionNode) {
             // (BINARY type op left right)
-            printf("(BINARY ");
-            printf("%s ", getTypeString(binaryExpressionNode->getExpressionType()).c_str());
+            printf("(BINARY");
+            printSourceLocation(binaryExpressionNode);
+            printf(" ");
+            printf("%s ", binaryExpressionNode->getExpressionTypeString().c_str());
             printf("%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
             binaryExpressionNode->getLeftExpression()->visit(*this);
             printf(" ");
@@ -211,27 +241,33 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(IntLiteralNode *intLiteralNode) {
             // <literal>
             printf("%d", intLiteralNode->getVal());
+            printSourceLocation(intLiteralNode);
         }
 
         virtual void nodeVisit(FloatLiteralNode *floatLiteralNode) {
             // <literal>
             printf("%f", floatLiteralNode->getVal());
+            printSourceLocation(floatLiteralNode);
         }
 
         virtual void nodeVisit(BooleanLiteralNode *booleanLiteralNode) {
             // <literal>
             printf("%s", (booleanLiteralNode->getVal() ? "true":"false"));
+            printSourceLocation(booleanLiteralNode);
         }
 
         virtual void nodeVisit(IdentifierNode *identifierNode) {
             // <identifier>
             printf("%s", identifierNode->getName().c_str());
+            printSourceLocation(identifierNode);
         }
 
         virtual void nodeVisit(IndexingNode *indexingNode) {
             // (INDEX type id index)
-            printf("(INDEX ");
-            printf("%s ", getTypeString(indexingNode->getExpressionType()).c_str());
+            printf("(INDEX");
+            printSourceLocation(indexingNode);
+            printf(" ");
+            printf("%s ", indexingNode->getExpressionTypeString().c_str());
             indexingNode->getIdentifier()->visit(*this);
             printf(" ");
             indexingNode->getIndexExpression()->visit(*this);
@@ -240,7 +276,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(FunctionNode *functionNode) {
             // (CALL name ...)
-            printf("(CALL ");
+            printf("(CALL");
+            printSourceLocation(functionNode);
+            printf(" ");
             printf("%s", functionNode->getName().c_str());
             functionNode->getArgumentExpressions()->visit(*this);
             printf(")");
@@ -248,8 +286,10 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(ConstructorNode *constructorNode) {
             // (CALL name ...)
-            printf("(CALL ");
-            printf("%s", getTypeString(constructorNode->getExpressionType()).c_str());
+            printf("(CALL");
+            printSourceLocation(constructorNode);
+            printf(" ");
+            printf("%s", getTypeString(constructorNode->getConstructorType()).c_str());
             constructorNode->getArgumentExpressions()->visit(*this);
             printf(")");
         }
@@ -257,7 +297,9 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(StatementsNode *statementsNode) {
             // (STATEMENTS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(STATEMENTS\n");
+            printf("(STATEMENTS");
+            printSourceLocation(statementsNode);
+            printf("\n");
             enterScope();
             for(StatementNode *stmt: statementsNode->getStatementList()) {
                 printf("%s", getIndentSpaceString(getIndentSize()).c_str());
@@ -271,10 +313,12 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(DeclarationNode *declarationNode) {
             // (DECLARATION variable-name type-name initial-value?)
-            printf("(DECLARATION ");
+            printf("(DECLARATION");
+            printSourceLocation(declarationNode);
+            printf(" ");
             printf("%s ", declarationNode->getName().c_str());
-            printf("%s", (declarationNode->isConst() ? "const ":""));
-            printf("%s", getTypeString(declarationNode->getType()).c_str());
+            printf("%s", declarationNode->getQualifierString().c_str());
+            printf("%s", declarationNode->getTypeString().c_str());
             if(declarationNode->getExpression() != nullptr) {
                 printf(" ");
                 declarationNode->getExpression()->visit(*this);
@@ -285,7 +329,9 @@ class PrintVisitor: public Visitor {
         virtual void nodeVisit(DeclarationsNode *declarationsNode) {
             // (DECLARATIONS ...)
             printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(DECLARATIONS\n");
+            printf("(DECLARATIONS");
+            printSourceLocation(declarationsNode);
+            printf("\n");
             enterScope();
             for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
                 printf("%s", getIndentSpaceString(getIndentSize()).c_str());
@@ -299,7 +345,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(IfStatementNode *ifStatementNode) {
             // (IF cond then-stmt else-stmt?)
-            printf("(IF ");
+            printf("(IF");
+            printSourceLocation(ifStatementNode);
+            printf(" ");
             ifStatementNode->getConditionExpression()->visit(*this);
             printf(" ");
             ifStatementNode->getThenStatement()->visit(*this);
@@ -312,8 +360,10 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(AssignmentNode *assignmentNode) {
             // (ASSIGN type variable-name new-value)
-            printf("(ASSIGN ");
-            printf("%s ", getTypeString(assignmentNode->getExpressionType()).c_str());
+            printf("(ASSIGN");
+            printSourceLocation(assignmentNode);
+            printf(" ");
+            printf("%s ", assignmentNode->getExpressionTypeString().c_str());
             assignmentNode->getVariable()->visit(*this);
             printf(" ");
             assignmentNode->getExpression()->visit(*this);
@@ -322,7 +372,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(NestedScopeNode *nestedScopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE\n");
+            printf("(SCOPE");
+            printSourceLocation(nestedScopeNode);
+            printf("\n");
             enterScope();
             nestedScopeNode->getDeclarations()->visit(*this);
             nestedScopeNode->getStatements()->visit(*this);
@@ -333,7 +385,9 @@ class PrintVisitor: public Visitor {
 
         virtual void nodeVisit(ScopeNode *scopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE\n");
+            printf("(SCOPE");
+            printSourceLocation(scopeNode);
+            printf("\n");
             enterScope();
             scopeNode->getDeclarations()->visit(*this);
             scopeNode->getStatements()->visit(*this);
@@ -381,6 +435,17 @@ std::string getOperatorString(int op) {
     }
 }
 
+std::string getSourceLocationString(const SourceLocation &srcLoc) {
+    return (std::string("Line ") +
+            std::to_string(srcLoc.firstLine) +
+            std::string(":") +
+            std::to_string(srcLoc.firstColumn) +
+            std::string(" to Line ") +
+            std::to_string(srcLoc.lastLine) +
+            std::string(":") +
+            std::to_string(srcLoc.lastColumn));
+}
+
 } /* END NAMESPACE */
 
 //////////////////////////////////////////////////////////////////
@@ -401,6 +466,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::DeclarationsNode *decls = static_cast<AST::DeclarationsNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementsNode *stmts = static_cast<AST::StatementsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::ScopeNode(decls, stmts);
+            
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -420,6 +489,10 @@ node *ast_allocate(node_kind kind, ...) {
                 exprs->pushBackExpression(expr);
             }
             astNode = exprs;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -427,6 +500,10 @@ node *ast_allocate(node_kind kind, ...) {
             int op = va_arg(args, int);
             AST::ExpressionNode *expr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::UnaryExpressionNode(op, expr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -435,24 +512,40 @@ node *ast_allocate(node_kind kind, ...) {
             AST::ExpressionNode *leftExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             AST::ExpressionNode *rightExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::BinaryExpressionNode(op, leftExpr, rightExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case INT_C_NODE: {
             int val = va_arg(args, int);
             astNode = new AST::IntLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case FLOAT_C_NODE: {
             double val = va_arg(args, double);
             astNode = new AST::FloatLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case BOOL_C_NODE: {
             bool val = static_cast<bool>(va_arg(args, int));
             astNode = new AST::BooleanLiteralNode(val);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -465,6 +558,10 @@ node *ast_allocate(node_kind kind, ...) {
         case ID_NODE: {
             const char *id = va_arg(args, char *);
             astNode = new AST::IdentifierNode(id);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -476,7 +573,17 @@ node *ast_allocate(node_kind kind, ...) {
              */
             const char *id = va_arg(args, char *);
             AST::ExpressionNode *indexExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
-            astNode = new AST::IndexingNode(new AST::IdentifierNode(id), indexExpr);
+            
+            AST::IdentifierNode *idNode = new AST::IdentifierNode(id);
+
+            YYLTYPE *idLoc = va_arg(args, YYLTYPE *);
+            idNode->setSourceLocation(AST::SourceLocation{idLoc->first_line, idLoc->first_column, idLoc->last_line, idLoc->last_column});
+
+            astNode = new AST::IndexingNode(idNode, indexExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -484,13 +591,21 @@ node *ast_allocate(node_kind kind, ...) {
             const char *functionName = va_arg(args, char *);
             AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::FunctionNode(functionName, argExprs);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case CONSTRUCTOR_NODE: {
-            int type = va_arg(args, int);
+            int constructorType = va_arg(args, int);
             AST::ExpressionsNode *argExprs = static_cast<AST::ExpressionsNode *>(va_arg(args, AST::ASTNode *));
-            astNode = new AST::ConstructorNode(type, argExprs);
+            astNode = new AST::ConstructorNode(constructorType, argExprs);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -505,6 +620,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::StatementNode *thenStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementNode *elseStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::IfStatementNode(condExpr, thenStmt, elseStmt);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -512,6 +631,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::ExpressionNode *condExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             AST::StatementNode *bodyStmt = static_cast<AST::StatementNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::WhileStatementNode(condExpr, bodyStmt);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -519,6 +642,10 @@ node *ast_allocate(node_kind kind, ...) {
             AST::VariableNode *var = static_cast<AST::VariableNode *>(va_arg(args, AST::ASTNode *));
             AST::ExpressionNode *newValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::AssignmentNode(var, newValExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -526,11 +653,19 @@ node *ast_allocate(node_kind kind, ...) {
             /* Argument ScopeNode is destructed and converted to NestedScopeNode */
             AST::ScopeNode *scopeNode = static_cast<AST::ScopeNode *>(va_arg(args, AST::ASTNode *));
             astNode = AST::ScopeNode::convertToNestedScopeNode(scopeNode);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
         case STALL_STATEMENT_NODE: {
             astNode = new AST::StallStatementNode();
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -544,6 +679,10 @@ node *ast_allocate(node_kind kind, ...) {
                 stmts->pushBackStatement(stmt);
             }
             astNode = stmts;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -553,6 +692,10 @@ node *ast_allocate(node_kind kind, ...) {
             int type = va_arg(args, int);
             AST::ExpressionNode *initValExpr = static_cast<AST::ExpressionNode *>(va_arg(args, AST::ASTNode *));
             astNode = new AST::DeclarationNode(varName, static_cast<bool>(isConst), type, initValExpr);
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -566,6 +709,10 @@ node *ast_allocate(node_kind kind, ...) {
                 decls->pushBackDeclaration(decl);
             }
             astNode = decls;
+
+            YYLTYPE *loc = va_arg(args, YYLTYPE *);
+            astNode->setSourceLocation(AST::SourceLocation{loc->first_line, loc->first_column, loc->last_line, loc->last_column});
+
             break;
         }
 
@@ -588,7 +735,8 @@ void ast_free(node *ast) {
 
 void ast_print(node *ast) {
     if(ast != nullptr) {
-        AST::PrintVisitor printer;
+        AST::Printer printer;
+        printer.setPrintSourceLocation(false);
         static_cast<AST::ASTNode *>(ast)->visit(printer);
     }
 }

@@ -34,7 +34,7 @@ class SymbolTable {
         /* Declaration Related */
         void enterScope();
         void exitScope();
-        bool declareSymbol(AST::DeclarationNode *decl);
+        AST::DeclarationNode *declareSymbol(AST::DeclarationNode *decl);
     
     public:
         /* Identifier Related */

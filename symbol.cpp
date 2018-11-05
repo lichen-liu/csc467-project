@@ -47,12 +47,12 @@ void SymbolTable::exitScope() {
     m_encounterNewScope = false;
 }
 
-bool SymbolTable::declareSymbol(AST::DeclarationNode *decl) {
+AST::DeclarationNode *SymbolTable::declareSymbol(AST::DeclarationNode *decl) {
     assert(decl != nullptr);
 
     AST::DeclarationNode *redecl = findRedeclaration(decl);
     if(redecl != nullptr) {
-        return false;
+        return redecl;
     }
 
     std::unique_ptr<SymbolNode> uptr(new SymbolNode(m_currentHead, decl, m_encounterNewScope));
@@ -60,7 +60,7 @@ bool SymbolTable::declareSymbol(AST::DeclarationNode *decl) {
     m_currentHead = uptr.get();
     m_symbolNodes.push_back(std::move(uptr));
 
-    return true;
+    return nullptr;
 }
 
 void SymbolTable::markSymbolRefPos(AST::IdentifierNode *ident) {

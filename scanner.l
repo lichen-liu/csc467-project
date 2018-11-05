@@ -36,7 +36,11 @@ int CheckID(char *id_value);
 /* Return nothing */
 void ToFunc(char *func_value);
 
+int colnum = 1;
+#define YY_USER_ACTION {yylloc.first_line = yylineno; yylloc.first_column = colnum; colnum=colnum+yyleng; yylloc.last_column=colnum; yylloc.last_line = yylineno;}
+
 %}
+%option yylineno
 %option noyywrap
 
 WS                              [ \t]
@@ -126,7 +130,7 @@ EXP_LIT                         [eE]{SIGN}?{DIGIT}+
 {R_FLOAT_LIT}{ID}               { yERROR("Float literal should not be followed by identifier");                                                 }
 
 {WS}                            /* skip whitespace */
-<*>\n                           { yyline++;                                                                                                     }
+<*>\n                           { yyline++; colnum = 1;                                                                                         }
 
 <IN_COMMENT>.                   { dbprtf("COMMENT SKIPPED <LINE %d>:%s\n", yyline, yytext);                                                     }
 .                               { dbprtf("=> LINE %d : %s\n", yyline, yytext); yERROR("Unknown token");                                         }

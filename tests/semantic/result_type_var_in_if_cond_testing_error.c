@@ -1,0 +1,4 @@
+{
+    if(gl_FragDepth)
+        ;
+}
