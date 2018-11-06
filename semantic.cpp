@@ -2242,6 +2242,8 @@ DataContainer DataContainer::getSlice(int idx) {
 }
 
 AST::ExpressionNode *DataContainer::createASTExpr() const {
+    AST::ExpressionNode *resultExpr = nullptr;
+
     switch(m_typeBase) {
         case INT_T: {
             const std::array<int, 4> &val = getIntVal();
@@ -2251,11 +2253,13 @@ AST::ExpressionNode *DataContainer::createASTExpr() const {
                         args->pushBackExpression(new AST::IntLiteralNode(val[i]));
                     }
                 AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
-                return constructor;
+                resultExpr = constructor;
             } else {
                 AST::IntLiteralNode *intLit = new AST::IntLiteralNode(val[0]);
-                return intLit;
+                resultExpr = intLit;
             }
+
+            break;
         }
 
         case FLOAT_T: {
@@ -2266,11 +2270,13 @@ AST::ExpressionNode *DataContainer::createASTExpr() const {
                         args->pushBackExpression(new AST::FloatLiteralNode(val[i]));
                     }
                 AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
-                return constructor;
+                resultExpr = constructor;
             } else {
                 AST::FloatLiteralNode *floatLit = new AST::FloatLiteralNode(val[0]);
-                return floatLit;
+                resultExpr = floatLit;
             }
+
+            break;
         }
 
         case BOOL_T: {
@@ -2281,18 +2287,25 @@ AST::ExpressionNode *DataContainer::createASTExpr() const {
                         args->pushBackExpression(new AST::BooleanLiteralNode(val[i]));
                     }
                 AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
-                return constructor;
+                resultExpr = constructor;
             } else {
                 AST::BooleanLiteralNode *boolLit = new AST::BooleanLiteralNode(val[0]);
-                return boolLit;
+                resultExpr = boolLit;
             }
+
+            break;
         }
 
         default:
             assert(0);
     }
 
-    return nullptr;
+    if(resultExpr != nullptr) {
+        resultExpr->setConst(true);
+        resultExpr->setExpressionType(m_type);
+    }
+
+    return resultExpr;
 }
 
 class ConstantExpressionEvaluator: public AST::Visitor {
@@ -2556,7 +2569,11 @@ void ConstantDeclarationOptimizer::preNodeVisit(AST::DeclarationNode *declaratio
     DataContainer initData(initExpr->getExpressionType());
     bool constOptSuccessful = ConstantExpressionEvaluator::evaluateValue(initExpr, initData);
     if(constOptSuccessful) {
-        declarationNode->setInitValue(initData.createASTExpr());
+        printf("Optimization for declaration of const-qualified symbol '%s' successful.\n", declarationNode->getName().c_str());
+
+        AST::ExpressionNode *resultExpr = initData.createASTExpr();
+        assert(resultExpr != nullptr);
+        declarationNode->setInitValue(resultExpr);
     }
 }
 
