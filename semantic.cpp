@@ -2597,11 +2597,13 @@ int semantic_check(node * ast) {
     SEMA::TypeChecker typeChecker(symbolTable, semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(typeChecker);
     // symbolTable.printSymbolReference();
+    printf("***************************************\n");
+    printf("AST DUMP POST TYPE CHECK\n");
     ast_print(ast);
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
-    semaAnalyzer.setColorPrintEnabled(false);
+    semaAnalyzer.setColorPrintEnabled(true);
     if(numEvents != 0) {
         printf("\n");
     }
@@ -2615,6 +2617,8 @@ int semantic_check(node * ast) {
     /* Evaluate initialization for const-qualified declaration */
     SEMA::ConstantDeclarationOptimizer constDeclOptimizer;
     static_cast<AST::ASTNode *>(ast)->visit(constDeclOptimizer);
+    printf("***************************************\n");
+    printf("AST DUMP POST CONST DECL OPT\n");
     ast_print(ast);
     /// TODO: TEST THIS!
 
