@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <list>
 #include <array>
 #include <algorithm>
@@ -2577,6 +2578,195 @@ void ConstantDeclarationOptimizer::preNodeVisit(AST::DeclarationNode *declaratio
     }
 }
 
+class VariableAssignmentLog {
+    private:
+        VariableAssignmentLog *m_prev;
+        std::unordered_set<const AST::DeclarationNode *> m_assignmentLU;
+
+    public:
+        VariableAssignmentLog(VariableAssignmentLog *prev) : m_prev(prev) {}
+
+    public:
+        void markAssigned(const AST::DeclarationNode *decl);
+        bool checkAssigned(const AST::DeclarationNode *decl) const; // Checks recursively
+        void merge(const VariableAssignmentLog &log1, const VariableAssignmentLog &log2);
+        void merge(const VariableAssignmentLog &log);
+};
+
+void VariableAssignmentLog::markAssigned(const AST::DeclarationNode *decl) {
+    assert(decl);
+    m_assignmentLU.insert(decl);
+}
+
+bool VariableAssignmentLog::checkAssigned(const AST::DeclarationNode *decl) const {
+    assert(decl);
+
+    // Checks recursively
+    if(m_assignmentLU.count(decl) == 1) {
+        // If found, return immediately
+        return true;
+    }
+
+    // If not found, check previous node
+    if(m_prev != nullptr) {
+        return m_prev->checkAssigned(decl);
+    } else {
+        // If not found and reaches the end
+        return false;
+    }
+}
+
+void VariableAssignmentLog::merge(const VariableAssignmentLog &log1, const VariableAssignmentLog &log2) {
+    std::unordered_set<const AST::DeclarationNode *> intersection;
+    for(const AST::DeclarationNode *node: log1.m_assignmentLU) {
+        if(log2.m_assignmentLU.count(node) == 1) {
+            intersection.insert(node);
+        }
+    }
+
+    this->m_assignmentLU.insert(intersection.begin(), intersection.end());
+}
+
+void VariableAssignmentLog::merge(const VariableAssignmentLog &log) {
+    this->m_assignmentLU.insert(log.m_assignmentLU.begin(), log.m_assignmentLU.end());
+}
+
+class VariableAssignmentChecker: public AST::Visitor {
+    private:
+        VariableAssignmentLog *m_currentFlowEdge = nullptr;
+
+        const AST::DeclarationNode *m_currentDeclaration = nullptr;
+        bool m_currentDeclarationRecursiveInit = false;
+    private:
+        virtual void preNodeVisit(AST::DeclarationNode *declarationNode);
+
+    private:
+        virtual void postNodeVisit(AST::AssignmentNode *assignmentNode);
+        virtual void postNodeVisit(AST::IdentifierNode *identifierNode);
+        virtual void postNodeVisit(AST::DeclarationNode *declarationNode);
+
+    private:
+        virtual void nodeVisit(AST::AssignmentNode *assignmentNode);
+        virtual void nodeVisit(AST::IfStatementNode *ifStatementNode);
+        virtual void nodeVisit(AST::ScopeNode *scopeNode);
+};
+
+void VariableAssignmentChecker::preNodeVisit(AST::DeclarationNode *declarationNode) {
+    assert(m_currentDeclaration == nullptr);
+    m_currentDeclaration = declarationNode;
+    m_currentDeclarationRecursiveInit = false;
+}
+
+void VariableAssignmentChecker::postNodeVisit(AST::AssignmentNode *assignmentNode) {
+    if(assignmentNode->getExpressionType() == ANY_TYPE) {
+        return;
+    }
+
+    AST::VariableNode *var = assignmentNode->getVariable();
+
+    const AST::DeclarationNode *decl = var->getDeclaration();
+    assert(decl != nullptr);
+
+    m_currentFlowEdge->markAssigned(decl);
+}
+
+void VariableAssignmentChecker::postNodeVisit(AST::IdentifierNode *identifierNode) {
+    if(identifierNode->getExpressionType() == ANY_TYPE) {
+        return;
+    }
+
+    const AST::DeclarationNode *decl = identifierNode->getDeclaration();
+    assert(decl != nullptr);
+
+    if(!m_currentFlowEdge->checkAssigned(decl)) {
+        printf("Warning: read of potentially unassigned variable '%s' at %s.\n",
+            identifierNode->getName().c_str(), identifierNode->getSourceLocationString().c_str());
+
+        if(decl == m_currentDeclaration) {
+            /* use of a variable within its own initialization */
+            m_currentDeclarationRecursiveInit = true;
+        }
+    }
+}
+
+void VariableAssignmentChecker::postNodeVisit(AST::DeclarationNode *declarationNode) {
+    assert(m_currentDeclaration == declarationNode);
+    m_currentDeclaration = nullptr;
+
+    AST::ExpressionNode *initExpr = declarationNode->getExpression();
+    if(initExpr == nullptr) {
+        // Declaration without initialization
+        return;
+    }
+
+    if(initExpr->getExpressionType() != declarationNode->getType()) {
+        return;
+    }
+
+    if(m_currentDeclarationRecursiveInit) {
+        printf("Warning: Self-initialization involves read of potentially unassigned variable '%s' at %s.\n",
+            declarationNode->getName().c_str(), declarationNode->getSourceLocationString().c_str());
+
+        m_currentDeclarationRecursiveInit = false;
+    } else {
+        m_currentFlowEdge->markAssigned(declarationNode);
+    }
+}
+
+void VariableAssignmentChecker::nodeVisit(AST::AssignmentNode *assignmentNode) {
+    // Do not traverse into variable on lhs
+    assignmentNode->getExpression()->visit(*this);
+}
+
+void VariableAssignmentChecker::nodeVisit(AST::IfStatementNode *ifStatementNode) {
+    AST::ExpressionNode *cond = ifStatementNode->getConditionExpression();
+    cond->visit(*this);
+
+    VariableAssignmentLog *commonParentEdge = m_currentFlowEdge;
+
+    // Branch
+    std::unique_ptr<VariableAssignmentLog> thenStmtEdge(new VariableAssignmentLog(commonParentEdge));
+    m_currentFlowEdge = thenStmtEdge.get();
+    ifStatementNode->getThenStatement()->visit(*this);
+
+    // Branch
+    std::unique_ptr<VariableAssignmentLog> elseStmtEdge(new VariableAssignmentLog(commonParentEdge));
+    m_currentFlowEdge = elseStmtEdge.get();
+    if(ifStatementNode->getElseStatement() != nullptr) {
+        ifStatementNode->getElseStatement()->visit(*this);
+    }
+
+    // If there is a always true branch
+    VariableAssignmentLog *alwaysTrueBranch = nullptr;
+    if(cond->isConst() && cond->getExpressionType() == BOOL_T) {
+        DataContainer condData(BOOL_T);
+        bool successful = ConstantExpressionEvaluator::evaluateValue(cond, condData);
+
+        if(successful) {
+            alwaysTrueBranch = condData.getBoolVal()[0] ? thenStmtEdge.get() : elseStmtEdge.get();
+        }
+    }
+
+    // Merge
+    if(alwaysTrueBranch == nullptr) {
+        commonParentEdge->merge(*thenStmtEdge, *elseStmtEdge);
+    } else {
+        commonParentEdge->merge(*alwaysTrueBranch);
+    }
+
+    m_currentFlowEdge = commonParentEdge;
+}
+
+void VariableAssignmentChecker::nodeVisit(AST::ScopeNode *scopeNode) {
+    std::unique_ptr<VariableAssignmentLog> rootEdge(new VariableAssignmentLog(nullptr));
+    m_currentFlowEdge = rootEdge.get();
+
+    scopeNode->getDeclarations()->visit(*this);
+    scopeNode->getStatements()->visit(*this);
+
+    m_currentFlowEdge = nullptr;
+}
+
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
@@ -2621,6 +2811,10 @@ int semantic_check(node * ast) {
     printf("AST DUMP POST CONST DECL OPT\n");
     ast_print(ast);
     /// TODO: TEST THIS!
+
+    /* Ensure that every variable has been assigned a value before being read */
+    SEMA::VariableAssignmentChecker varAssignmentChecker;
+    static_cast<AST::ASTNode *>(ast)->visit(varAssignmentChecker);
 
     return 1;
 }
