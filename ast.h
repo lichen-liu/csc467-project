@@ -330,6 +330,7 @@ class DeclarationNode: public ASTNode {
         bool m_isWriteOnly = false;                     // write-only qualified
         int m_type;                                     // types defined in parser.tab.h
         ExpressionNode *m_initValExpr = nullptr;        // initial value expression (optional)
+        ExpressionNode *m_initVal = nullptr;            // value of initial value expression (optional)
     public:
         DeclarationNode(const std::string &variableName, bool isConst, int type, ExpressionNode *initValExpr = nullptr):
             m_variableName(variableName), m_isConst(isConst), m_type(type), m_initValExpr(initValExpr) {}
@@ -341,6 +342,8 @@ class DeclarationNode: public ASTNode {
         int getType() const { return m_type; }
         std::string getTypeString() const { return AST::getTypeString(m_type); }
         ExpressionNode *getExpression() const { return m_initValExpr; }
+        ExpressionNode *getInitValue() const { return m_initVal; }
+        void setInitValue(ExpressionNode *initVal) { m_initVal = initVal; }
     public:
         /*
          * Attribute: Read-only, non-constant.
@@ -359,6 +362,9 @@ class DeclarationNode: public ASTNode {
         virtual ~DeclarationNode() {
             if(m_initValExpr != nullptr) {
                 ASTNode::destructNode(m_initValExpr);
+            }
+            if(m_initVal != nullptr) {
+                ASTNode::destructNode(m_initVal);
             }
         }
     

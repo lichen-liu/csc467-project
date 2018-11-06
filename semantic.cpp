@@ -10,8 +10,11 @@
 #include <vector>
 #include <unordered_map>
 #include <list>
+#include <array>
+#include <algorithm>
 #include <sstream>
 
+#include <cmath>
 #include <cassert>
 
 namespace SEMA{ /* START NAMESPACE */
@@ -1684,6 +1687,896 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
     return ANY_TYPE;
 }
 
+class DataContainer {
+    private:
+        const int m_type;
+    private:
+        const int m_typeBase;
+        const int m_typeOrder;
+        union ValueUnion {
+            std::array<int, 4> intVal;
+            std::array<float, 4> floatVal;
+            std::array<bool, 4> boolVal;
+        } m_value = {0};
+    public:
+        using IntArrayCIt = std::array<int, 4>::const_iterator;
+        using FloatArrayCIt = std::array<float, 4>::const_iterator;
+        using BoolArrayCIt = std::array<bool, 4>::const_iterator;
+
+    public:
+        DataContainer(int type):
+            m_type(type), m_typeBase(getDataTypeBaseType(m_type)), m_typeOrder(getDataTypeOrder(m_type)) {}
+        DataContainer(const DataContainer& other):
+            m_type(other.m_type), m_typeBase(other.m_typeBase), m_typeOrder(other.m_typeOrder), m_value(other.m_value) {}
+    
+    public:
+        int getType() const { return m_type; }
+        int getTypeBase() const { return m_typeBase; }
+        int getTypeOrder() const { return m_typeOrder; }
+
+    public:
+        std::array<int, 4> &getIntVal() { assert(m_typeBase == INT_T); return m_value.intVal; }
+        std::array<float, 4> &getFloatVal() { assert(m_typeBase == FLOAT_T); return m_value.floatVal; }
+        std::array<bool, 4> &getBoolVal() { assert(m_typeBase == BOOL_T); return m_value.boolVal; }
+        const std::array<int, 4> &getIntVal() const { assert(m_typeBase == INT_T); return m_value.intVal; }
+        const std::array<float, 4> &getFloatVal() const { assert(m_typeBase == FLOAT_T); return m_value.floatVal; }
+        const std::array<bool, 4> &getBoolVal() const { assert(m_typeBase == BOOL_T); return m_value.boolVal; }
+
+    public:
+        IntArrayCIt getIntValBegin() const { assert(m_typeBase == INT_T); return m_value.intVal.begin(); }
+        FloatArrayCIt getFloatValBegin() const { assert(m_typeBase == FLOAT_T); return m_value.floatVal.begin(); }
+        BoolArrayCIt getBoolValBegin() const { assert(m_typeBase == BOOL_T); return m_value.boolVal.begin(); }
+        IntArrayCIt getIntValEnd() const { assert(m_typeBase == INT_T); return m_value.intVal.begin() + m_typeOrder; }
+        FloatArrayCIt getFloatValEnd() const { assert(m_typeBase == FLOAT_T); return m_value.floatVal.begin() + m_typeOrder; }
+        BoolArrayCIt getBoolValEnd() const { assert(m_typeBase == BOOL_T); return m_value.boolVal.begin() + m_typeOrder; }
+
+    public:
+        DataContainer& operator= (const DataContainer &rhs);
+    
+    public:
+        DataContainer getSlice(int idx);
+
+    public:
+        AST::ExpressionNode *createASTExpr() const;
+};
+
+DataContainer operator+(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * +, - ss, vv Arithmetic
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            std::transform(lhs.getIntValBegin(), lhs.getIntValEnd(), rhs.getIntValBegin(), result.getIntVal().begin(), 
+                [](int a, int b) -> int {
+                    return a + b;
+                }
+                );
+            break;
+        }
+        case FLOAT_T: {
+            std::transform(lhs.getFloatValBegin(), lhs.getFloatValEnd(), rhs.getFloatValBegin(), result.getFloatVal().begin(), 
+                [](float a, float b) -> float {
+                    return a + b;
+                }
+                );
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator-(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * +, - ss, vv Arithmetic
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            std::transform(lhs.getIntValBegin(), lhs.getIntValEnd(), rhs.getIntValBegin(), result.getIntVal().begin(), 
+                [](int a, int b) -> int {
+                    return a - b;
+                }
+                );
+            break;
+        }
+        case FLOAT_T: {
+            std::transform(lhs.getFloatValBegin(), lhs.getFloatValEnd(), rhs.getFloatValBegin(), result.getFloatVal().begin(), 
+                [](float a, float b) -> float {
+                    return a - b;
+                }
+                );
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator*(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * * ss, vv, sv, vs Arithmetic
+     */
+    assert(lhs.getTypeBase() == rhs.getTypeBase());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    if(lhs.getType() == rhs.getType()) {
+        /* ss, vv */
+        DataContainer result(lhs.getType());
+        switch(lhs.getTypeBase()) {
+            case INT_T: {
+                std::transform(lhs.getIntValBegin(), lhs.getIntValEnd(), rhs.getIntValBegin(), result.getIntVal().begin(), 
+                    [](int a, int b) -> int {
+                        return a * b;
+                    }
+                    );
+                break;
+            }
+            case FLOAT_T: {
+                std::transform(lhs.getFloatValBegin(), lhs.getFloatValEnd(), rhs.getFloatValBegin(), result.getFloatVal().begin(), 
+                    [](float a, float b) -> float {
+                        return a * b;
+                    }
+                    );
+                break;
+            }
+            case BOOL_T:
+                assert(0);
+            default:
+                assert(0);
+        }
+
+        return result;
+    } else {
+        /* sv, vs */
+        assert(lhs.getTypeOrder() == 1 || rhs.getTypeOrder() == 1);
+        const DataContainer &vec = lhs.getTypeOrder() > 1 ? lhs : rhs;
+        const DataContainer &scal = lhs.getTypeOrder() > 1 ? rhs : lhs;
+        DataContainer result(vec.getType());
+
+        switch(vec.getTypeBase()) {
+            case INT_T: {
+                std::transform(vec.getIntValBegin(), vec.getIntValEnd(), result.getIntVal().begin(), 
+                    [&scal](int a) -> int {
+                        return a * scal.getIntVal()[0];
+                    }
+                    );
+                break;
+            }
+            case FLOAT_T: {
+                std::transform(vec.getFloatValBegin(), vec.getFloatValEnd(), result.getFloatVal().begin(), 
+                    [&scal](float a) -> float {
+                        return a * scal.getFloatVal()[0];
+                    }
+                    );
+                break;
+            }
+            case BOOL_T:
+                assert(0);
+            default:
+                assert(0);
+        }
+
+        return result;
+    }
+}
+
+DataContainer operator/(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * /, ˆ ss Arithmetic
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getIntVal()[0] = lhs.getIntVal()[0] / rhs.getIntVal()[0];
+            break;
+        }
+        case FLOAT_T: {
+            result.getFloatVal()[0] = lhs.getFloatVal()[0] / rhs.getFloatVal()[0];
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator^(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * /, ˆ ss Arithmetic
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getIntVal()[0] = static_cast<int>(pow(lhs.getIntVal()[0], rhs.getIntVal()[0]));
+            break;
+        }
+        case FLOAT_T: {
+            result.getFloatVal()[0] = static_cast<float>(pow(lhs.getFloatVal()[0], rhs.getFloatVal()[0]));
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator&&(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+    * &&, || ss, vv Logical
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Boolean);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {     
+        case BOOL_T: {
+            std::transform(lhs.getBoolValBegin(), lhs.getBoolValEnd(), rhs.getBoolValBegin(), result.getBoolVal().begin(), 
+                [](bool a, bool b) -> bool {
+                    return a && b;
+                }
+                );
+            break;
+        }
+        case INT_T:
+            assert(0);
+        case FLOAT_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator||(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+    * &&, || ss, vv Logical
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Boolean);
+
+    DataContainer result(lhs.getType());
+    switch(lhs.getTypeBase()) {     
+        case BOOL_T: {
+            std::transform(lhs.getBoolValBegin(), lhs.getBoolValEnd(), rhs.getBoolValBegin(), result.getBoolVal().begin(), 
+                [](bool a, bool b) -> bool {
+                    return a || b;
+                }
+                );
+            break;
+        }
+        case INT_T:
+            assert(0);
+        case FLOAT_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator<(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * <, <=, >, >= ss Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = lhs.getIntVal()[0] < rhs.getIntVal()[0];
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = lhs.getFloatVal()[0] < rhs.getFloatVal()[0];
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator<=(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * <, <=, >, >= ss Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = lhs.getIntVal()[0] <= rhs.getIntVal()[0];
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = lhs.getFloatVal()[0] <= rhs.getFloatVal()[0];
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator>(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * <, <=, >, >= ss Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = lhs.getIntVal()[0] > rhs.getIntVal()[0];
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = lhs.getFloatVal()[0] > rhs.getFloatVal()[0];
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator>=(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * <, <=, >, >= ss Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(lhs.getTypeOrder() == 1);
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = lhs.getIntVal()[0] >= rhs.getIntVal()[0];
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = lhs.getFloatVal()[0] >= rhs.getFloatVal()[0];
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator==(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * ==, != ss, vv Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = std::equal(lhs.getIntValBegin(), lhs.getIntValEnd(), rhs.getIntValBegin());
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = std::equal(lhs.getFloatValBegin(), lhs.getFloatValEnd(), rhs.getFloatValBegin());
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator!=(const DataContainer &lhs, const DataContainer &rhs) {
+    /*
+     * ==, != ss, vv Comparison
+     */
+    assert(lhs.getType() == rhs.getType());
+    assert(getDataTypeCategory(lhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(BOOL_T);
+    switch(lhs.getTypeBase()) {
+        case INT_T: {
+            result.getBoolVal()[0] = !std::equal(lhs.getIntValBegin(), lhs.getIntValEnd(), rhs.getIntValBegin());
+            break;
+        }
+        case FLOAT_T: {
+            result.getBoolVal()[0] = !std::equal(lhs.getFloatValBegin(), lhs.getFloatValEnd(), rhs.getFloatValBegin());
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator-(const DataContainer &rhs) {
+    /*
+     * - s, v Arithmetic
+     */
+    assert(getDataTypeCategory(rhs.getType()) == DataTypeCategory::Arithmetic);
+
+    DataContainer result(rhs.getType());
+    switch(rhs.getTypeBase()) {
+        case INT_T: {
+            std::transform(rhs.getIntValBegin(), rhs.getIntValEnd(), result.getIntVal().begin(), 
+                [](int a) -> int {
+                    return -a;
+                }
+                );
+            break;
+        }
+        case FLOAT_T: {
+            std::transform(rhs.getFloatValBegin(), rhs.getFloatValEnd(), result.getFloatVal().begin(), 
+                [](float a) -> float {
+                    return -a;
+                }
+                );
+            break;
+        }
+        case BOOL_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer operator!(const DataContainer &rhs) {
+    /*
+     * ! s, v Logical
+     */
+    assert(getDataTypeCategory(rhs.getType()) == DataTypeCategory::Boolean);
+
+    DataContainer result(rhs.getType());
+    switch(rhs.getTypeBase()) {
+        case BOOL_T: {
+            std::transform(rhs.getBoolValBegin(), rhs.getBoolValEnd(), result.getBoolVal().begin(), 
+                [](bool a) -> bool {
+                    return !a;
+                }
+                );
+            break;
+        }
+        case INT_T:
+            assert(0);
+        case FLOAT_T:
+            assert(0);
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+DataContainer& DataContainer::operator= (const DataContainer &rhs) {
+    if(this == &rhs) {
+        return *this;
+    }
+
+    assert((this->getType() == rhs.getType()));
+    this->m_value = rhs.m_value;
+
+    return *this;
+}
+
+DataContainer DataContainer::getSlice(int idx) {
+    assert(idx >= 0);
+    assert(idx < this->m_typeOrder);
+    DataContainer result(this->m_typeBase);
+    switch(this->m_typeBase) {
+        case INT_T: {
+            result.getIntVal()[0] = this->getIntVal()[idx];
+            break;
+        }
+        case FLOAT_T: {
+            result.getFloatVal()[0] = this->getFloatVal()[idx];
+            break;
+        }
+        case BOOL_T: {
+            result.getBoolVal()[0] = this->getBoolVal()[idx];
+            break;
+        }
+        default:
+            assert(0);
+    }
+
+    return result;
+}
+
+AST::ExpressionNode *DataContainer::createASTExpr() const {
+    AST::ExpressionNode *resultExpr = nullptr;
+
+    switch(m_typeBase) {
+        case INT_T: {
+            const std::array<int, 4> &val = getIntVal();
+            if(m_typeOrder > 1) {
+                AST::ExpressionsNode *args = new AST::ExpressionsNode();
+                    for(int i = 0; i < m_typeOrder; i++) {       
+                        args->pushBackExpression(new AST::IntLiteralNode(val[i]));
+                    }
+                AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
+                resultExpr = constructor;
+            } else {
+                AST::IntLiteralNode *intLit = new AST::IntLiteralNode(val[0]);
+                resultExpr = intLit;
+            }
+
+            break;
+        }
+
+        case FLOAT_T: {
+            const std::array<float, 4> &val = getFloatVal();
+            if(m_typeOrder > 1) {
+                AST::ExpressionsNode *args = new AST::ExpressionsNode();
+                    for(int i = 0; i < m_typeOrder; i++) {       
+                        args->pushBackExpression(new AST::FloatLiteralNode(val[i]));
+                    }
+                AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
+                resultExpr = constructor;
+            } else {
+                AST::FloatLiteralNode *floatLit = new AST::FloatLiteralNode(val[0]);
+                resultExpr = floatLit;
+            }
+
+            break;
+        }
+
+        case BOOL_T: {
+            const std::array<bool, 4> &val = getBoolVal();
+            if(m_typeOrder > 1) {
+                AST::ExpressionsNode *args = new AST::ExpressionsNode();
+                    for(int i = 0; i < m_typeOrder; i++) {       
+                        args->pushBackExpression(new AST::BooleanLiteralNode(val[i]));
+                    }
+                AST::ConstructorNode *constructor = new AST::ConstructorNode(m_type, args);
+                resultExpr = constructor;
+            } else {
+                AST::BooleanLiteralNode *boolLit = new AST::BooleanLiteralNode(val[0]);
+                resultExpr = boolLit;
+            }
+
+            break;
+        }
+
+        default:
+            assert(0);
+    }
+
+    if(resultExpr != nullptr) {
+        resultExpr->setConst(true);
+        resultExpr->setExpressionType(m_type);
+    }
+
+    return resultExpr;
+}
+
+class ConstantExpressionEvaluator: public AST::Visitor {
+    private:
+        bool m_evaluationSuccessful = true;
+        DataContainer &m_data;
+
+    private:
+        ConstantExpressionEvaluator(DataContainer &data): m_data(data) {}
+
+    private:
+        virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
+            assert(m_data.getType() == unaryExpressionNode->getExpressionType());
+
+            AST::ExpressionNode *rhsExpr = unaryExpressionNode->getExpression();
+            DataContainer rhsData(rhsExpr->getExpressionType());
+            m_evaluationSuccessful = evaluateValue(rhsExpr, rhsData);
+            
+            if(m_evaluationSuccessful) {
+                switch(unaryExpressionNode->getOperator()) {
+                    case MINUS:
+                        m_data = -rhsData;
+                        break;
+                    case NOT:
+                        m_data = !rhsData;
+                        break;
+                    default:
+                        assert(0);
+                }
+            }
+        }
+        
+        virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {
+            assert(m_data.getType() == binaryExpressionNode->getExpressionType());
+
+            AST::ExpressionNode *lhsExpr = binaryExpressionNode->getLeftExpression();
+            DataContainer lhsData(lhsExpr->getExpressionType());
+            m_evaluationSuccessful = evaluateValue(lhsExpr, lhsData);
+
+            AST::ExpressionNode *rhsExpr = binaryExpressionNode->getRightExpression();
+            DataContainer rhsData(rhsExpr->getExpressionType());
+            m_evaluationSuccessful &= evaluateValue(rhsExpr, rhsData);
+
+            if(m_evaluationSuccessful) {
+                switch(binaryExpressionNode->getOperator()) {
+                    case AND:
+                        m_data = lhsData && rhsData;
+                        break;
+                    case OR:
+                        m_data = lhsData || rhsData;
+                        break;
+                    case PLUS:
+                        m_data = lhsData + rhsData;
+                        break;
+                    case MINUS:
+                        m_data = lhsData - rhsData;
+                        break;
+                    case TIMES:
+                        m_data = lhsData * rhsData;
+                        break;
+                    case SLASH:
+                        m_data = lhsData / rhsData;
+                        break;
+                    case EXP:
+                        m_data = lhsData ^ rhsData;
+                        break;
+                    case EQL:
+                        m_data = lhsData == rhsData;
+                        break;
+                    case NEQ:
+                        m_data = lhsData != rhsData;
+                        break;
+                    case LSS:
+                        m_data = lhsData < rhsData;
+                        break;
+                    case LEQ:
+                        m_data = lhsData <= rhsData;
+                        break;
+                    case GTR:
+                        m_data = lhsData > rhsData;
+                        break;
+                    case GEQ:
+                        m_data = lhsData >= rhsData;
+                        break;
+                    default:
+                        assert(0);
+                }
+            }
+        }
+
+        virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode) {
+            assert(m_data.getType() == INT_T);
+
+            m_data.getIntVal()[0] = intLiteralNode->getVal();
+        }
+
+        virtual void nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {
+            assert(m_data.getType() == FLOAT_T);
+
+            m_data.getFloatVal()[0] = floatLiteralNode->getVal();
+        }
+
+        virtual void nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {
+            assert(m_data.getType() == BOOL_T);
+
+            m_data.getBoolVal()[0] = booleanLiteralNode->getVal();
+        }
+
+        virtual void nodeVisit(AST::IdentifierNode *identifierNode) {
+            if(!identifierNode->isOrdinaryType()) {
+                m_evaluationSuccessful = false;
+                return;
+            }
+            assert(m_data.getType() == identifierNode->getExpressionType());
+
+            const AST::DeclarationNode *decl = identifierNode->getDeclaration();
+            assert(decl != nullptr);
+
+            AST::ExpressionNode *identVal = decl->getInitValue();
+            if(identVal == nullptr) {
+                /* If somehow this variable does not have a evaluated initialization expression, abort */
+                m_evaluationSuccessful = false;
+                return;
+            }
+
+            m_evaluationSuccessful = evaluateValue(identVal, m_data);
+        }
+
+        virtual void nodeVisit(AST::IndexingNode *indexingNode) {
+            if(!indexingNode->isOrdinaryType()) {
+                m_evaluationSuccessful = false;
+                return;
+            }
+            assert(m_data.getType() == indexingNode->getExpressionType());
+
+            AST::IdentifierNode *ident = indexingNode->getIdentifier();
+            int identType = ident->getExpressionType();
+            assert(getDataTypeBaseType(identType) == indexingNode->getExpressionType());
+
+            /* Get the value of identifier first */
+            DataContainer identData(identType);
+            m_evaluationSuccessful = evaluateValue(ident, identData);
+
+            if(m_evaluationSuccessful) {
+                /* Do the indexing */
+                AST::IntLiteralNode *index = reinterpret_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression());
+                m_data = identData.getSlice(index->getVal());
+            }
+        }
+
+        virtual void nodeVisit(AST::FunctionNode *functionNode) {
+            m_evaluationSuccessful = false;
+        }
+
+        virtual void nodeVisit(AST::ConstructorNode *constructorNode) {
+            assert(m_data.getType() == constructorNode->getExpressionType());
+
+            const AST::ExpressionsNode *exprs = constructorNode->getArgumentExpressions();
+            const std::vector<AST::ExpressionNode *> &args = exprs->getExpressionList();
+
+            int constructorDataType = constructorNode->getConstructorType();
+            int constructorDataTypeBaseType = getDataTypeBaseType(constructorDataType);
+            for(int i = 0; i < args.size() && m_evaluationSuccessful; i++) {
+                assert(args[i]->getExpressionType() == constructorDataTypeBaseType);
+                assert(i < m_data.getTypeOrder());
+                
+                DataContainer argData(constructorDataTypeBaseType);
+                m_evaluationSuccessful &= evaluateValue(args[i], argData);
+
+                switch(constructorDataTypeBaseType) {
+                    case INT_T:
+                        m_data.getIntVal()[i] = argData.getIntVal()[0];
+                        break;
+                    case FLOAT_T:
+                        m_data.getFloatVal()[i] = argData.getFloatVal()[0];
+                        break;
+                    case BOOL_T:
+                        m_data.getBoolVal()[i] = argData.getBoolVal()[0];
+                        break;
+                    default:
+                        assert(0);
+                }
+            }
+        }
+
+    public:
+        static bool evaluateValue(AST::ExpressionNode *expr, DataContainer &data) {
+            int dataType = expr->getExpressionType();
+            assert(dataType != ANY_TYPE);
+            assert(dataType == data.getType());
+
+            ConstantExpressionEvaluator ev(data);
+            expr->visit(ev);
+
+            return ev.m_evaluationSuccessful;
+        }
+};
+
+class ConstantDeclarationOptimizer: public AST::Visitor {
+    private:
+        virtual void preNodeVisit(AST::DeclarationNode *declarationNode);
+
+    private:
+        /* Do not traverse into these nodes */
+        virtual void nodeVisit(AST::DeclarationNode *declarationNode) {}
+
+        virtual void nodeVisit(AST::ExpressionNode *expressionNode) {}
+        virtual void nodeVisit(AST::ExpressionsNode *expressionsNode) {}
+        virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {}
+        virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {}
+        virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode) {}
+        virtual void nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {}
+        virtual void nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {}
+        virtual void nodeVisit(AST::VariableNode *variableNode) {}
+        virtual void nodeVisit(AST::IdentifierNode *identifierNode) {}
+        virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
+        virtual void nodeVisit(AST::FunctionNode *functionNode) {}
+        virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
+};
+
+void ConstantDeclarationOptimizer::preNodeVisit(AST::DeclarationNode *declarationNode) {
+    /* Skip fake declarations for predefined variables */
+    if(!declarationNode->isOrdinaryType()) {
+        return;
+    }
+
+    /* Skip if declaration is not for a const-qualified variable */
+    if(!declarationNode->isConst()) {
+        return;
+    }
+
+    AST::ExpressionNode *initExpr = declarationNode->getExpression();
+    
+    /* Skip if declaration does not have initialization */
+    if(initExpr == nullptr) {
+        return;
+    }
+
+    /* Skip if initialization is not well-defined */
+    if(initExpr->getExpressionType() == ANY_TYPE) {
+        return;
+    }
+
+    /* Skip if initialization is not a const-qualifed expression */
+    if(!initExpr->isConst()) {
+        return;
+    }
+
+    /* Skip if type does not match */
+    if(declarationNode->getType() != initExpr->getExpressionType()) {
+        return;
+    }
+
+    /* 
+     * We have skipped a lot of invalid conditions that are not suitable for
+     * constant folding and propagation, even some combinations of them
+     * are not valid in terms of the lanague grammar rule.
+     * However, it is okay to simply skip them, because these errors are caught
+     * in other stages of semantic analysis.
+     */
+    DataContainer initData(initExpr->getExpressionType());
+    bool constOptSuccessful = ConstantExpressionEvaluator::evaluateValue(initExpr, initData);
+    if(constOptSuccessful) {
+        printf("Optimization for declaration of const-qualified symbol '%s' successful.\n", declarationNode->getName().c_str());
+
+        AST::ExpressionNode *resultExpr = initData.createASTExpr();
+        assert(resultExpr != nullptr);
+        declarationNode->setInitValue(resultExpr);
+    }
+}
+
 } /* END NAMESPACE */
 
 int semantic_check(node * ast) {
@@ -1704,11 +2597,13 @@ int semantic_check(node * ast) {
     SEMA::TypeChecker typeChecker(symbolTable, semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(typeChecker);
     // symbolTable.printSymbolReference();
+    printf("***************************************\n");
+    printf("AST DUMP POST TYPE CHECK\n");
     ast_print(ast);
 
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
-    semaAnalyzer.setColorPrintEnabled(false);
+    semaAnalyzer.setColorPrintEnabled(true);
     if(numEvents != 0) {
         printf("\n");
     }
@@ -1718,6 +2613,14 @@ int semantic_check(node * ast) {
     if(numEvents != 0) {
         printf("--------------------------------------------------------------------------\n");
     }
+
+    /* Evaluate initialization for const-qualified declaration */
+    SEMA::ConstantDeclarationOptimizer constDeclOptimizer;
+    static_cast<AST::ASTNode *>(ast)->visit(constDeclOptimizer);
+    printf("***************************************\n");
+    printf("AST DUMP POST CONST DECL OPT\n");
+    ast_print(ast);
+    /// TODO: TEST THIS!
 
     return 1;
 }

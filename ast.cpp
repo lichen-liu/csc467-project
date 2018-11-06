@@ -319,7 +319,10 @@ class Printer: public Visitor {
             printf("%s ", declarationNode->getName().c_str());
             printf("%s", declarationNode->getQualifierString().c_str());
             printf("%s", declarationNode->getTypeString().c_str());
-            if(declarationNode->getExpression() != nullptr) {
+            if(declarationNode->getInitValue() != nullptr) {
+                printf(" ");
+                declarationNode->getInitValue()->visit(*this);
+            } else if(declarationNode->getExpression() != nullptr) {
                 printf(" ");
                 declarationNode->getExpression()->visit(*this);
             }
