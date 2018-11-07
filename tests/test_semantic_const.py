@@ -5,7 +5,7 @@ import os
 import subprocess
 
 compiler467_exe = './compiler467'
-test_dir = './tests/semantic/'
+test_dir = './tests/semantic_const/'
 prev_dir = test_dir + 'prev/'
 
 print "Rebuild:"
@@ -28,9 +28,9 @@ for root, dirs, files in os.walk(test_dir):
         for test_target_file in files:
             print test_target_file + ':'
 
-            p = subprocess.Popen([compiler467_exe, test_dir + test_target_file], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+            p = subprocess.Popen([compiler467_exe, '-Da', test_dir + test_target_file], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
             run_out, run_err = p.communicate()
-            total_out = run_out + run_err
+            total_out = run_err + run_out
 
             for prev_root, prev_dirs, prev_files in os.walk(prev_dir):
                 if test_target_file not in prev_files:
@@ -56,12 +56,16 @@ for root, dirs, files in os.walk(test_dir):
                     total_out_lines = total_out.splitlines()
                     prev_total_out_lines = prev_total_out.splitlines()
                     line = 1
+                    diff_count = 0
                     for total_out_line in total_out_lines:
                         if total_out_line != prev_total_out_lines[line-1]:
                             print "Line: " + str(line) + ":"
                             print "E:" + prev_total_out_lines[line-1]
                             print "A:" + total_out_line
+                            diff_count += 1
                         line += 1
+                        if diff_count == 10:
+                            break
                     print '----------------'
                     print '\nThere are probably some bugs with the compiler, or update the EXPECTED in ' + prev_dir + test_target_file + '!'
                     print
