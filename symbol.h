@@ -23,6 +23,9 @@ class SymbolTable {
     private:
         std::unordered_map<AST::IdentifierNode *, SymbolNode *> m_positionOfRef;
                                                                     // Position of reference of Identifier
+    private:
+        FILE *m_out = stdout;
+
     public:
         SymbolTable();
         ~SymbolTable();
@@ -44,13 +47,15 @@ class SymbolTable {
     public:
         void printScopeLeaves() const;
         void printSymbolReference() const;
+        void setOutput(FILE *out) { m_out = out; }
+        FILE *getOutput() const { return m_out; }
 
     private:
         /* Helper Functions */
         /* Return redecl if redeclaration under current scope; otherwise nullptr */
         AST::DeclarationNode *findRedeclaration(AST::DeclarationNode *decl) const;
         static bool checkSymbolMatch(AST::DeclarationNode *decl, AST::IdentifierNode *ident);
-        static int printSymbolTreeTo(SymbolNode *node, const AST::DeclarationNode *markDecl = nullptr);
+        int printSymbolTreeTo(SymbolNode *node, const AST::DeclarationNode *markDecl = nullptr) const;
 };
 
 }

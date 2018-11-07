@@ -18,6 +18,10 @@
 #include <cmath>
 #include <cassert>
 
+///////////////////////////////////////
+#define NORMAL_MODE
+///////////////////////////////////////
+
 namespace SEMA{ /* START NAMESPACE */
 
 class SourceContext {
@@ -115,6 +119,7 @@ class SemanticAnalyzer {
 
     private:
         bool m_colorPrintEnabled = true;
+        FILE *m_out = stdout;
     
     public:
         void resetAnalyzer() {
@@ -145,6 +150,8 @@ class SemanticAnalyzer {
     public:
         bool isColorPrintEnabled() const { return m_colorPrintEnabled; }
         void setColorPrintEnabled(bool flag) { m_colorPrintEnabled = flag; }
+        void setOutput(FILE *out) { m_out = out; }
+        FILE *getOutput() const { return m_out; }
         void printEvent(EventID eventID, const SourceContext &sourceContext) const;
 
     public:
@@ -193,7 +200,7 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
     const Event &event = getEvent(eventID);
     const AST::SourceLocation &eventLoc = event.EventLoc();
     
-    printf("--------------------------------------------------------------------------\n");
+    fprintf(m_out, "--------------------------------------------------------------------------\n");
 
     // Print event message
     std::string header;
@@ -202,65 +209,65 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
     } else {
         header = "Warning";
     }
-    printf("%s-%d", header.c_str(), eventID);
-    printf(": %s\n", event.Message().c_str());
+    fprintf(m_out, "%s-%d", header.c_str(), eventID);
+    fprintf(m_out, ": %s\n", event.Message().c_str());
 
     // Print event location info
     if(AST::SourceLocation() != eventLoc) {
         if(eventLoc.firstLine == eventLoc.lastLine) {
             const std::string &line = sourceContext.getLine(eventLoc.firstLine);
-            printf("%7d:%s", eventLoc.firstLine, tenSpace.c_str());
-            printf("%s\n", line.c_str());
-            printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+            fprintf(m_out, "%7d:%s", eventLoc.firstLine, tenSpace.c_str());
+            fprintf(m_out, "%s\n", line.c_str());
+            fprintf(m_out, "%s %s", sevenSpace.c_str(), tenSpace.c_str());
             for(int colNumber = 0; colNumber < line.length(); colNumber++) {
                 if(colNumber >= eventLoc.firstColumn - 1 && colNumber < eventLoc.lastColumn - 1) {
-                    printf("^");
+                    fprintf(m_out, "^");
                 } else {
-                    printf(" ");
+                    fprintf(m_out, " ");
                 }
             }
         } else {
             for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
                 const std::string &line = sourceContext.getLine(lineNumber);
-                printf("%7d:%s", lineNumber, tenSpace.c_str());
-                printf("%s\n", line.c_str());
+                fprintf(m_out, "%7d:%s", lineNumber, tenSpace.c_str());
+                fprintf(m_out, "%s\n", line.c_str());
             }
         }
-        printf("\n");
+        fprintf(m_out, "\n");
     }
 
     // Print reference location info and reference message
     if(event.isUsingReference()) {
         const AST::SourceLocation &refLoc = event.RefLoc();
 
-        printf("\n");
+        fprintf(m_out, "\n");
 
         // Print reference message
-        printf("Info");
-        printf(": %s\n", event.RefMessage().c_str());
+        fprintf(m_out, "Info");
+        fprintf(m_out, ": %s\n", event.RefMessage().c_str());
 
         // Print reference location info
         if(AST::SourceLocation() != refLoc) {
             if(refLoc.firstLine == refLoc.lastLine) {
                 const std::string &line = sourceContext.getLine(refLoc.firstLine);
-                printf("%7d:%s", refLoc.firstLine, tenSpace.c_str());
-                printf("%s\n", line.c_str());
-                printf("%s %s", sevenSpace.c_str(), tenSpace.c_str());
+                fprintf(m_out, "%7d:%s", refLoc.firstLine, tenSpace.c_str());
+                fprintf(m_out, "%s\n", line.c_str());
+                fprintf(m_out, "%s %s", sevenSpace.c_str(), tenSpace.c_str());
                 for(int colNumber = 0; colNumber < line.length(); colNumber++) {
                     if(colNumber >= refLoc.firstColumn - 1 && colNumber < refLoc.lastColumn - 1) {
-                        printf("~");
+                        fprintf(m_out, "~");
                     } else {
-                        printf(" ");
+                        fprintf(m_out, " ");
                     }
                 }
             } else {
                 for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
                     const std::string &line = sourceContext.getLine(lineNumber);
-                    printf("%7d:%s", lineNumber, tenSpace.c_str());
-                    printf("%s\n", line.c_str());
+                    fprintf(m_out, "%7d:%s", lineNumber, tenSpace.c_str());
+                    fprintf(m_out, "%s\n", line.c_str());
                 }
             }
-            printf("\n");
+            fprintf(m_out, "\n");
         }
     }
 }
@@ -2568,7 +2575,9 @@ void ConstantDeclarationOptimizer::preNodeVisit(AST::DeclarationNode *declaratio
     DataContainer initData(initExpr->getExpressionType());
     bool constOptSuccessful = ConstantExpressionEvaluator::evaluateValue(initExpr, initData);
     if(constOptSuccessful) {
-        printf("Optimization for declaration of const-qualified symbol '%s' successful.\n", declarationNode->getName().c_str());
+        fprintf(outputFile, "Info: Optimization for declaration of const-qualified symbol '%s' of type '%s%s' successful at %s.\n",
+            declarationNode->getName().c_str(), declarationNode->getQualifierString().c_str(), declarationNode->getTypeString().c_str(), 
+            declarationNode->getSourceLocationString().c_str());
 
         AST::ExpressionNode *resultExpr = initData.createASTExpr();
         assert(resultExpr != nullptr);
@@ -2816,34 +2825,47 @@ int semantic_check(node * ast) {
     SEMA::TypeChecker typeChecker(symbolTable, semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(typeChecker);
     // symbolTable.printSymbolReference();
-    printf("***************************************\n");
-    printf("AST DUMP POST TYPE CHECK\n");
-    ast_print(ast);
+    // printf("***************************************\n");
+    // printf("AST DUMP POST TYPE CHECK\n");
+    // ast_print(ast);
 
     /* Evaluate initialization for const-qualified declaration */
     SEMA::ConstantDeclarationOptimizer constDeclOptimizer;
     static_cast<AST::ASTNode *>(ast)->visit(constDeclOptimizer);
-    printf("***************************************\n");
-    printf("AST DUMP POST CONST DECL OPT\n");
-    ast_print(ast);
-    /// TODO: TEST THIS!
+    // printf("***************************************\n");
+    // printf("AST DUMP POST CONST DECL OPT\n");
+    // ast_print(ast);
 
     /* Ensure that every variable has been assigned a value before being read */
     SEMA::VariableAssignmentChecker varAssignmentChecker(semaAnalyzer);
     static_cast<AST::ASTNode *>(ast)->visit(varAssignmentChecker);
 
-    /* Analyzing Semantic Analysis Result */
+    /* Check Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
+    #ifdef NORMAL_MODE
     semaAnalyzer.setColorPrintEnabled(true);
+    semaAnalyzer.setOutput(stdout);
+    #else
+    semaAnalyzer.setColorPrintEnabled(false);
+    semaAnalyzer.setOutput(errorFile);
+    #endif
     if(numEvents != 0) {
-        printf("\n");
+        fprintf(semaAnalyzer.getOutput(), "\n");
     }
     for(int id = 0; id < numEvents; id++) {
         semaAnalyzer.printEvent(id, sourceContext);
     }
     if(numEvents != 0) {
-        printf("--------------------------------------------------------------------------\n");
+        fprintf(semaAnalyzer.getOutput(), "--------------------------------------------------------------------------\n");
     }
     
-    return 1;
+    int numErrorEvents = semaAnalyzer.getNumberErrors();
+    if(numErrorEvents > 0) {
+        // If error occurs, return 0
+        errorOccurred = 1;
+        return 0;
+    } else {
+        // if no error, return 1
+        return 1;
+    }
 }
