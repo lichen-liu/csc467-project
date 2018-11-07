@@ -19,7 +19,7 @@
 #include <cassert>
 
 ///////////////////////////////////////
-// #define NORMAL_MODE
+#define NORMAL_MODE
 ///////////////////////////////////////
 
 namespace SEMA{ /* START NAMESPACE */
