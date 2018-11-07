@@ -275,13 +275,11 @@ void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sou
     printf("--------------------------------------------------------------------------\n");
 
     // Print event message
-    std::string header;
     if(event.getEventType() == EventType::Error) {
-        header = "Error";
+        printf("\033[1;31mError-%d\033[0m", eventID);
     } else {
-        header = "Warning";
+        printf("\033[1;33mWarning-%d\033[0m", eventID);
     }
-    printf("\033[1;31m%s-%d\033[0m", header.c_str(), eventID);
     printf("\033[1;39m: %s\033[0m\n", event.Message().c_str());
 
     // Print event location info
@@ -530,7 +528,7 @@ class SymbolDeclVisitor: public AST::Visitor {
             AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
 
             if(redecl != nullptr) {
-                std::stringstream ss; /// WIP
+                std::stringstream ss;
                 ss << "Duplicate declaration of '" << declarationNode->getQualifierString() << declarationNode->getTypeString() <<
                     " " << declarationNode->getName() << "' at " << declarationNode->getSourceLocationString() << ". " <<
                     "Previously declared at " << redecl->getSourceLocationString() << ".";
@@ -2633,10 +2631,18 @@ void VariableAssignmentLog::merge(const VariableAssignmentLog &log) {
 
 class VariableAssignmentChecker: public AST::Visitor {
     private:
+        SemanticAnalyzer &m_semanticAnalyzer;
+
+    private:
         VariableAssignmentLog *m_currentFlowEdge = nullptr;
 
         const AST::DeclarationNode *m_currentDeclaration = nullptr;
         bool m_currentDeclarationRecursiveInit = false;
+
+    public:
+        VariableAssignmentChecker(SemanticAnalyzer &semanticAnalyzer):
+            m_semanticAnalyzer(semanticAnalyzer) {}
+
     private:
         virtual void preNodeVisit(AST::DeclarationNode *declarationNode);
 
@@ -2663,6 +2669,10 @@ void VariableAssignmentChecker::postNodeVisit(AST::AssignmentNode *assignmentNod
     }
 
     AST::VariableNode *var = assignmentNode->getVariable();
+    if(!var->isOrdinaryType()) {
+        // Skip for predefined variables
+        return;
+    }
 
     const AST::DeclarationNode *decl = var->getDeclaration();
     assert(decl != nullptr);
@@ -2671,6 +2681,11 @@ void VariableAssignmentChecker::postNodeVisit(AST::AssignmentNode *assignmentNod
 }
 
 void VariableAssignmentChecker::postNodeVisit(AST::IdentifierNode *identifierNode) {
+    if(!identifierNode->isOrdinaryType()) {
+        // Skip for predefined variables
+        return;
+    }
+
     if(identifierNode->getExpressionType() == ANY_TYPE) {
         return;
     }
@@ -2679,8 +2694,15 @@ void VariableAssignmentChecker::postNodeVisit(AST::IdentifierNode *identifierNod
     assert(decl != nullptr);
 
     if(!m_currentFlowEdge->checkAssigned(decl)) {
-        printf("Warning: read of potentially unassigned variable '%s' at %s.\n",
-            identifierNode->getName().c_str(), identifierNode->getSourceLocationString().c_str());
+        auto id = m_semanticAnalyzer.createEvent(identifierNode, SemanticAnalyzer::EventType::Warning);
+        
+        std::stringstream ss;
+        ss << "Read of potentially unassigned variable '" << identifierNode->getName() << "' of type '" <<
+            identifierNode->getExpressionQualifierString() << identifierNode->getExpressionTypeString() << "' at " <<
+            identifierNode->getSourceLocationString() << ".";
+
+        m_semanticAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semanticAnalyzer.getEvent(id).EventLoc() = identifierNode->getSourceLocation();
 
         if(decl == m_currentDeclaration) {
             /* use of a variable within its own initialization */
@@ -2704,8 +2726,15 @@ void VariableAssignmentChecker::postNodeVisit(AST::DeclarationNode *declarationN
     }
 
     if(m_currentDeclarationRecursiveInit) {
-        printf("Warning: Self-initialization involves read of potentially unassigned variable '%s' at %s.\n",
-            declarationNode->getName().c_str(), declarationNode->getSourceLocationString().c_str());
+        auto id = m_semanticAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Warning);
+        
+        std::stringstream ss;
+        ss << "Self-initialization involves read of potentially unassigned variable '" << declarationNode->getName() << "' of type '" <<
+            declarationNode->getQualifierString() << declarationNode->getTypeString() << "' at " <<
+            declarationNode->getSourceLocationString() << ".";
+
+        m_semanticAnalyzer.getEvent(id).Message() = std::move(ss.str());
+        m_semanticAnalyzer.getEvent(id).EventLoc() = declarationNode->getSourceLocation();
 
         m_currentDeclarationRecursiveInit = false;
     } else {
@@ -2791,6 +2820,18 @@ int semantic_check(node * ast) {
     printf("AST DUMP POST TYPE CHECK\n");
     ast_print(ast);
 
+    /* Evaluate initialization for const-qualified declaration */
+    SEMA::ConstantDeclarationOptimizer constDeclOptimizer;
+    static_cast<AST::ASTNode *>(ast)->visit(constDeclOptimizer);
+    printf("***************************************\n");
+    printf("AST DUMP POST CONST DECL OPT\n");
+    ast_print(ast);
+    /// TODO: TEST THIS!
+
+    /* Ensure that every variable has been assigned a value before being read */
+    SEMA::VariableAssignmentChecker varAssignmentChecker(semaAnalyzer);
+    static_cast<AST::ASTNode *>(ast)->visit(varAssignmentChecker);
+
     /* Analyzing Semantic Analysis Result */
     int numEvents = semaAnalyzer.getNumberEvents();
     semaAnalyzer.setColorPrintEnabled(true);
@@ -2803,18 +2844,6 @@ int semantic_check(node * ast) {
     if(numEvents != 0) {
         printf("--------------------------------------------------------------------------\n");
     }
-
-    /* Evaluate initialization for const-qualified declaration */
-    SEMA::ConstantDeclarationOptimizer constDeclOptimizer;
-    static_cast<AST::ASTNode *>(ast)->visit(constDeclOptimizer);
-    printf("***************************************\n");
-    printf("AST DUMP POST CONST DECL OPT\n");
-    ast_print(ast);
-    /// TODO: TEST THIS!
-
-    /* Ensure that every variable has been assigned a value before being read */
-    SEMA::VariableAssignmentChecker varAssignmentChecker;
-    static_cast<AST::ASTNode *>(ast)->visit(varAssignmentChecker);
-
+    
     return 1;
 }
