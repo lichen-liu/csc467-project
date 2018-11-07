@@ -4,7 +4,7 @@ import os
 import subprocess
 
 compiler467_exe = './compiler467'
-test_dir = './tests/semantic_const/'
+test_dir = './tests/semantic_assigned/'
 prev_dir = test_dir + 'prev/'
 
 print "Rebuild:"
