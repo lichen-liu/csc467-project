@@ -1,70 +1,69 @@
 # Must be executed in compiler467/
 
-import difflib
 import os
 import subprocess
+import re
 
-compiler467_exe = './compiler467'
-test_dir = './tests/semantic/'
-prev_dir = test_dir + 'prev/'
+test_semantic_assigned_script = '../compiler467/tests/test_semantic_assigned.py'
+test_semantic_const_script = '../compiler467/tests/test_semantic_const.py'
+test_semantic_core_script = '../compiler467/tests/test_semantic_core.py'
 
-print "Rebuild:"
-p = subprocess.Popen(['make', 'clean'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-make_clean_out, make_clean_err = p.communicate()
-if make_clean_err:
-    print make_clean_out
-    print make_clean_err
-    raise Exception("make clean failed")
+total_passed = 0
+
+print '0..'
+
+semantic_assigned_passed = True
+p = subprocess.Popen(['python', test_semantic_assigned_script], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+run_out, run_err = p.communicate()
+total_out = run_err + run_out
+print total_out
+matchObj = re.search(r'Successful!\sTotal\sPassed:\s([0-9]+)', total_out)
+if matchObj:
+   total_passed += int(matchObj.group(1))
 else:
-    print "    clean."
+   semantic_assigned_passed = False
 
-p = subprocess.Popen(['make'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-make_out, make_err = p.communicate()
-print "    make."
+print '0..1..'
 
-passed_count = 0
-for root, dirs, files in os.walk(test_dir):
-    if root == test_dir:
-        for test_target_file in files:
-            print test_target_file + ':'
+semantic_const_passed = True
+p = subprocess.Popen(['python', test_semantic_const_script], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+run_out, run_err = p.communicate()
+total_out = run_err + run_out
+print total_out
+matchObj = re.search(r'Successful!\sTotal\sPassed:\s([0-9]+)', total_out)
+if matchObj:
+   total_passed += int(matchObj.group(1))
+else:
+   semantic_const_passed = False
 
-            p = subprocess.Popen([compiler467_exe, test_dir + test_target_file], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-            run_out, run_err = p.communicate()
-            total_out = run_out + run_err
+print '0..1..2..'
 
-            for prev_root, prev_dirs, prev_files in os.walk(prev_dir):
-                if test_target_file not in prev_files:
-                    print '    Error: ' + test_target_file + ' cannot be found in ' + prev_dir
-                    print '           Maybe it is a new test, consider adding the expected output to prev!\n'
-                    raise Exception(test_target_file + ' cannot be found in ' + prev_dir)
+semantic_core_passed = True
+p = subprocess.Popen(['python', test_semantic_core_script], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+run_out, run_err = p.communicate()
+total_out = run_err + run_out
+print total_out
+matchObj = re.search(r'Successful!\sTotal\sPassed:\s([0-9]+)', total_out)
+if matchObj:
+   total_passed += int(matchObj.group(1))
+else:
+   semantic_core_passed = False
 
-            with open(prev_dir + test_target_file, 'r') as prev_file:
-                prev_total_out = prev_file.read()
-                if prev_total_out == total_out:
-                    print '    Passed.'
-                    passed_count += 1
-                else:
-                    print '    Failed.'
-                    print '    DIFF'
-                    print '===== ACTUAL ====='
-                    print total_out
-                    print '=================='
-                    print '***** EXPECTED *****'
-                    print prev_total_out
-                    print '********************'
-                    print '----- DIFF(' + test_target_file + ') -----'
-                    total_out_lines = total_out.splitlines()
-                    prev_total_out_lines = prev_total_out.splitlines()
-                    line = 1
-                    for total_out_line in total_out_lines:
-                        if total_out_line != prev_total_out_lines[line-1]:
-                            print "Line: " + str(line) + ":"
-                            print "E:" + prev_total_out_lines[line-1]
-                            print "A:" + total_out_line
-                        line += 1
-                    print '----------------'
-                    print '\nThere are probably some bugs with the compiler, or update the EXPECTED in ' + prev_dir + test_target_file + '!'
-                    print
-                    raise Exception(test_target_file + ' failed to produce same output as expected!')
-print '##########'
-print 'Total Passed: ' + str(passed_count)
+
+print "===================================="
+if semantic_assigned_passed:
+    print test_semantic_assigned_script + " Passed!"
+else:
+    print test_semantic_assigned_script + " Failed!"
+
+if semantic_const_passed:
+    print test_semantic_const_script + " Passed!"
+else:
+    print test_semantic_const_script + " Failed!"
+
+if semantic_core_passed:
+    print test_semantic_core_script + " Passed!"
+else:
+    print test_semantic_core_script + " Failed!"
+
+print "Total Passed: " + str(total_passed) + "!"

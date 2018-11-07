@@ -16,8 +16,9 @@ python ./tests/test_parser.py
 
 ### To Test SEMANTIC ANALYSIS
 ``` bash
-./compiler467 -Tp ./tests/semantic/*.c
+./compiler467 -Tp ./tests/semantic_*/*.c
 python ./tests/test_semantic.py
+python ./tests/test_semantic_*.py
 ```
 
 ### To Count Lines

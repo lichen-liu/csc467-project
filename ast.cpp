@@ -7,8 +7,6 @@
 #include "common.h"
 #include "parser.tab.h"
 
-#define DEBUG_PRINT_TREE 0
-
 node *ast = NULL;
 
 //////////////////////////////////////////////////////////////////
@@ -189,12 +187,16 @@ class Printer: public Visitor {
     
     private:
         bool m_printSourceLocation = false;
+        FILE *m_out = stdout;
     public:
         void setPrintSourceLocation(bool printSourceLocation) { m_printSourceLocation = printSourceLocation; }
+        void setOutput(FILE *out) { m_out = out; }
+        FILE *getOutput() const { return m_out; }
+
     private:
         void printSourceLocation(const ASTNode *node) const {
             if(m_printSourceLocation) {
-                printf("<%s>", node->getSourceLocationString().c_str());
+                fprintf(m_out, "<%s>", node->getSourceLocationString().c_str());
             }
         }
     
@@ -209,193 +211,193 @@ class Printer: public Visitor {
     private:
         virtual void nodeVisit(ExpressionsNode *expressionsNode) {
             for(ExpressionNode *expr: expressionsNode->getExpressionList()) {
-                printf(" ");
+                fprintf(m_out, " ");
                 expr->visit(*this);
             }
         }
 
         virtual void nodeVisit(UnaryExpressionNode *unaryExpressionNode) {
             // (UNARY type op expr)
-            printf("(UNARY");
+            fprintf(m_out, "(UNARY");
             printSourceLocation(unaryExpressionNode);
-            printf(" ");
-            printf("%s ", unaryExpressionNode->getExpressionTypeString().c_str());
-            printf("%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s ", unaryExpressionNode->getExpressionTypeString().c_str());
+            fprintf(m_out, "%s ", getOperatorString(unaryExpressionNode->getOperator()).c_str());
             unaryExpressionNode->getExpression()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(BinaryExpressionNode *binaryExpressionNode) {
             // (BINARY type op left right)
-            printf("(BINARY");
+            fprintf(m_out, "(BINARY");
             printSourceLocation(binaryExpressionNode);
-            printf(" ");
-            printf("%s ", binaryExpressionNode->getExpressionTypeString().c_str());
-            printf("%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s ", binaryExpressionNode->getExpressionTypeString().c_str());
+            fprintf(m_out, "%s ", getOperatorString(binaryExpressionNode->getOperator()).c_str());
             binaryExpressionNode->getLeftExpression()->visit(*this);
-            printf(" ");
+            fprintf(m_out, " ");
             binaryExpressionNode->getRightExpression()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(IntLiteralNode *intLiteralNode) {
             // <literal>
-            printf("%d", intLiteralNode->getVal());
+            fprintf(m_out, "%d", intLiteralNode->getVal());
             printSourceLocation(intLiteralNode);
         }
 
         virtual void nodeVisit(FloatLiteralNode *floatLiteralNode) {
             // <literal>
-            printf("%f", floatLiteralNode->getVal());
+            fprintf(m_out, "%f", floatLiteralNode->getVal());
             printSourceLocation(floatLiteralNode);
         }
 
         virtual void nodeVisit(BooleanLiteralNode *booleanLiteralNode) {
             // <literal>
-            printf("%s", (booleanLiteralNode->getVal() ? "true":"false"));
+            fprintf(m_out, "%s", (booleanLiteralNode->getVal() ? "true":"false"));
             printSourceLocation(booleanLiteralNode);
         }
 
         virtual void nodeVisit(IdentifierNode *identifierNode) {
             // <identifier>
-            printf("%s", identifierNode->getName().c_str());
+            fprintf(m_out, "%s", identifierNode->getName().c_str());
             printSourceLocation(identifierNode);
         }
 
         virtual void nodeVisit(IndexingNode *indexingNode) {
             // (INDEX type id index)
-            printf("(INDEX");
+            fprintf(m_out, "(INDEX");
             printSourceLocation(indexingNode);
-            printf(" ");
-            printf("%s ", indexingNode->getExpressionTypeString().c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s ", indexingNode->getExpressionTypeString().c_str());
             indexingNode->getIdentifier()->visit(*this);
-            printf(" ");
+            fprintf(m_out, " ");
             indexingNode->getIndexExpression()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(FunctionNode *functionNode) {
             // (CALL name ...)
-            printf("(CALL");
+            fprintf(m_out, "(CALL");
             printSourceLocation(functionNode);
-            printf(" ");
-            printf("%s", functionNode->getName().c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s", functionNode->getName().c_str());
             functionNode->getArgumentExpressions()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(ConstructorNode *constructorNode) {
             // (CALL name ...)
-            printf("(CALL");
+            fprintf(m_out, "(CALL");
             printSourceLocation(constructorNode);
-            printf(" ");
-            printf("%s", getTypeString(constructorNode->getConstructorType()).c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s", getTypeString(constructorNode->getConstructorType()).c_str());
             constructorNode->getArgumentExpressions()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(StatementsNode *statementsNode) {
             // (STATEMENTS ...)
-            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(STATEMENTS");
+            fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
+            fprintf(m_out, "(STATEMENTS");
             printSourceLocation(statementsNode);
-            printf("\n");
+            fprintf(m_out, "\n");
             enterScope();
             for(StatementNode *stmt: statementsNode->getStatementList()) {
-                printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+                fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
                 stmt->visit(*this);
-                printf("\n");
+                fprintf(m_out, "\n");
             }
             exitScope();
-            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf(")\n");
+            fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
+            fprintf(m_out, ")\n");
         }
 
         virtual void nodeVisit(DeclarationNode *declarationNode) {
             // (DECLARATION variable-name type-name initial-value?)
-            printf("(DECLARATION");
+            fprintf(m_out, "(DECLARATION");
             printSourceLocation(declarationNode);
-            printf(" ");
-            printf("%s ", declarationNode->getName().c_str());
-            printf("%s", declarationNode->getQualifierString().c_str());
-            printf("%s", declarationNode->getTypeString().c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s ", declarationNode->getName().c_str());
+            fprintf(m_out, "%s", declarationNode->getQualifierString().c_str());
+            fprintf(m_out, "%s", declarationNode->getTypeString().c_str());
             if(declarationNode->getInitValue() != nullptr) {
-                printf(" ");
+                fprintf(m_out, " ");
                 declarationNode->getInitValue()->visit(*this);
             } else if(declarationNode->getExpression() != nullptr) {
-                printf(" ");
+                fprintf(m_out, " ");
                 declarationNode->getExpression()->visit(*this);
             }
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(DeclarationsNode *declarationsNode) {
             // (DECLARATIONS ...)
-            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf("(DECLARATIONS");
+            fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
+            fprintf(m_out, "(DECLARATIONS");
             printSourceLocation(declarationsNode);
-            printf("\n");
+            fprintf(m_out, "\n");
             enterScope();
             for(DeclarationNode *decl: declarationsNode->getDeclarationList()) {
-                printf("%s", getIndentSpaceString(getIndentSize()).c_str());
+                fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
                 decl->visit(*this);
-                printf("\n");
+                fprintf(m_out, "\n");
             }
             exitScope();
-            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf(")\n");
+            fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
+            fprintf(m_out, ")\n");
         }
 
         virtual void nodeVisit(IfStatementNode *ifStatementNode) {
             // (IF cond then-stmt else-stmt?)
-            printf("(IF");
+            fprintf(m_out, "(IF");
             printSourceLocation(ifStatementNode);
-            printf(" ");
+            fprintf(m_out, " ");
             ifStatementNode->getConditionExpression()->visit(*this);
-            printf(" ");
+            fprintf(m_out, " ");
             ifStatementNode->getThenStatement()->visit(*this);
             if(ifStatementNode->getElseStatement() != nullptr) {
-                printf(" ");
+                fprintf(m_out, " ");
                 ifStatementNode->getElseStatement()->visit(*this);
             }
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(AssignmentNode *assignmentNode) {
             // (ASSIGN type variable-name new-value)
-            printf("(ASSIGN");
+            fprintf(m_out, "(ASSIGN");
             printSourceLocation(assignmentNode);
-            printf(" ");
-            printf("%s ", assignmentNode->getExpressionTypeString().c_str());
+            fprintf(m_out, " ");
+            fprintf(m_out, "%s ", assignmentNode->getExpressionTypeString().c_str());
             assignmentNode->getVariable()->visit(*this);
-            printf(" ");
+            fprintf(m_out, " ");
             assignmentNode->getExpression()->visit(*this);
-            printf(")");
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(NestedScopeNode *nestedScopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE");
+            fprintf(m_out, "(SCOPE");
             printSourceLocation(nestedScopeNode);
-            printf("\n");
+            fprintf(m_out, "\n");
             enterScope();
             nestedScopeNode->getDeclarations()->visit(*this);
             nestedScopeNode->getStatements()->visit(*this);
             exitScope();
-            printf("%s", getIndentSpaceString(getIndentSize()).c_str());
-            printf(")");
+            fprintf(m_out, "%s", getIndentSpaceString(getIndentSize()).c_str());
+            fprintf(m_out, ")");
         }
 
         virtual void nodeVisit(ScopeNode *scopeNode) {
             // (SCOPE (DECLARATIONS ...) (STATEMENTS ...))
-            printf("(SCOPE");
+            fprintf(m_out, "(SCOPE");
             printSourceLocation(scopeNode);
-            printf("\n");
+            fprintf(m_out, "\n");
             enterScope();
             scopeNode->getDeclarations()->visit(*this);
             scopeNode->getStatements()->visit(*this);
             exitScope();
-            printf(")\n");
+            fprintf(m_out, ")\n");
         }
 };
 
@@ -740,6 +742,7 @@ void ast_print(node *ast) {
     if(ast != nullptr) {
         AST::Printer printer;
         printer.setPrintSourceLocation(false);
+        printer.setOutput(dumpFile);
         static_cast<AST::ASTNode *>(ast)->visit(printer);
     }
 }

@@ -88,14 +88,12 @@ int main (int argc, char *argv[]) {
     return 0; // parse failed
   }
 
-/* Phase 3: Call the AST dumping routine if requested */
+  /* Phase 3: Semantic Analysis */
+  semantic_check(ast);
+
+  /* Phase 3: Call the AST dumping routine if requested */
   if (dumpAST)
     ast_print(ast);
-
-/* Phase 3: Semantic Analysis */
-if(0 == semantic_check(ast)) {
-  return 0; // semantic analysis failed
-}
 
 /* Phase 4: Add code to call the code generation routine */
 /* TODO: call your code generation routine here */
