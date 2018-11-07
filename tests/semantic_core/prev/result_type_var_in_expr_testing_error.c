@@ -1,28 +1,3 @@
-(SCOPE
-    (DECLARATIONS
-        (DECLARATION gl_FragColor result vec4)
-        (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
-        (DECLARATION gl_TexCoord attribute vec4)
-        (DECLARATION gl_Color attribute vec4)
-        (DECLARATION gl_Secondary attribute vec4)
-        (DECLARATION gl_FogFragCoord attribute vec4)
-        (DECLARATION gl_Light_Half uniform vec4)
-        (DECLARATION gl_Light_Ambient uniform vec4)
-        (DECLARATION gl_Material_Shininess uniform vec4)
-        (DECLARATION env1 uniform vec4)
-        (DECLARATION env2 uniform vec4)
-        (DECLARATION env3 uniform vec4)
-        (DECLARATION gl_FragColor vec4)
-        (DECLARATION a vec4)
-        (DECLARATION b vec4)
-        (DECLARATION c vec3)
-    )
-    (STATEMENTS
-        (ASSIGN ANY_TYPE a (BINARY ANY_TYPE + (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - gl_FragColor))))) gl_FragCoord))
-        (ASSIGN ANY_TYPE b (BINARY ANY_TYPE + (BINARY ANY_TYPE + c a) (BINARY ANY_TYPE + (INDEX float gl_FragCoord 2) c)))
-    )
-)
 
 --------------------------------------------------------------------------
 Error-0: Duplicate declaration of 'vec4 gl_FragColor' at Line 2:5 to Line 2:23. Previously declared at Line 0:0 to Line 0:0.
@@ -67,3 +42,29 @@ Error-6: Variable assignment for 'b' at Line 8:5 to Line 8:39, has expression of
       8:              b = c + a + (gl_FragCoord[2] + c);
                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 --------------------------------------------------------------------------
+(SCOPE
+    (DECLARATIONS
+        (DECLARATION gl_FragColor result vec4)
+        (DECLARATION gl_FragDepth result bool)
+        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_TexCoord attribute vec4)
+        (DECLARATION gl_Color attribute vec4)
+        (DECLARATION gl_Secondary attribute vec4)
+        (DECLARATION gl_FogFragCoord attribute vec4)
+        (DECLARATION gl_Light_Half uniform vec4)
+        (DECLARATION gl_Light_Ambient uniform vec4)
+        (DECLARATION gl_Material_Shininess uniform vec4)
+        (DECLARATION env1 uniform vec4)
+        (DECLARATION env2 uniform vec4)
+        (DECLARATION env3 uniform vec4)
+        (DECLARATION gl_FragColor vec4)
+        (DECLARATION a vec4 (CALL vec4 2.000000 2.000000 2.000000 3.000000))
+        (DECLARATION b vec4 (CALL vec4 2.000000 2.000000 2.000000 3.000000))
+        (DECLARATION c vec3 (CALL vec3 2.000000 2.000000 3.000000))
+    )
+    (STATEMENTS
+        (ASSIGN ANY_TYPE a (BINARY ANY_TYPE + (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - (UNARY ANY_TYPE - gl_FragColor))))) gl_FragCoord))
+        (ASSIGN ANY_TYPE b (BINARY ANY_TYPE + (BINARY ANY_TYPE + c a) (BINARY ANY_TYPE + (INDEX float gl_FragCoord 2) c)))
+    )
+)
+Failed to compile

@@ -1,3 +1,13 @@
+
+--------------------------------------------------------------------------
+Error-0: If-statement condition expression has write-only Result type at Line 2:8 to Line 2:20.
+      2:              if(gl_FragDepth)
+                         ^^^^^^^^^^^^ 
+
+Info: The first write-only Result variable is 'gl_FragDepth':
+      2:              if(gl_FragDepth)
+                         ~~~~~~~~~~~~ 
+--------------------------------------------------------------------------
 (SCOPE
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
@@ -18,13 +28,4 @@
         (IF gl_FragDepth )
     )
 )
-
---------------------------------------------------------------------------
-Error-0: If-statement condition expression has write-only Result type at Line 2:8 to Line 2:20.
-      2:              if(gl_FragDepth)
-                         ^^^^^^^^^^^^ 
-
-Info: The first write-only Result variable is 'gl_FragDepth':
-      2:              if(gl_FragDepth)
-                         ~~~~~~~~~~~~ 
---------------------------------------------------------------------------
+Failed to compile

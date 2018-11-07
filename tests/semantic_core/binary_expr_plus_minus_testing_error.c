@@ -4,14 +4,14 @@
      */
 
     /* Declaration */
-    float floata;
-    float floatb;
-    float floatc;
-    vec3 vec3a;
+    float floata = 0.;
+    float floatb = 1.;
+    float floatc = 2.;
+    vec3 vec3a = vec3(1., 2., 3.);
     ivec3 ivec3a = ivec3(10, 20, 30);
-    ivec3 ivec3b;
-    ivec3 ivec3c;
-    ivec4 ivec4a;
+    ivec3 ivec3b = ivec3(1,2,3);
+    ivec3 ivec3c = ivec3(4,5,6);
+    ivec4 ivec4a = ivec4(5,6,7,8);
     int inta;
 
     /* scalar */

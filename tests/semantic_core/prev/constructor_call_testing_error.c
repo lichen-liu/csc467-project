@@ -1,34 +1,3 @@
-(SCOPE
-    (DECLARATIONS
-        (DECLARATION gl_FragColor result vec4)
-        (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
-        (DECLARATION gl_TexCoord attribute vec4)
-        (DECLARATION gl_Color attribute vec4)
-        (DECLARATION gl_Secondary attribute vec4)
-        (DECLARATION gl_FogFragCoord attribute vec4)
-        (DECLARATION gl_Light_Half uniform vec4)
-        (DECLARATION gl_Light_Ambient uniform vec4)
-        (DECLARATION gl_Material_Shininess uniform vec4)
-        (DECLARATION env1 uniform vec4)
-        (DECLARATION env2 uniform vec4)
-        (DECLARATION env3 uniform vec4)
-        (DECLARATION inta int (CALL int 1))
-        (DECLARATION floata float (CALL float 2.000000))
-        (DECLARATION boola bool (CALL bool true))
-        (DECLARATION ivec2a ivec2 (CALL ivec2 1 inta))
-        (DECLARATION bvec3a bvec3 (CALL bvec3 true false boola))
-        (DECLARATION vec4a vec4 (CALL vec4 1.000000 2.000000 floata floata))
-    )
-    (STATEMENTS
-        (ASSIGN ANY_TYPE inta (CALL int 1 2))
-        (ASSIGN ANY_TYPE inta (CALL int 2.000000))
-        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1 2 3))
-        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1 2.000000))
-        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1))
-        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 true 1))
-    )
-)
 
 --------------------------------------------------------------------------
 Error-0: Unmatched constructor parameters when calling constructor for 'int' at Line 11:12 to Line 11:20.
@@ -91,3 +60,35 @@ Error-11: Variable assignment for 'ivec2a' at Line 16:5 to Line 16:29, has expre
      16:              ivec2a = ivec2(true, 1);
                       ^^^^^^^^^^^^^^^^^^^^^^^^
 --------------------------------------------------------------------------
+(SCOPE
+    (DECLARATIONS
+        (DECLARATION gl_FragColor result vec4)
+        (DECLARATION gl_FragDepth result bool)
+        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_TexCoord attribute vec4)
+        (DECLARATION gl_Color attribute vec4)
+        (DECLARATION gl_Secondary attribute vec4)
+        (DECLARATION gl_FogFragCoord attribute vec4)
+        (DECLARATION gl_Light_Half uniform vec4)
+        (DECLARATION gl_Light_Ambient uniform vec4)
+        (DECLARATION gl_Material_Shininess uniform vec4)
+        (DECLARATION env1 uniform vec4)
+        (DECLARATION env2 uniform vec4)
+        (DECLARATION env3 uniform vec4)
+        (DECLARATION inta int (CALL int 1))
+        (DECLARATION floata float (CALL float 2.000000))
+        (DECLARATION boola bool (CALL bool true))
+        (DECLARATION ivec2a ivec2 (CALL ivec2 1 inta))
+        (DECLARATION bvec3a bvec3 (CALL bvec3 true false boola))
+        (DECLARATION vec4a vec4 (CALL vec4 1.000000 2.000000 floata floata))
+    )
+    (STATEMENTS
+        (ASSIGN ANY_TYPE inta (CALL int 1 2))
+        (ASSIGN ANY_TYPE inta (CALL int 2.000000))
+        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1 2 3))
+        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1 2.000000))
+        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 1))
+        (ASSIGN ANY_TYPE ivec2a (CALL ivec2 true 1))
+    )
+)
+Failed to compile

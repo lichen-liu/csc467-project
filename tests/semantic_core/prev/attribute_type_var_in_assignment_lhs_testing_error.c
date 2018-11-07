@@ -1,3 +1,13 @@
+
+--------------------------------------------------------------------------
+Error-0: Invalid variable assignment for Read-Only variable 'gl_Color[0]' at Line 3:5 to Line 3:23.
+      3:              gl_Color[0] = 2.0;
+                      ^^^^^^^^^^^^^^^^^^
+
+Info: Predefined Variable: 'attribute float gl_Color'.
+      3:              gl_Color[0] = 2.0;
+                      ~~~~~~~~~~~       
+--------------------------------------------------------------------------
 (SCOPE
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
@@ -19,13 +29,4 @@
         (ASSIGN float (INDEX float gl_Color 0) 2.000000)
     )
 )
-
---------------------------------------------------------------------------
-Error-0: Invalid variable assignment for Read-Only variable 'gl_Color[0]' at Line 3:5 to Line 3:23.
-      3:              gl_Color[0] = 2.0;
-                      ^^^^^^^^^^^^^^^^^^
-
-Info: Predefined Variable: 'attribute float gl_Color'.
-      3:              gl_Color[0] = 2.0;
-                      ~~~~~~~~~~~       
---------------------------------------------------------------------------
+Failed to compile

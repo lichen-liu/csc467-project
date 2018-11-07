@@ -1,3 +1,23 @@
+
+--------------------------------------------------------------------------
+Error-0: Invalid variable assignment for Read-Only variable 'gl_Light_Half[1]' at Line 3:5 to Line 3:30.
+      3:              gl_Light_Half[1] = vec4a;
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Info: Predefined Variable: 'uniform float gl_Light_Half'.
+      3:              gl_Light_Half[1] = vec4a;
+                      ~~~~~~~~~~~~~~~~         
+--------------------------------------------------------------------------
+Error-1: Invalid variable assignment for 'gl_Light_Half[1]' at Line 3:5 to Line 3:30, has expression of non-compatible type 'vec4' at Line 3:24 to Line 3:29.
+      3:              gl_Light_Half[1] = vec4a;
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Info: Variable 'gl_Light_Half[1]' at Line 3:5 to Line 3:21 has type 'uniform float', and is a predefined variable.
+--------------------------------------------------------------------------
+Warning-2: Read of potentially unassigned variable 'vec4a' of type 'vec4' at Line 3:24 to Line 3:29.
+      3:              gl_Light_Half[1] = vec4a;
+                                         ^^^^^ 
+--------------------------------------------------------------------------
 (SCOPE
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
@@ -19,19 +39,4 @@
         (ASSIGN ANY_TYPE (INDEX float gl_Light_Half 1) vec4a)
     )
 )
-
---------------------------------------------------------------------------
-Error-0: Invalid variable assignment for Read-Only variable 'gl_Light_Half[1]' at Line 3:5 to Line 3:30.
-      3:              gl_Light_Half[1] = vec4a;
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Info: Predefined Variable: 'uniform float gl_Light_Half'.
-      3:              gl_Light_Half[1] = vec4a;
-                      ~~~~~~~~~~~~~~~~         
---------------------------------------------------------------------------
-Error-1: Invalid variable assignment for 'gl_Light_Half[1]' at Line 3:5 to Line 3:30, has expression of non-compatible type 'vec4' at Line 3:24 to Line 3:29.
-      3:              gl_Light_Half[1] = vec4a;
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Info: Variable 'gl_Light_Half[1]' at Line 3:5 to Line 3:21 has type 'uniform float', and is a predefined variable.
---------------------------------------------------------------------------
+Failed to compile

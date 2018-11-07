@@ -1,3 +1,13 @@
+
+--------------------------------------------------------------------------
+Error-0: Missing declaration for symbol 'ivec3a' at Line 2:13 to Line 2:19.
+      2:              int a = ivec3a[2];
+                              ^^^^^^    
+--------------------------------------------------------------------------
+Error-1: Variable declaration of 'int a' at Line 2:5 to Line 2:23, is initialized to an unknown type at Line 2:13 to Line 2:22 due to previous error(s).
+      2:              int a = ivec3a[2];
+                      ^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------------
 (SCOPE
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
@@ -18,13 +28,4 @@
     (STATEMENTS
     )
 )
-
---------------------------------------------------------------------------
-Error-0: Missing declaration for symbol 'ivec3a' at Line 2:13 to Line 2:19.
-      2:              int a = ivec3a[2];
-                              ^^^^^^    
---------------------------------------------------------------------------
-Error-1: Variable declaration of 'int a' at Line 2:5 to Line 2:23, is initialized to an unknown type at Line 2:13 to Line 2:22 due to previous error(s).
-      2:              int a = ivec3a[2];
-                      ^^^^^^^^^^^^^^^^^^
---------------------------------------------------------------------------
+Failed to compile

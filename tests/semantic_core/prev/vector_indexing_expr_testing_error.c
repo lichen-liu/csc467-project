@@ -1,3 +1,23 @@
+
+--------------------------------------------------------------------------
+Error-0: Invalid indexing of vector variable 'ivec3a' of type 'ivec3' at Line 9:9 to Line 9:18.
+      9:              b = ivec3a[3];
+                          ^^^^^^^^^ 
+
+Info: Expecting an index value between 0 to 2.
+--------------------------------------------------------------------------
+Error-1: Variable assignment for 'b' at Line 9:5 to Line 9:19, has expression of unknown type at Line 9:9 to Line 9:18 due to previous error(s).
+      9:              b = ivec3a[3];
+                      ^^^^^^^^^^^^^^
+--------------------------------------------------------------------------
+Error-2: Invalid indexing of non-vector variable 'b' of type 'int' at Line 10:9 to Line 10:13.
+     10:              b = b[2];
+                          ^^^^ 
+--------------------------------------------------------------------------
+Error-3: Variable assignment for 'b' at Line 10:5 to Line 10:14, has expression of unknown type at Line 10:9 to Line 10:13 due to previous error(s).
+     10:              b = b[2];
+                      ^^^^^^^^^
+--------------------------------------------------------------------------
 (SCOPE
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
@@ -24,23 +44,4 @@
         (ASSIGN ANY_TYPE b (INDEX ANY_TYPE b 2))
     )
 )
-
---------------------------------------------------------------------------
-Error-0: Invalid indexing of vector variable 'ivec3a' of type 'ivec3' at Line 9:9 to Line 9:18.
-      9:              b = ivec3a[3];
-                          ^^^^^^^^^ 
-
-Info: Expecting an index value between 0 to 2.
---------------------------------------------------------------------------
-Error-1: Variable assignment for 'b' at Line 9:5 to Line 9:19, has expression of unknown type at Line 9:9 to Line 9:18 due to previous error(s).
-      9:              b = ivec3a[3];
-                      ^^^^^^^^^^^^^^
---------------------------------------------------------------------------
-Error-2: Invalid indexing of non-vector variable 'b' of type 'int' at Line 10:9 to Line 10:13.
-     10:              b = b[2];
-                          ^^^^ 
---------------------------------------------------------------------------
-Error-3: Variable assignment for 'b' at Line 10:5 to Line 10:14, has expression of unknown type at Line 10:9 to Line 10:13 due to previous error(s).
-     10:              b = b[2];
-                      ^^^^^^^^^
---------------------------------------------------------------------------
+Failed to compile

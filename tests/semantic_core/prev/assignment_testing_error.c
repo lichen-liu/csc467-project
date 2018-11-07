@@ -1,34 +1,3 @@
-(SCOPE
-    (DECLARATIONS
-        (DECLARATION gl_FragColor result vec4)
-        (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
-        (DECLARATION gl_TexCoord attribute vec4)
-        (DECLARATION gl_Color attribute vec4)
-        (DECLARATION gl_Secondary attribute vec4)
-        (DECLARATION gl_FogFragCoord attribute vec4)
-        (DECLARATION gl_Light_Half uniform vec4)
-        (DECLARATION gl_Light_Ambient uniform vec4)
-        (DECLARATION gl_Material_Shininess uniform vec4)
-        (DECLARATION env1 uniform vec4)
-        (DECLARATION env2 uniform vec4)
-        (DECLARATION env3 uniform vec4)
-        (DECLARATION inta int)
-        (DECLARATION ivec3a ivec3)
-        (DECLARATION vec3a vec3)
-        (DECLARATION floata const float 2.000000)
-    )
-    (STATEMENTS
-        (ASSIGN ANY_TYPE a (BINARY ANY_TYPE + 2 2.000000))
-        (ASSIGN ANY_TYPE a 2)
-        (ASSIGN ANY_TYPE inta (BINARY ANY_TYPE + 2 2.000000))
-        (ASSIGN ANY_TYPE inta 2.000000)
-        (ASSIGN ANY_TYPE (INDEX float vec3a 0) (BINARY ANY_TYPE + 2 2.000000))
-        (ASSIGN ANY_TYPE (INDEX int ivec3a 1) 2.000000)
-        (ASSIGN ANY_TYPE (INDEX ANY_TYPE vec3a 3) 3.000000)
-        (ASSIGN ANY_TYPE floata 3.000000)
-    )
-)
 
 --------------------------------------------------------------------------
 Error-0: Missing declaration for symbol 'a' at Line 8:5 to Line 8:6.
@@ -107,3 +76,36 @@ Info: Variable 'floata' at Line 18:5 to Line 18:11 has type 'const float', and i
       6:              const float floata = 2.0;
                       ~~~~~~~~~~~~~~~~~~~~~~~~~
 --------------------------------------------------------------------------
+Info: Optimization for declaration of const-qualified symbol 'floata' of type 'const float' successful at Line 6:5 to Line 6:30.
+(SCOPE
+    (DECLARATIONS
+        (DECLARATION gl_FragColor result vec4)
+        (DECLARATION gl_FragDepth result bool)
+        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_TexCoord attribute vec4)
+        (DECLARATION gl_Color attribute vec4)
+        (DECLARATION gl_Secondary attribute vec4)
+        (DECLARATION gl_FogFragCoord attribute vec4)
+        (DECLARATION gl_Light_Half uniform vec4)
+        (DECLARATION gl_Light_Ambient uniform vec4)
+        (DECLARATION gl_Material_Shininess uniform vec4)
+        (DECLARATION env1 uniform vec4)
+        (DECLARATION env2 uniform vec4)
+        (DECLARATION env3 uniform vec4)
+        (DECLARATION inta int)
+        (DECLARATION ivec3a ivec3)
+        (DECLARATION vec3a vec3)
+        (DECLARATION floata const float 2.000000)
+    )
+    (STATEMENTS
+        (ASSIGN ANY_TYPE a (BINARY ANY_TYPE + 2 2.000000))
+        (ASSIGN ANY_TYPE a 2)
+        (ASSIGN ANY_TYPE inta (BINARY ANY_TYPE + 2 2.000000))
+        (ASSIGN ANY_TYPE inta 2.000000)
+        (ASSIGN ANY_TYPE (INDEX float vec3a 0) (BINARY ANY_TYPE + 2 2.000000))
+        (ASSIGN ANY_TYPE (INDEX int ivec3a 1) 2.000000)
+        (ASSIGN ANY_TYPE (INDEX ANY_TYPE vec3a 3) 3.000000)
+        (ASSIGN ANY_TYPE floata 3.000000)
+    )
+)
+Failed to compile

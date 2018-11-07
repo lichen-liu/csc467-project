@@ -226,6 +226,7 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
                     fprintf(m_out, " ");
                 }
             }
+            fprintf(m_out, "\n");
         } else {
             for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
                 const std::string &line = sourceContext.getLine(lineNumber);
@@ -233,7 +234,6 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
                 fprintf(m_out, "%s\n", line.c_str());
             }
         }
-        fprintf(m_out, "\n");
     }
 
     // Print reference location info and reference message
@@ -260,6 +260,7 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
                         fprintf(m_out, " ");
                     }
                 }
+                fprintf(m_out, "\n");
             } else {
                 for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
                     const std::string &line = sourceContext.getLine(lineNumber);
@@ -267,7 +268,6 @@ void SemanticAnalyzer::printEventNoColor(EventID eventID, const SourceContext &s
                     fprintf(m_out, "%s\n", line.c_str());
                 }
             }
-            fprintf(m_out, "\n");
         }
     }
 }
@@ -303,6 +303,7 @@ void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sou
                     printf(" ");
                 }
             }
+            printf("\n");
         } else {
             for(int lineNumber = eventLoc.firstLine; lineNumber <= eventLoc.lastLine; lineNumber++) {
                 const std::string &line = sourceContext.getLine(lineNumber);
@@ -310,7 +311,6 @@ void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sou
                 printf("\033[1;37m%s\033[0m\n", line.c_str());
             }
         }
-        printf("\n");
     }
 
     // Print reference location info and reference message
@@ -337,6 +337,7 @@ void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sou
                         printf(" ");
                     }
                 }
+                printf("\n");
             } else {
                 for(int lineNumber = refLoc.firstLine; lineNumber <= refLoc.lastLine; lineNumber++) {
                     const std::string &line = sourceContext.getLine(lineNumber);
@@ -344,7 +345,6 @@ void SemanticAnalyzer::printEventColor(EventID eventID, const SourceContext &sou
                     printf("\033[1;37m%s\033[0m\n", line.c_str());
                 }
             }
-            printf("\n");
         }
     }
 }
