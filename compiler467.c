@@ -3,8 +3,8 @@
  *
  * Student Name 1: Lichen Liu
  * Student ID 1: 1001721498
- * Student Name 2:
- * Student ID 2:
+ * Student Name 2: Gan Yang
+ * Student ID 2: 1000909163
  *  
  * compiler467.c
  *
