@@ -1,0 +1,74 @@
+NOTE: We have included a color print mode, in which you can have better visualization on
+compiler warnings and errors (will be printed to stdout).
+To use this feature:
+1. goto "semantic.cpp"
+2. uncomment "#define NORMAL_MODE"
+3. rebuild
+
+
+
+===========================================================================================
+SUMMARY: We have completed all five bonus parts. In the following section, we will
+describe what we have done.
+
+
+
+===========================================================================================
+Bonus: If you choose to do this bonus then the previous requirement is subsumed
+by this requirement. const qualified variables must be initialized with constant
+expressions. A constant expression is an expression where every operand is either
+a literal or const qualified. If you do this bonus, then the value printed for the
+initial-value? field of the DECLARATION must be the value of the expression,
+and not the AST-printed expression. This is challenging because you will need to do
+minimal constant folding and constant propagation.
+
+
+Comment: Our compiler is able to evaluate the value of the initialization expressions
+for all const-qualified-declarations EXCEPT for the following conditions:
+1. If the expression contains errors AND/OR
+2. If the expression contains uniform type of variable AND/OR
+3. If the expression contains other const-qualified variable that cannot
+   have its initialization expression evaluated due to above reasons
+The value of initialization after evaluation can be found in the S-expression for declaration.
+Scalar literal value is printed directly, whereas vector literal value is shown as a call to its constructor with
+all scalar literal values as arguments.
+
+
+
+===========================================================================================
+Bonus: Ensure that every variable has been assigned a value before being read. This
+is challenging because it requires checking potentially all control flow paths that lead
+to a read of a variable.
+
+
+Comment: Our compiler is able to evaluate whether a variable has been assigned a value before read. In
+such case, a warning message will be shown (will not stop the compilation flow). This also includes self-initialization,
+for example, 'int a = a;'. A variable is treated as having been assigned a value as long as any of its slices (e.g. vector[i])
+has been assigned a value. In case that only vector[0] is assigned a value, a warning will not be prompted when
+vector[1] is being read.
+
+We determine that whether a variable is not assigned a value before read by looking at all its previous potential control flow paths.
+If an assignment to a variable is made in a then-branch but not in the else-branch, then in the scope of then-branch,
+that variable is reguared as assigned; however after the end of this if-then-else statement, we do not consider that variable as
+assigned anymore, because the program could be executing through the else-branch (without variable assignment).
+
+We have also applied some constant-propagation and constant-folding optimizations for case that a conditional expression in the
+if statement is a constant boolean variable which is either a compile-time deterministic true or false. In such case, any variables that have assignments
+made in the always-true-branch but not made in the always-false-branch will also be considered assigned after the if-statement.
+
+
+
+===========================================================================================
+Bonus: Report the line number on which the semantic error occured.
+
+Bonus: Report the column of the line, with the line number, on which the error occured.
+
+Bonus: Provide a contextual message that gives extra meaning to the error to help the
+programmer debug the error. For example, if the error involves writing to a const qualified
+variable, then report the line number where that variable was declared.
+
+
+Comment: Our compiler is also able to provide extremely detailed and friendly error and warning messages.
+Line numbers, column numbers along with the exact text strings from source file will be shown. The well-explained
+error and warning messages are able to direct the user to problems in their source code very easily.
+For better user experience, you can try our color-mode as explained at the very top of this document.

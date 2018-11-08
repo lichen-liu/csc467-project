@@ -1,6 +1,11 @@
 /***********************************************************************
  * **YOUR GROUP INFO SHOULD GO HERE**
  *
+ * Student Name 1: Lichen Liu
+ * Student ID 1: 1001721498
+ * Student Name 2:
+ * Student ID 2:
+ *  
  * compiler467.c
  *
  * This is the main driver program for the CSC467F course project
