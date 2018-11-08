@@ -14,6 +14,7 @@
         (DECLARATION env2 uniform vec4)
         (DECLARATION env3 uniform vec4)
         (DECLARATION floata const float (INDEX float gl_Light_Half 3))
+        (DECLARATION floatb const float floata)
     )
     (STATEMENTS
     )
