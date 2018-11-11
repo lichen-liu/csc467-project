@@ -43,6 +43,7 @@ class SymbolTable {
         /* Identifier Related */
         void markSymbolRefPos(AST::IdentifierNode *ident);
         AST::DeclarationNode *getSymbolDecl(AST::IdentifierNode *ident) const;
+        AST::DeclarationNode *findAnyRedeclaration(AST::DeclarationNode *decl) const;
     
     public:
         void printScopeLeaves() const;

@@ -91,6 +91,27 @@ AST::DeclarationNode *SymbolTable::getSymbolDecl(AST::IdentifierNode *ident) con
     return resultDecl;
 }
 
+AST::DeclarationNode *SymbolTable::findAnyRedeclaration(AST::DeclarationNode *decl) const {
+    assert(decl != nullptr);
+
+    SymbolNode *symNode = m_currentHead;
+
+    AST::DeclarationNode *redecl = nullptr;
+
+    while(symNode != nullptr) {
+        AST::DeclarationNode *curDecl = symNode->getDecl();
+
+        if(curDecl->getName() == decl->getName()) {
+            redecl = curDecl;
+            break;
+        }
+
+        symNode = symNode->getPrevSymbolNode();
+    }
+
+    return redecl;
+}
+
 int SymbolTable::printSymbolTreeTo(SymbolNode *node, const AST::DeclarationNode *markDecl) const {
     if(node == nullptr) {
         return 0;

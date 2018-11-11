@@ -24,6 +24,22 @@
 
 namespace SEMA{ /* START NAMESPACE */
 
+const std::vector<std::string> l_predefinedVariableNames = {
+    "gl_FragColor",
+    "gl_FragDepth",
+    "gl_FragCoord",
+    "gl_TexCoord",
+    "gl_Color",
+    "gl_Secondary",
+    "gl_FogFragCoord",
+    "gl_Light_Half",
+    "gl_Light_Ambient",
+    "gl_Material_Shininess",
+    "env1",
+    "env2",
+    "env3"
+};
+
 class SourceContext {
     private:
         std::vector<std::string> m_sourceFile;
@@ -531,14 +547,27 @@ class SymbolDeclVisitor: public AST::Visitor {
         }
 
         virtual void preNodeVisit(AST::DeclarationNode *declarationNode) {
-            // Declare the symbol before traversing the possible evaluation on rhs
-            AST::DeclarationNode *redecl = m_symbolTable.declareSymbol(declarationNode);
+            AST::DeclarationNode *redecl = nullptr;
+            if(std::count(l_predefinedVariableNames.begin(), l_predefinedVariableNames.end(), declarationNode->getName()) == 1) {
+                redecl = m_symbolTable.findAnyRedeclaration(declarationNode);
+
+                if(redecl == nullptr) {
+                    // First time declare predefined variables
+                    redecl = m_symbolTable.declareSymbol(declarationNode);
+                }
+            } else {
+                // Declare the symbol before traversing the possible evaluation on rhs
+                redecl = m_symbolTable.declareSymbol(declarationNode);
+            }
 
             if(redecl != nullptr) {
                 std::stringstream ss;
                 ss << "Duplicate declaration of '" << declarationNode->getQualifierString() << declarationNode->getTypeString() <<
-                    " " << declarationNode->getName() << "' at " << declarationNode->getSourceLocationString() << ". " <<
-                    "Previously declared at " << redecl->getSourceLocationString() << ".";
+                    " " << declarationNode->getName() << "' at " << declarationNode->getSourceLocationString() << ".";
+
+                if(redecl->isOrdinaryType()) {
+                    ss << " Previously declared at " << redecl->getSourceLocationString() << ".";
+                }
 
                 auto id = m_semaAnalyzer.createEvent(declarationNode, SemanticAnalyzer::EventType::Error);
                 m_semaAnalyzer.getEvent(id).Message() = std::move(ss.str());

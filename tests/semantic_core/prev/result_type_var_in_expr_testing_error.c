@@ -1,6 +1,6 @@
 
 --------------------------------------------------------------------------
-Error-0: Duplicate declaration of 'vec4 gl_FragColor' at Line 2:5 to Line 2:23. Previously declared at Line 0:0 to Line 0:0.
+Error-0: Duplicate declaration of 'vec4 gl_FragColor' at Line 2:5 to Line 2:23.
       2:              vec4 gl_FragColor;
                       ^^^^^^^^^^^^^^^^^^
 
