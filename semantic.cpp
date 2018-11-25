@@ -1662,7 +1662,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     // Both arithmetic type
                     // Both scalar type
                     assert(lhsDataType == rhsDataType);
-                    return lhsDataType;
+                    return BOOL_T;
                 }
             }
 
@@ -1690,7 +1690,7 @@ int TypeChecker::inferDataType(int op, int lhsDataType, int rhsDataType) {
                     // Both arithmetic type
                     // Same type order
                     assert(lhsDataType == rhsDataType);
-                    return lhsDataType;
+                    return BOOL_T;
                 }
             }
 
