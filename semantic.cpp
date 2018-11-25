@@ -632,11 +632,6 @@ class WriteOnlyFinder: public AST::Visitor {
         const std::vector<const AST::VariableNode *> &getWriteOnlyVars() const { return m_writeOnlyVars; }
 };
 
-enum class DataTypeCategory {
-    Boolean,
-    Arithmetic
-};
-
 DataTypeCategory getDataTypeCategory(int dataType) {
     switch(dataType) {
         case BOOL_T:
