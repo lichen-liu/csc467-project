@@ -1,4 +1,6 @@
 {
+    const bool booltrue = true;
+    const bool boolfalse = false;
     const ivec3 ivec3a = ivec3(1, 2, 3);
     const vec4 vec4a = vec4(1.0, 2.0, 3.0, 4.0);
     float floata;
