@@ -42,7 +42,7 @@ Warning-7: Read of potentially unassigned variable 'bvec3b' of type 'bvec3' at L
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
         (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_FragCoord attribute vec4)
         (DECLARATION gl_TexCoord attribute vec4)
         (DECLARATION gl_Color attribute vec4)
         (DECLARATION gl_Secondary attribute vec4)

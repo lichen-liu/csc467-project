@@ -12,7 +12,7 @@ Warning-1: Self-initialization involves read of potentially unassigned variable 
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
         (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_FragCoord attribute vec4)
         (DECLARATION gl_TexCoord attribute vec4)
         (DECLARATION gl_Color attribute vec4)
         (DECLARATION gl_Secondary attribute vec4)

@@ -64,7 +64,7 @@ Error-11: Variable assignment for 'ivec2a' at Line 16:5 to Line 16:29, has expre
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
         (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_FragCoord attribute vec4)
         (DECLARATION gl_TexCoord attribute vec4)
         (DECLARATION gl_Color attribute vec4)
         (DECLARATION gl_Secondary attribute vec4)

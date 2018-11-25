@@ -24,21 +24,13 @@ Error-3: Operands in binary expression at Line 8:9 to Line 8:14 have non-compati
 
 Info: Expecting vector operands on both sides of operator to have same order, but they are 'vec3' and 'vec4'.
 --------------------------------------------------------------------------
-Error-4: Operands in binary expression at Line 8:18 to Line 8:37 has write-only Result type.
-      8:              b = c + a + (gl_FragCoord[2] + c);
-                                   ^^^^^^^^^^^^^^^^^^^  
-
-Info: The first write-only Result variable is 'gl_FragCoord[2]':
-      8:              b = c + a + (gl_FragCoord[2] + c);
-                                   ~~~~~~~~~~~~~~~      
---------------------------------------------------------------------------
-Error-5: Operands in binary expression at Line 8:18 to Line 8:37 have non-compatible type.
+Error-4: Operands in binary expression at Line 8:18 to Line 8:37 have non-compatible type.
       8:              b = c + a + (gl_FragCoord[2] + c);
                                    ^^^^^^^^^^^^^^^^^^^  
 
 Info: Expecting operands on both sides of operator '+' to have arithmetic type and same order, but they are 'float' and 'vec3'.
 --------------------------------------------------------------------------
-Error-6: Variable assignment for 'b' at Line 8:5 to Line 8:39, has expression of unknown type at Line 8:9 to Line 8:38 due to previous error(s).
+Error-5: Variable assignment for 'b' at Line 8:5 to Line 8:39, has expression of unknown type at Line 8:9 to Line 8:38 due to previous error(s).
       8:              b = c + a + (gl_FragCoord[2] + c);
                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 --------------------------------------------------------------------------
@@ -46,7 +38,7 @@ Error-6: Variable assignment for 'b' at Line 8:5 to Line 8:39, has expression of
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
         (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_FragCoord attribute vec4)
         (DECLARATION gl_TexCoord attribute vec4)
         (DECLARATION gl_Color attribute vec4)
         (DECLARATION gl_Secondary attribute vec4)

@@ -16,7 +16,7 @@ Error-1: Variable declaration of 'vec4 vec4b' at Line 3:5 to Line 3:39, is initi
     (DECLARATIONS
         (DECLARATION gl_FragColor result vec4)
         (DECLARATION gl_FragDepth result bool)
-        (DECLARATION gl_FragCoord result vec4)
+        (DECLARATION gl_FragCoord attribute vec4)
         (DECLARATION gl_TexCoord attribute vec4)
         (DECLARATION gl_Color attribute vec4)
         (DECLARATION gl_Secondary attribute vec4)

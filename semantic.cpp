@@ -451,7 +451,7 @@ class PredefinedVariableCreater: public AST::Visitor {
             /*
                 result vec4 gl_FragColor ;
                 result bool gl_FragDepth ;
-                result vec4 gl_FragCoord ;
+                attribute vec4 gl_FragCoord ;
                 attribute vec4 gl_TexCoord ;
                 attribute vec4 gl_Color;
                 attribute vec4 gl_Secondary ;
@@ -472,9 +472,9 @@ class PredefinedVariableCreater: public AST::Visitor {
             AST::DeclarationNode *node_gl_FragDepth = new AST::DeclarationNode("gl_FragDepth", false, BOOL_T);
             node_gl_FragDepth->setResultType();
 
-            // result vec4 gl_FragCoord ;
+            // attribute vec4 gl_FragCoord ;
             AST::DeclarationNode *node_gl_FragCoord = new AST::DeclarationNode("gl_FragCoord", false, VEC4_T);
-            node_gl_FragCoord->setResultType();
+            node_gl_FragCoord->setAttributeType();
 
             // attribute vec4 gl_TexCoord ;
             AST::DeclarationNode *node_gl_TexCoord = new AST::DeclarationNode("gl_TexCoord", false, VEC4_T);
