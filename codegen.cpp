@@ -10,7 +10,6 @@
 #include <vector>
 #include <string>
 
-#define STRINGIFY(s) #s
 
 namespace COGEN{ /* START NAMESPACE */
 
@@ -438,10 +437,10 @@ class ConstQualifiedExpressionReducer: public AST::Visitor {
     public:
         /* Reduce the expression to value */
         static std::string reduceToValue(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, AST::ExpressionNode *expr) {
-            ConstQualifiedExpressionReducer visitor(declaredSymbolRegisterTable);
-            expr->visit(visitor);
-            if(visitor.m_successful) {
-                return visitor.m_assemblyValue;
+            ConstQualifiedExpressionReducer reducer(declaredSymbolRegisterTable);
+            expr->visit(reducer);
+            if(reducer.m_successful) {
+                return reducer.m_assemblyValue;
             } else {
                 std::string assemblyValue = "{";
                 int dataTypeOrder = SEMA::getDataTypeOrder(expr->getExpressionType());
@@ -471,7 +470,6 @@ class ExpressionReducer: public AST::Visitor {
         
     private:
         /* Disable traversal, we do reduction here */
-        virtual void nodeVisit(AST::ExpressionsNode *expressionsNode);
         virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode);
         virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode);
         virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode);
@@ -489,10 +487,6 @@ class ExpressionReducer: public AST::Visitor {
             ARBAssemblyDatabase &assemblyDB,
             AST::ExpressionNode *expr);
 };
-
-void ExpressionReducer::nodeVisit(AST::ExpressionsNode *expressionsNode) {
-
-}
 
 void ExpressionReducer::nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
     std::string rhsRegName = reduce(m_declaredSymbolRegisterTable,
@@ -520,15 +514,19 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
 }
 
 void ExpressionReducer::nodeVisit(AST::IntLiteralNode *intLiteralNode) {
-    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(static_cast<float>(intLiteralNode->getVal())));
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(
+        ConstQualifiedExpressionReducer::reduceToValue(m_declaredSymbolRegisterTable, intLiteralNode));
+    
 }
 
 void ExpressionReducer::nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {
-    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(floatLiteralNode->getVal()));
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(
+        ConstQualifiedExpressionReducer::reduceToValue(m_declaredSymbolRegisterTable, floatLiteralNode));
 }
 
 void ExpressionReducer::nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {
-    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(booleanLiteralNode->getVal() ? 1.0 : -1.0));
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(
+        ConstQualifiedExpressionReducer::reduceToValue(m_declaredSymbolRegisterTable, booleanLiteralNode));
 }
 
 void ExpressionReducer::nodeVisit(AST::IdentifierNode *identifierNode) {
@@ -546,7 +544,8 @@ void ExpressionReducer::nodeVisit(AST::FunctionNode *functionNode) {
 }
 
 void ExpressionReducer::nodeVisit(AST::ConstructorNode *constructorNode) {
-
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(
+        ConstQualifiedExpressionReducer::reduceToValue(m_declaredSymbolRegisterTable, constructorNode));
 }
 
 std::string ExpressionReducer::reduce(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable,
