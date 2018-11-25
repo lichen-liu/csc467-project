@@ -2,6 +2,8 @@
 
 #include "ast.h"
 #include "semantic.h"
+#include "common.h"
+#include "parser.tab.h"
 
 #include <cassert>
 #include <unordered_map>
@@ -306,18 +308,18 @@ class DeclaredSymbolRegisterTable {
                 printf("\n");
             }
         }
+
+        void generateCode(ARBAssemblyDatabase &assemblyDB) const;
 };
 
 
-class SymbolDeclVisitor: public AST::Visitor {
+DeclaredSymbolRegisterTable createDeclaredSymbolRegisterTable(AST::ASTNode *astNode) {
+    class SymbolDeclVisitor: public AST::Visitor {
     private:
-        static const std::string s_symbolNamePrefix;
+        const char *m_symbolNamePrefix = "$";
     
-    private:
+    public:
         DeclaredSymbolRegisterTable m_declaredSymbolRegisterTable;
-
-    private:
-        SymbolDeclVisitor() = default;
 
     private:
         virtual void preNodeVisit(AST::DeclarationNode *declarationNode) {
@@ -327,7 +329,7 @@ class SymbolDeclVisitor: public AST::Visitor {
             }
 
             std::string symbolDeclaredName = declarationNode->getName();
-            std::string symbolRegisterName = s_symbolNamePrefix + symbolDeclaredName;
+            std::string symbolRegisterName = m_symbolNamePrefix + symbolDeclaredName;
 
             std::string symbolRegisterResolvedName = symbolRegisterName;
             
@@ -340,19 +342,16 @@ class SymbolDeclVisitor: public AST::Visitor {
 
             m_declaredSymbolRegisterTable.insert(symbolRegisterResolvedName, declarationNode);
         }
+    };
 
-    public:
-        static DeclaredSymbolRegisterTable createDeclaredSymbolRegisterTable(AST::ASTNode *astNode) {
-            SymbolDeclVisitor symbolDeclVisitor;
-            astNode->visit(symbolDeclVisitor);
+    SymbolDeclVisitor symbolDeclVisitor;
+    astNode->visit(symbolDeclVisitor);
 
-            return symbolDeclVisitor.m_declaredSymbolRegisterTable;
-        }
-};
-const std::string SymbolDeclVisitor::s_symbolNamePrefix = "$";
+    return symbolDeclVisitor.m_declaredSymbolRegisterTable;
+}
 
 
-class DeclaredSymbolRegisterCodeGenerator: public AST::Visitor {
+class ConstQualifiedExpressionReducer: public AST::Visitor {
     private:
         const DeclaredSymbolRegisterTable &m_declaredSymbolRegisterTable;
 
@@ -360,7 +359,7 @@ class DeclaredSymbolRegisterCodeGenerator: public AST::Visitor {
         bool m_successful = true;
 
     private:
-        DeclaredSymbolRegisterCodeGenerator(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable):
+        ConstQualifiedExpressionReducer(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable):
             m_declaredSymbolRegisterTable(declaredSymbolRegisterTable) {}
 
     private:
@@ -436,50 +435,35 @@ class DeclaredSymbolRegisterCodeGenerator: public AST::Visitor {
         }
         virtual void nodeVisit(AST::FunctionNode *functionNode) {}
 
-    private:
-        static bool generateConstQualifiedValue(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, AST::ExpressionNode *expr, std::string &assemblyLine) {
-            DeclaredSymbolRegisterCodeGenerator visitor(declaredSymbolRegisterTable);
-            expr->visit(visitor);
-            assemblyLine = std::move(visitor.m_assemblyValue);
-            return visitor.m_successful;
-        }
-
     public:
-        static void generateCode(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, ARBAssemblyDatabase &assemblyDB) {
-            const DeclaredSymbolRegisterTable::NameToDeclHashTable &regToDecl =
-                declaredSymbolRegisterTable.getRegNameToDeclMapping();
-            
-            for(const auto &p: regToDecl) {
-                const AST::DeclarationNode *decl = p.second;
-                if(decl->isOrdinaryType()) {
-                    if(decl->isConst()) {
-                        AST::ExpressionNode *initExpr = (decl->getInitValue()) ? decl->getInitValue(): decl->getExpression();
-
-                        std::string initialValueAssemblyInstruction;
-                        if(!generateConstQualifiedValue(declaredSymbolRegisterTable, initExpr, initialValueAssemblyInstruction)) {
-                            initialValueAssemblyInstruction = "{";
-                            int dataTypeOrder = SEMA::getDataTypeOrder(decl->getType());
-                            for(int i = 0; i < dataTypeOrder; i++) {
-                                if(i != 0) {
-                                    initialValueAssemblyInstruction += ",";
-                                }
-                                initialValueAssemblyInstruction += "0.0";
-                            }
-                            initialValueAssemblyInstruction += "}";
-                        }
-                        assemblyDB.declareUserParamRegister(p.first, initialValueAssemblyInstruction);
-                    } else {
-                        assemblyDB.declareUserTempRegister(p.first);
+        /* Reduce the expression to value */
+        static std::string reduceToValue(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, AST::ExpressionNode *expr) {
+            ConstQualifiedExpressionReducer visitor(declaredSymbolRegisterTable);
+            expr->visit(visitor);
+            if(visitor.m_successful) {
+                return visitor.m_assemblyValue;
+            } else {
+                std::string assemblyValue = "{";
+                int dataTypeOrder = SEMA::getDataTypeOrder(expr->getExpressionType());
+                for(int i = 0; i < dataTypeOrder; i++) {
+                    if(i != 0) {
+                        assemblyValue += ",";
                     }
+                    assemblyValue += "0.0";
                 }
+                assemblyValue += "}";
+                return assemblyValue;
             }
         }
 };
+
 
 class ExpressionReducer: public AST::Visitor {
     private:
         const DeclaredSymbolRegisterTable &m_declaredSymbolRegisterTable;
         ARBAssemblyDatabase &m_assemblyDB;
+
+        std::string m_resultRegName;
 
     private:
         ExpressionReducer(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, ARBAssemblyDatabase &assemblyDB):
@@ -500,7 +484,8 @@ class ExpressionReducer: public AST::Visitor {
 
     
     public:
-        static const std::string &reduceExpression(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable,
+        /* Reduce the expression into a register containing the expression result */
+        static std::string reduce(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable,
             ARBAssemblyDatabase &assemblyDB,
             AST::ExpressionNode *expr);
 };
@@ -510,31 +495,50 @@ void ExpressionReducer::nodeVisit(AST::ExpressionsNode *expressionsNode) {
 }
 
 void ExpressionReducer::nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {
+    std::string rhsRegName = reduce(m_declaredSymbolRegisterTable,
+        m_assemblyDB,
+        unaryExpressionNode->getExpression());
+    
+    m_resultRegName = m_assemblyDB.requestAutoTempRegister();
 
+    assert(unaryExpressionNode->getOperator() == MINUS || unaryExpressionNode->getOperator() == NOT);
+    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, m_resultRegName, "-" + rhsRegName);
 }
 
 void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {
+    std::string lhsRegName = reduce(m_declaredSymbolRegisterTable,
+    m_assemblyDB,
+    binaryExpressionNode->getLeftExpression());
 
+    std::string rhsRegName = reduce(m_declaredSymbolRegisterTable,
+    m_assemblyDB,
+    binaryExpressionNode->getRightExpression());
+
+    m_resultRegName = m_assemblyDB.requestAutoTempRegister();
+
+    // wip
 }
 
 void ExpressionReducer::nodeVisit(AST::IntLiteralNode *intLiteralNode) {
-
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(static_cast<float>(intLiteralNode->getVal())));
 }
 
 void ExpressionReducer::nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {
-
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(floatLiteralNode->getVal()));
 }
 
 void ExpressionReducer::nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {
-
+    m_resultRegName = m_assemblyDB.requestAutoParamRegister(std::to_string(booleanLiteralNode->getVal() ? 1.0 : -1.0));
 }
 
 void ExpressionReducer::nodeVisit(AST::IdentifierNode *identifierNode) {
-
+    m_resultRegName = m_declaredSymbolRegisterTable.getRegisterName(identifierNode->getDeclaration());
 }
 
 void ExpressionReducer::nodeVisit(AST::IndexingNode *indexingNode) {
-
+    m_resultRegName = m_declaredSymbolRegisterTable.getRegisterName(indexingNode->getDeclaration());
+    m_resultRegName += "." +
+                getRegisterIndexing(dynamic_cast<AST::IntLiteralNode *>(indexingNode->getIndexExpression())->getVal());
 }
 
 void ExpressionReducer::nodeVisit(AST::FunctionNode *functionNode) {
@@ -545,10 +549,27 @@ void ExpressionReducer::nodeVisit(AST::ConstructorNode *constructorNode) {
 
 }
 
-const std::string &ExpressionReducer::reduceExpression(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable,
+std::string ExpressionReducer::reduce(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable,
             ARBAssemblyDatabase &assemblyDB,
             AST::ExpressionNode *expr) {
+    ExpressionReducer reducer(declaredSymbolRegisterTable, assemblyDB);
+    expr->visit(reducer);
+    return reducer.m_resultRegName;
+}
 
+
+void DeclaredSymbolRegisterTable::generateCode(ARBAssemblyDatabase &assemblyDB) const {      
+    for(const auto &p: m_regNameToDecl) {
+        const AST::DeclarationNode *decl = p.second;
+        if(decl->isOrdinaryType()) {
+            if(decl->isConst()) {
+                AST::ExpressionNode *initExpr = (decl->getInitValue()) ? decl->getInitValue(): decl->getExpression();
+                assemblyDB.declareUserParamRegister(p.first, ConstQualifiedExpressionReducer::reduceToValue(*this, initExpr));
+            } else {
+                assemblyDB.declareUserTempRegister(p.first);
+            }
+        }
+    }
 }
 
 } /* END NAMESPACE */
@@ -558,13 +579,13 @@ int genCode(node *ast) {
     COGEN::ARBAssemblyDatabase assemblyDB;
 
     COGEN::DeclaredSymbolRegisterTable declaredSymbolRegisterTable =
-        COGEN::SymbolDeclVisitor::createDeclaredSymbolRegisterTable(static_cast<AST::ASTNode *>(ast));
+        COGEN::createDeclaredSymbolRegisterTable(static_cast<AST::ASTNode *>(ast));
 
     printf("\n");
     printf("Declared Symbol Register Table\n");
     declaredSymbolRegisterTable.print();
 
-    COGEN::DeclaredSymbolRegisterCodeGenerator::generateCode(declaredSymbolRegisterTable, assemblyDB);
+    declaredSymbolRegisterTable.generateCode(assemblyDB);
 
     printf("\n");
     printf("ARB Assembly Database\n");
