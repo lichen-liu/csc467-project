@@ -23,7 +23,7 @@ python ./tests/test_semantic_*.py
 
 ### To Count Lines
 ``` bash
-wc -l ast.cpp ast.h semantic.cpp semantic.h symbol.cpp symbol.h
+wc -l ast.cpp ast.h semantic.cpp semantic.h symbol.cpp symbol.h codegen.cpp codegen.h
 ```
 
 ### To Commit
