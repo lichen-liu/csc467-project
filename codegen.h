@@ -3,6 +3,6 @@
 
 #include "ast.h"
 
-int genCode(node * ast);
+int genCode(node *ast);
 
 #endif
