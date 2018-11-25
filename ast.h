@@ -207,6 +207,8 @@ class ExpressionsNode: public ASTNode {
     public:
         void pushBackExpression(ExpressionNode *expr) { m_expressions.push_back(expr); }
         const std::vector<ExpressionNode *> &getExpressionList() const { return m_expressions; }
+        unsigned getNumberExpression() const { return m_expressions.size(); }
+        ExpressionNode *getExpressionAt(unsigned idx) const { return m_expressions.at(idx); }
     protected:
         virtual ~ExpressionsNode() {
             for(ExpressionNode *expr: m_expressions) {

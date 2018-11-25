@@ -65,7 +65,7 @@ class ARBAssemblyDatabase {
 
             public:
                 const std::string &getRegName() const { return m_regName; }
-                std::string composeAssemblyCode() const { return "TEMP " + m_regName + ";"; }
+                std::string generateCode() const { return "TEMP " + m_regName + ";"; }
         };
 
         class ParamRegDeclaration {
@@ -80,7 +80,7 @@ class ARBAssemblyDatabase {
             public:
                 const std::string &getRegName() const { return m_regName; }
                 const std::string &getRegValue() const { return m_regValue; }
-                std::string composeAssemblyCode() const { return "PARAM " + m_regName + " = " + m_regValue + ";"; }
+                std::string generateCode() const { return "PARAM " + m_regName + " = " + m_regValue + ";"; }
         };
 
     public:
@@ -91,6 +91,9 @@ class ARBAssemblyDatabase {
         // MUL v,v v multiply
         // RCP s ssss reciprocal
         // POW s,s ssss exponentiate
+        // DP3 v,v ssss 3-component dot product
+        // LIT v v compute light coefficients
+        // RSQ s ssss reciprocal square root
         enum class OPCode {
             CMP,
             MOV,
@@ -98,7 +101,10 @@ class ARBAssemblyDatabase {
             SUB,
             MUL,
             RCP,
-            POW
+            POW,
+            DP3,
+            LIT,
+            RSQ
         };
 
     private:
@@ -115,7 +121,7 @@ class ARBAssemblyDatabase {
                     m_OPCode(opCode), m_out(out), m_in0(in0), m_in1(in1), m_in2(in2) {}
             
             public:
-                std::string composeAssemblyCode() const {
+                std::string generateCode() const {
                     std::string operatorString;
                     switch(m_OPCode) {
                         case OPCode::ADD:
@@ -135,6 +141,15 @@ class ARBAssemblyDatabase {
 
                         case OPCode::CMP:
                             return std::string("CMP") + " " + m_out + ", " + m_in0 + ", " + m_in1 + ", " + m_in2;
+
+                        case OPCode::DP3:
+                            return std::string("DP3") + " " + m_out + ", " + m_in0 + ", " + m_in1;
+
+                        case OPCode::LIT:
+                            return std::string("LIT") + " " + m_out + ", " + m_in0;
+
+                        case OPCode::RSQ:
+                            return std::string("RSQ") + " " + m_out + ", " + m_in0;
 
                         default:
                             assert(0);
@@ -208,7 +223,7 @@ class ARBAssemblyDatabase {
 
             assemblyCode.emplace_back("# User Declared Non-Constant Variables");
             for(const auto &tempDecl: m_userTempRegDeclarations) {
-                assemblyCode.push_back(tempDecl.composeAssemblyCode());
+                assemblyCode.push_back(tempDecl.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -216,7 +231,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# User Declared Constant Variables");
             for(const auto &paramDecl: m_userParamRegDeclarations) {
-                assemblyCode.push_back(paramDecl.composeAssemblyCode());
+                assemblyCode.push_back(paramDecl.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -224,7 +239,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# Auto-Generated Re-usable Intermediate Value Registers");
             for(const auto &tempDecl: m_autoTempRegDeclarations) {
-                assemblyCode.push_back(tempDecl.composeAssemblyCode());
+                assemblyCode.push_back(tempDecl.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -232,7 +247,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# Auto-Generated Non-reusable Intermediate Value Registers");
             for(const auto &tempDecl: m_autoLongLiveTempRegDeclarations) {
-                assemblyCode.push_back(tempDecl.composeAssemblyCode());
+                assemblyCode.push_back(tempDecl.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -240,7 +255,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# Auto-Generated Immediate Value Registers");
             for(const auto &paramDecl: m_autoParamRegDeclarations) {
-                assemblyCode.push_back(paramDecl.composeAssemblyCode());
+                assemblyCode.push_back(paramDecl.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -248,7 +263,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# Instructions");
             for(const auto &ins: m_instructions) {
-                assemblyCode.push_back(ins.composeAssemblyCode());
+                assemblyCode.push_back(ins.generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -308,7 +323,7 @@ class DeclaredSymbolRegisterTable {
             }
         }
 
-        void generateCode(ARBAssemblyDatabase &assemblyDB) const;
+        void sendToAssemblyDB(ARBAssemblyDatabase &assemblyDB) const;
 };
 
 
@@ -516,7 +531,6 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
 void ExpressionReducer::nodeVisit(AST::IntLiteralNode *intLiteralNode) {
     m_resultRegName = m_assemblyDB.requestAutoParamRegister(
         ConstQualifiedExpressionReducer::reduceToValue(m_declaredSymbolRegisterTable, intLiteralNode));
-    
 }
 
 void ExpressionReducer::nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {
@@ -540,7 +554,30 @@ void ExpressionReducer::nodeVisit(AST::IndexingNode *indexingNode) {
 }
 
 void ExpressionReducer::nodeVisit(AST::FunctionNode *functionNode) {
+    const std::string &funcName = functionNode->getName();
+    AST::ExpressionsNode *exprs = functionNode->getArgumentExpressions();
+    if(funcName == "rsq") {
+        m_resultRegName = m_assemblyDB.requestAutoTempRegister();
+        assert(exprs->getNumberExpression() == 1);
+        std::string arg1RegName = reduce(m_declaredSymbolRegisterTable, m_assemblyDB, exprs->getExpressionAt(0));
 
+        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::RSQ, m_resultRegName, arg1RegName);
+    } else if (funcName == "dp3") {
+        m_resultRegName = m_assemblyDB.requestAutoTempRegister();
+        assert(exprs->getNumberExpression() == 2);
+        std::string arg1RegName = reduce(m_declaredSymbolRegisterTable, m_assemblyDB, exprs->getExpressionAt(0));
+        std::string arg2RegName = reduce(m_declaredSymbolRegisterTable, m_assemblyDB, exprs->getExpressionAt(1));
+
+        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::DP3, m_resultRegName, arg1RegName, arg2RegName);
+    } else if (funcName == "lit") {
+        m_resultRegName = m_assemblyDB.requestAutoTempRegister();
+        assert(exprs->getNumberExpression() == 1);
+        std::string arg1RegName = reduce(m_declaredSymbolRegisterTable, m_assemblyDB, exprs->getExpressionAt(0));
+
+        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::LIT, m_resultRegName, arg1RegName);
+    } else {
+        assert(0);
+    }
 }
 
 void ExpressionReducer::nodeVisit(AST::ConstructorNode *constructorNode) {
@@ -557,7 +594,7 @@ std::string ExpressionReducer::reduce(const DeclaredSymbolRegisterTable &declare
 }
 
 
-void DeclaredSymbolRegisterTable::generateCode(ARBAssemblyDatabase &assemblyDB) const {      
+void DeclaredSymbolRegisterTable::sendToAssemblyDB(ARBAssemblyDatabase &assemblyDB) const {      
     for(const auto &p: m_regNameToDecl) {
         const AST::DeclarationNode *decl = p.second;
         if(decl->isOrdinaryType()) {
@@ -584,7 +621,7 @@ int genCode(node *ast) {
     printf("Declared Symbol Register Table\n");
     declaredSymbolRegisterTable.print();
 
-    declaredSymbolRegisterTable.generateCode(assemblyDB);
+    declaredSymbolRegisterTable.sendToAssemblyDB(assemblyDB);
 
     printf("\n");
     printf("ARB Assembly Database\n");
