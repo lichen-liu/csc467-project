@@ -50,7 +50,78 @@ std::string getRegisterIndexing(unsigned index) {
 
 
 /* Stores the ARB Assembly */
-using ARBAssemblyDatabase = std::vector<std::string>;
+class ARBAssemblyDatabase {
+    private:
+        class TempRegDeclaration {
+            private:
+                std::string m_regName;
+            
+            public:
+                TempRegDeclaration(const std::string &regName):
+                    m_regName(regName) {}
+
+            public:
+                const std::string &getRegName() const {return m_regName; }
+        };
+
+        class ParamRegDeclaration {
+            private:
+                std::string m_regName;
+                std::string m_regValue;
+            
+            public:
+                ParamRegDeclaration(const std::string &regName, const std::string &regValue):
+                    m_regName(regName), m_regValue(regValue) {}
+
+            public:
+                const std::string &getRegName() const { return m_regName; }
+                const std::string &getRegValue() const { return m_regValue; }
+        };
+
+    private:
+        /* For user-defined variables */
+        std::vector<TempRegDeclaration> m_userTempRegDeclarations;
+        std::vector<ParamRegDeclaration> m_userParamRegDeclarations;
+
+        /* For auto-generated variables, e.g. immediate and intermediate values */
+        std::vector<TempRegDeclaration> m_autoTempRegDeclarations;
+        unsigned m_autoTempRegDeclarationsSessionCount = 0;
+        std::vector<ParamRegDeclaration> m_autoParamRegDeclarations;
+
+    public:
+        void declareUserTempRegister(const std::string &regName) {
+            m_userTempRegDeclarations.emplace_back(regName);
+        }
+
+        void declareUserParamRegister(const std::string &regName, const std::string &regValue) {
+            m_userParamRegDeclarations.emplace_back(regName, regValue);
+        }
+    
+    public:
+        void print() const {
+            unsigned lineNumber = 0;
+
+            for(const auto &tempDecl: m_userTempRegDeclarations) {
+                lineNumber++;
+                printf("%u: TEMP %s;\n", lineNumber, tempDecl.getRegName().c_str());
+            }
+
+            for(const auto &paramDecl: m_userParamRegDeclarations) {
+                lineNumber++;
+                printf("%u: PARAM %s = %s;\n", lineNumber, paramDecl.getRegName().c_str(), paramDecl.getRegValue().c_str());
+            }
+
+            for(const auto &tempDecl: m_autoTempRegDeclarations) {
+                lineNumber++;
+                printf("%u: TEMP %s;\n", lineNumber, tempDecl.getRegName().c_str());
+            }
+
+            for(const auto &paramDecl: m_autoParamRegDeclarations) {
+                lineNumber++;
+                printf("%u: PARAM %s = %s;\n", lineNumber, paramDecl.getRegName().c_str(), paramDecl.getRegValue().c_str());
+            }
+        }
+};
 
 
 /* Flattened symbol table with resolved symbol names */
@@ -246,31 +317,25 @@ class DeclaredSymbolRegisterCodeGenerator: public AST::Visitor {
             for(const auto &p: regToDecl) {
                 const AST::DeclarationNode *decl = p.second;
                 if(decl->isOrdinaryType()) {
-                    std::string assemblyInstruction;
-
                     if(decl->isConst()) {
                         AST::ExpressionNode *initExpr = (decl->getInitValue()) ? decl->getInitValue(): decl->getExpression();
-                        assemblyInstruction = "PARAM " + p.first + " = ";
 
                         std::string initialValueAssemblyInstruction;
-                        if(generateConstQualifiedValue(declaredSymbolRegisterTable, initExpr, initialValueAssemblyInstruction)) {
-                            assemblyInstruction += initialValueAssemblyInstruction + ";";
-                        } else {
-                            assemblyInstruction += "{";
+                        if(!generateConstQualifiedValue(declaredSymbolRegisterTable, initExpr, initialValueAssemblyInstruction)) {
+                            initialValueAssemblyInstruction = "{";
                             int dataTypeOrder = SEMA::getDataTypeOrder(decl->getType());
                             for(int i = 0; i < dataTypeOrder; i++) {
                                 if(i != 0) {
-                                    assemblyInstruction += ",";
+                                    initialValueAssemblyInstruction += ",";
                                 }
-                                assemblyInstruction += "0.0";
+                                initialValueAssemblyInstruction += "0.0";
                             }
-                            assemblyInstruction += "};";
+                            initialValueAssemblyInstruction += "}";
                         }
+                        assemblyDB.declareUserParamRegister(p.first, initialValueAssemblyInstruction);
                     } else {
-                        assemblyInstruction = "TEMP " + p.first + ";";
+                        assemblyDB.declareUserTempRegister(p.first);
                     }
-
-                    assemblyDB.push_back(std::move(assemblyInstruction));
                 }
             }
         }
@@ -293,11 +358,7 @@ int genCode(node *ast) {
 
     printf("\n");
     printf("ARB Assembly Database\n");
-    unsigned lineCounter = 0;
-    for(const auto &instruction : assemblyDB) {
-        lineCounter++;
-        printf("%d: %s\n", lineCounter, instruction.c_str());
-    }
+    assemblyDB.print();
     
     return 0;
 }
