@@ -728,6 +728,7 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             ARBAssemblyDatabase &m_assemblyDB;
 
             std::string m_currentConditionReg;
+            int m_ifScopeCount = 0;
 
         public:
             AssignmentVisitor(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, ARBAssemblyDatabase &assemblyDB):
@@ -747,45 +748,71 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
             virtual void nodeVisit(AST::FunctionNode *functionNode) {}
             virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
-        
+
+            virtual void nodeVisit(AST::StatementsNode *statementsNode) {
+                for(AST::StatementNode *stmt: statementsNode->getStatementList()) {
+                    m_assemblyDB.newAutoTempRegisterAllocationSession();
+                    stmt->visit(*this);
+                }
+            }
+
             virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
                 m_currentConditionReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
             }
 
             virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {
+                m_ifScopeCount++;
+
                 // save previous
                 std::string previousConditionReg = std::move(m_currentConditionReg);
 
                 std::string condReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB,
                     ifStatementNode->getConditionExpression());
+                std::string ownedCondReg = m_assemblyDB.requestAutoTempRegister();
                 // convert scalar condition to vector condition
-                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".y", condReg + ".x");
-                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".z", condReg + ".x");
-                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".w", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, ownedCondReg + ".x", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, ownedCondReg + ".y", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, ownedCondReg + ".z", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, ownedCondReg + ".w", condReg + ".x");
 
-                // conditionally set the condition reg
                 m_currentConditionReg = m_assemblyDB.requestLongLiveAutoTempRegister();
-                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
-                    m_currentConditionReg,
-                    previousConditionReg,
-                    previousConditionReg, // if outer condition is false, propagate false
-                    condReg // if outer condition is true, set new condition
-                    );
+
+                if((m_ifScopeCount - 1) == 0) {
+                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
+                        m_currentConditionReg,
+                        ownedCondReg);
+                } else {
+                    // conditionally set the condition reg
+                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
+                        m_currentConditionReg,
+                        previousConditionReg,
+                        previousConditionReg,       // if outer condition is false, propagate false
+                        ownedCondReg                // if outer condition is true, set new condition
+                        );
+                }
 
                 ifStatementNode->getThenStatement()->visit(*this);
 
                 if(ifStatementNode->getElseStatement() != nullptr) {
-                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
-                        m_currentConditionReg,
-                        previousConditionReg,
-                        previousConditionReg, // if outer condition is false, propagate false
-                        "-" + condReg // if outer condition is true, flip the new condition
-                        );
+                    if((m_ifScopeCount - 1) == 0) {
+                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
+                            m_currentConditionReg,
+                            "-" + ownedCondReg);
+                    } else {
+                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
+                            m_currentConditionReg,
+                            previousConditionReg,
+                            previousConditionReg,   // if outer condition is false, propagate false
+                            "-" + ownedCondReg      // if outer condition is true, flip the new condition
+                            );
+                    }
                     ifStatementNode->getElseStatement()->visit(*this);
                 }
 
                 // restore previous
                 m_currentConditionReg = std::move(previousConditionReg);
+                m_ifScopeCount--;
+                assert(m_ifScopeCount >= 0);
             }
 
             virtual void nodeVisit(AST::DeclarationNode *declarationNode) {
@@ -793,11 +820,17 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
                     AST::ExpressionNode *initExpr = declarationNode->getExpression();
                     if(initExpr) {
                         std::string lhsReg = m_declaredSymbolRegisterTable.getRegisterName(declarationNode);
-                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
-                            lhsReg,
-                            m_currentConditionReg,
-                            lhsReg, // if condition is false, no change
-                            ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
+                        if(m_ifScopeCount == 0) {
+                            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
+                                lhsReg,
+                                ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
+                        } else {
+                            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
+                                lhsReg,
+                                m_currentConditionReg,
+                                lhsReg, // if condition is false, no change
+                                ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
+                        }
                     }
                 }
             }
@@ -809,11 +842,17 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
                 std::string lhsReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, lhsVar);
                 std::string rhsReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, rhsExpr);
 
-                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
-                            lhsReg,
-                            m_currentConditionReg,
-                            lhsReg, // if condition is false, no change
-                            rhsReg);
+                if(m_ifScopeCount == 0) {
+                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
+                        lhsReg,
+                        rhsReg);
+                } else {
+                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
+                        lhsReg,
+                        m_currentConditionReg,
+                        lhsReg, // if condition is false, no change
+                        rhsReg);
+                }
             }
     };
 
