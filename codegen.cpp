@@ -11,6 +11,10 @@
 #include <string>
 
 
+/*
+    ARB Assembly Guideline:
+    https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_fragment_program.txt
+*/
 namespace COGEN{ /* START NAMESPACE */
 
 static const std::unordered_map<std::string, std::string> l_predefinedVariableRegisterName = {
@@ -717,34 +721,105 @@ std::string ExpressionReducer::reduce(const DeclaredSymbolRegisterTable &declare
 }
 
 
-class AssignmentVisitor: public AST::Visitor {
-    private:
-        /* Disable traversal for expressions */
-        virtual void nodeVisit(AST::ExpressionNode *expressionNode) {}
-        virtual void nodeVisit(AST::ExpressionsNode *expressionsNode) {}
-        virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {}
-        virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {}
-        virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode) {}
-        virtual void nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {}
-        virtual void nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {}
-        virtual void nodeVisit(AST::VariableNode *variableNode) {}
-        virtual void nodeVisit(AST::IdentifierNode *identifierNode) {}
-        virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
-        virtual void nodeVisit(AST::FunctionNode *functionNode) {}
-        virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
-    
-        virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {
+void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, AST::ASTNode *ast) {
+    class AssignmentVisitor: public AST::Visitor {
+        private:
+            const DeclaredSymbolRegisterTable &m_declaredSymbolRegisterTable;
+            ARBAssemblyDatabase &m_assemblyDB;
 
-        }
+            std::string m_currentConditionReg;
 
-        virtual void nodeVisit(AST::DeclarationNode *declarationNode) {
+        public:
+            AssignmentVisitor(const DeclaredSymbolRegisterTable &declaredSymbolRegisterTable, ARBAssemblyDatabase &assemblyDB):
+                m_declaredSymbolRegisterTable(declaredSymbolRegisterTable), m_assemblyDB(assemblyDB) {}
 
-        }
+        private:
+            /* Disable traversal for expressions */
+            virtual void nodeVisit(AST::ExpressionNode *expressionNode) {}
+            virtual void nodeVisit(AST::ExpressionsNode *expressionsNode) {}
+            virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {}
+            virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {}
+            virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode) {}
+            virtual void nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {}
+            virtual void nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {}
+            virtual void nodeVisit(AST::VariableNode *variableNode) {}
+            virtual void nodeVisit(AST::IdentifierNode *identifierNode) {}
+            virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
+            virtual void nodeVisit(AST::FunctionNode *functionNode) {}
+            virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
+        
+            virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
+                m_currentConditionReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            }
 
-        virtual void nodeVisit(AST::AssignmentNode *assignmentNode) {
-            
-        }
-};
+            virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {
+                // save previous
+                std::string previousConditionReg = std::move(m_currentConditionReg);
+
+                std::string condReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB,
+                    ifStatementNode->getConditionExpression());
+                // convert scalar condition to vector condition
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".y", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".z", condReg + ".x");
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, condReg + ".w", condReg + ".x");
+
+                // conditionally set the condition reg
+                m_currentConditionReg = m_assemblyDB.requestLongLiveAutoTempRegister();
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
+                    m_currentConditionReg,
+                    previousConditionReg,
+                    previousConditionReg, // if outer condition is false, propagate false
+                    condReg // if outer condition is true, set new condition
+                    );
+
+                ifStatementNode->getThenStatement()->visit(*this);
+
+                if(ifStatementNode->getElseStatement() != nullptr) {
+                    m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
+                        m_currentConditionReg,
+                        previousConditionReg,
+                        previousConditionReg, // if outer condition is false, propagate false
+                        "-" + condReg // if outer condition is true, flip the new condition
+                        );
+                    ifStatementNode->getElseStatement()->visit(*this);
+                }
+
+                // restore previous
+                m_currentConditionReg = std::move(previousConditionReg);
+            }
+
+            virtual void nodeVisit(AST::DeclarationNode *declarationNode) {
+                if(declarationNode->isOrdinaryType() && !declarationNode->isConst()) {
+                    AST::ExpressionNode *initExpr = declarationNode->getExpression();
+                    if(initExpr) {
+                        std::string lhsReg = m_declaredSymbolRegisterTable.getRegisterName(declarationNode);
+                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
+                            lhsReg,
+                            m_currentConditionReg,
+                            lhsReg, // if condition is false, no change
+                            ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
+                    }
+                }
+            }
+
+            virtual void nodeVisit(AST::AssignmentNode *assignmentNode) {
+                AST::VariableNode *lhsVar = assignmentNode->getVariable();
+                AST::ExpressionNode *rhsExpr = assignmentNode->getExpression();
+
+                std::string lhsReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, lhsVar);
+                std::string rhsReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, rhsExpr);
+
+                m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
+                            lhsReg,
+                            m_currentConditionReg,
+                            lhsReg, // if condition is false, no change
+                            rhsReg);
+            }
+    };
+
+    AssignmentVisitor visitor(declaredSymbolRegisterTable, assemblyDB);
+    ast->visit(visitor);
+} 
 
 
 void DeclaredSymbolRegisterTable::sendToAssemblyDB(ARBAssemblyDatabase &assemblyDB) const {      
@@ -766,15 +841,11 @@ void DeclaredSymbolRegisterTable::sendToAssemblyDB(ARBAssemblyDatabase &assembly
 
 int genCode(node *ast) {
     COGEN::ARBAssemblyDatabase assemblyDB;
-
     COGEN::DeclaredSymbolRegisterTable declaredSymbolRegisterTable =
         COGEN::createDeclaredSymbolRegisterTable(static_cast<AST::ASTNode *>(ast));
 
-    printf("\n");
-    printf("Declared Symbol Register Table\n");
-    declaredSymbolRegisterTable.print();
-
     declaredSymbolRegisterTable.sendToAssemblyDB(assemblyDB);
+    COGEN::sendInstructionToAssemblyDB(assemblyDB, declaredSymbolRegisterTable, ast);
 
     printf("\n");
     printf("ARB Assembly Database\n");
