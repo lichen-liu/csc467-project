@@ -452,9 +452,16 @@ class ARBAssemblyDatabase {
 
         void output(FILE *fd) const {
             std::vector<std::string> assemblyCode = generateCode();
+            
+            fprintf(fd, "!!ARBfp1.0\n");
+            fprintf(fd, "\n");
+
             for(const auto &line: assemblyCode) {
                 fprintf(fd, "%s\n", line.c_str());
             }
+
+            fprintf(fd, "\n");
+            fprintf(fd, "END\n");
         }
 };
 
