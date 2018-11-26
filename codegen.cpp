@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <memory>
 
 
 /*
@@ -138,7 +139,31 @@ class ARBAssemblyDatabase {
         };
 
     private:
+
         class Instruction {
+            public:
+                virtual std::string generateCode() const = 0;
+        };
+
+        class ARBComment: public Instruction {
+            private:
+                std::string m_comment;
+
+            public:
+                ARBComment(const std::string &comment): m_comment(comment) {}
+                ARBComment(std::string &&comment): m_comment(std::move(comment)) {}
+
+            public:
+                virtual std::string generateCode() const {
+                    if(m_comment == "") {
+                        return "";
+                    } else {
+                        return "# " + m_comment;
+                    }
+                }
+        };
+
+        class ARBInstruction: public Instruction {
             private:
                 OPCode m_OPCode;
                 std::string m_out;
@@ -147,11 +172,11 @@ class ARBAssemblyDatabase {
                 std::string m_in2;
 
             public:
-                Instruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = ""):
+                ARBInstruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = ""):
                     m_OPCode(opCode), m_out(out), m_in0(in0), m_in1(in1), m_in2(in2) {}
             
             public:
-                std::string generateCode() const {
+                virtual std::string generateCode() const {
                     std::stringstream ss;
 
                     switch(m_OPCode) {
@@ -301,7 +326,7 @@ class ARBAssemblyDatabase {
         };
 
         /* For assembly instructions */
-        std::vector<Instruction> m_instructions;
+        std::vector<std::unique_ptr<Instruction>> m_instructions;
 
     public:
         void declareUserTempRegister(const std::string &regName) {
@@ -345,7 +370,11 @@ class ARBAssemblyDatabase {
 
     public:
         void insertInstruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = "") {
-            m_instructions.emplace_back(opCode, out, in0, in1, in2);
+            m_instructions.emplace_back(new ARBInstruction(opCode, out, in0, in1, in2));
+        }
+
+        void insertInstructionComment(const std::string &comment) {
+            m_instructions.emplace_back(new ARBComment(comment));
         }
     
     public:
@@ -395,7 +424,7 @@ class ARBAssemblyDatabase {
             assemblyCode.emplace_back("");
             assemblyCode.emplace_back("# Instructions");
             for(const auto &ins: m_instructions) {
-                assemblyCode.push_back(ins.generateCode());
+                assemblyCode.push_back(ins->generateCode());
             }
             assemblyCode.emplace_back("");
 
@@ -871,13 +900,6 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             virtual void nodeVisit(AST::FunctionNode *functionNode) {}
             virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
 
-            virtual void nodeVisit(AST::StatementsNode *statementsNode) {
-                for(AST::StatementNode *stmt: statementsNode->getStatementList()) {
-                    m_assemblyDB.newAutoTempRegisterAllocationSession();
-                    stmt->visit(*this);
-                }
-            }
-
             virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
                 m_currentConditionReg = m_assemblyDB.getAutoTrueParamRegister();
             }
@@ -887,6 +909,9 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
 
                 // save previous
                 std::string previousConditionReg = std::move(m_currentConditionReg);
+
+                m_assemblyDB.newAutoTempRegisterAllocationSession();
+                m_assemblyDB.insertInstructionComment("");
 
                 std::string condReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB,
                     ifStatementNode->getConditionExpression());
@@ -941,6 +966,9 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
                 if(declarationNode->isOrdinaryType() && !declarationNode->isConst()) {
                     AST::ExpressionNode *initExpr = declarationNode->getExpression();
                     if(initExpr) {
+                        m_assemblyDB.newAutoTempRegisterAllocationSession();
+                        m_assemblyDB.insertInstructionComment("");
+
                         std::string lhsReg = m_declaredSymbolRegisterTable.getRegisterName(declarationNode);
                         if(m_ifScopeCount == 0) {
                             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
@@ -958,6 +986,9 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             }
 
             virtual void nodeVisit(AST::AssignmentNode *assignmentNode) {
+                m_assemblyDB.newAutoTempRegisterAllocationSession();
+                m_assemblyDB.insertInstructionComment("");
+
                 AST::VariableNode *lhsVar = assignmentNode->getVariable();
                 AST::ExpressionNode *rhsExpr = assignmentNode->getExpression();
 
