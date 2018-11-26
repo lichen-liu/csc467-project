@@ -143,6 +143,9 @@ class ARBAssemblyDatabase {
         class Instruction {
             public:
                 virtual std::string generateCode() const = 0;
+
+            public:
+                virtual ~Instruction() = default;
         };
 
         class ARBComment: public Instruction {
@@ -152,6 +155,8 @@ class ARBAssemblyDatabase {
             public:
                 ARBComment(const std::string &comment): m_comment(comment) {}
                 ARBComment(std::string &&comment): m_comment(std::move(comment)) {}
+
+                virtual ~ARBComment() = default;
 
             public:
                 virtual std::string generateCode() const {
@@ -175,6 +180,8 @@ class ARBAssemblyDatabase {
                 ARBInstruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = ""):
                     m_OPCode(opCode), m_out(out), m_in0(in0), m_in1(in1), m_in2(in2) {}
             
+                virtual ~ARBInstruction() = default;
+
             public:
                 virtual std::string generateCode() const {
                     std::stringstream ss;
@@ -322,8 +329,10 @@ class ARBAssemblyDatabase {
         /* For auto-generated immediate values */
         std::vector<ParamRegDeclaration> m_autoParamRegDeclarations = {
             {"__$param_true", "{1.0,1.0,1.0,1.0}"},
-            {"__$param_false", "{-1.0,-1.0,-1.0,-1.0}"}
+            {"__$param_false", "{-1.0,-1.0,-1.0,-1.0}"},
+            {"__$param_zero", "{0.0,0.0,0.0,0.0}"}
         };
+        static constexpr unsigned m_autoParamRegDeclarationsInitSize = 3;
 
         /* For assembly instructions */
         std::vector<std::unique_ptr<Instruction>> m_instructions;
@@ -359,14 +368,15 @@ class ARBAssemblyDatabase {
         }
 
         const std::string &requestAutoParamRegister(const std::string &regValue) {
-            unsigned count = m_autoParamRegDeclarations.size();
+            unsigned count = m_autoParamRegDeclarations.size() - m_autoParamRegDeclarationsInitSize;
             m_autoParamRegDeclarations.emplace_back("__$param_" + std::to_string(count), regValue);
 
             return m_autoParamRegDeclarations.back().getRegName();
         }
 
-        const std::string &getAutoTrueParamRegister() const { return m_autoParamRegDeclarations[0].getRegName(); }
-        const std::string &getAutoFalseParamRegister() const { return m_autoParamRegDeclarations[1].getRegName(); }
+        const std::string &getAutoTrueParamRegister() const { return m_autoParamRegDeclarations.at(0).getRegName(); }
+        const std::string &getAutoFalseParamRegister() const { return m_autoParamRegDeclarations.at(1).getRegName(); }
+        const std::string &getAutoZeroParamRegister() const { return m_autoParamRegDeclarations.at(2).getRegName(); }
 
     public:
         void insertInstruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = "") {
@@ -965,22 +975,25 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             virtual void nodeVisit(AST::DeclarationNode *declarationNode) {
                 if(declarationNode->isOrdinaryType() && !declarationNode->isConst()) {
                     AST::ExpressionNode *initExpr = declarationNode->getExpression();
-                    if(initExpr) {
-                        m_assemblyDB.newAutoTempRegisterAllocationSession();
-                        m_assemblyDB.insertInstructionComment("");
 
-                        std::string lhsReg = m_declaredSymbolRegisterTable.getRegisterName(declarationNode);
-                        if(m_ifScopeCount == 0) {
-                            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
-                                lhsReg,
-                                ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
-                        } else {
-                            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
-                                lhsReg,
-                                m_currentConditionReg,
-                                lhsReg, // if condition is false, no change
-                                ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr));
-                        }
+                    m_assemblyDB.newAutoTempRegisterAllocationSession();
+                    m_assemblyDB.insertInstructionComment("");
+
+                    std::string lhsReg = m_declaredSymbolRegisterTable.getRegisterName(declarationNode);
+                    std::string rhsReg = initExpr ?
+                                        ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB, initExpr):
+                                        m_assemblyDB.getAutoZeroParamRegister();
+
+                    if(m_ifScopeCount == 0) {
+                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
+                            lhsReg,
+                            rhsReg);
+                    } else {
+                        m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, 
+                            lhsReg,
+                            m_currentConditionReg,
+                            lhsReg, // if condition is false, no change
+                            rhsReg);
                     }
                 }
             }

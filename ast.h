@@ -386,6 +386,10 @@ class VariableNode: public ExpressionNode {
         virtual bool isUniformType() const = 0;
         virtual bool isResultType() const = 0;
         virtual bool isOrdinaryType() const = 0;
+    protected:
+        virtual ~VariableNode() = default;
+
+    AST_VISIT_THIS_NODE
 };
 
 class IdentifierNode: public VariableNode {
