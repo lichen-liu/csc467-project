@@ -94,6 +94,9 @@ class ARBAssemblyDatabase {
         // DP3 v,v ssss 3-component dot product
         // LIT v v compute light coefficients
         // RSQ s ssss reciprocal square root
+        // MAX v,v v maximum
+        // MIN v,v v minimum
+        // ABS v v absolute value
         enum class OPCode {
             CMP,
             MOV,
@@ -104,7 +107,10 @@ class ARBAssemblyDatabase {
             POW,
             DP3,
             LIT,
-            RSQ
+            RSQ,
+            MAX,
+            MIN,
+            ABS
         };
 
     private:
@@ -144,12 +150,18 @@ class ARBAssemblyDatabase {
 
                         case OPCode::DP3:
                             return std::string("DP3") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-
                         case OPCode::LIT:
                             return std::string("LIT") + " " + m_out + ", " + m_in0;
-
                         case OPCode::RSQ:
                             return std::string("RSQ") + " " + m_out + ", " + m_in0;
+
+                        case OPCode::MAX:
+                            return std::string("MAX") + " " + m_out + ", " + m_in0 + ", " + m_in1;
+                        case OPCode::MIN:
+                            return std::string("MIN") + " " + m_out + ", " + m_in0 + ", " + m_in1;
+
+                        case OPCode::ABS:
+                            return std::string("ABS") + " " + m_out + ", " + m_in0;
 
                         default:
                             assert(0);
@@ -329,33 +341,33 @@ class DeclaredSymbolRegisterTable {
 
 DeclaredSymbolRegisterTable createDeclaredSymbolRegisterTable(AST::ASTNode *astNode) {
     class SymbolDeclVisitor: public AST::Visitor {
-    private:
-        const char *m_symbolNamePrefix = "$";
-    
-    public:
-        DeclaredSymbolRegisterTable m_declaredSymbolRegisterTable;
+        private:
+            const char *m_symbolNamePrefix = "$";
+        
+        public:
+            DeclaredSymbolRegisterTable m_declaredSymbolRegisterTable;
 
-    private:
-        virtual void preNodeVisit(AST::DeclarationNode *declarationNode) {
-            if(!declarationNode->isOrdinaryType()) {
-                m_declaredSymbolRegisterTable.insert(getPredefinedVariableRegisterName(declarationNode->getName()), declarationNode);
-                return;
+        private:
+            virtual void preNodeVisit(AST::DeclarationNode *declarationNode) {
+                if(!declarationNode->isOrdinaryType()) {
+                    m_declaredSymbolRegisterTable.insert(getPredefinedVariableRegisterName(declarationNode->getName()), declarationNode);
+                    return;
+                }
+
+                std::string symbolDeclaredName = declarationNode->getName();
+                std::string symbolRegisterName = m_symbolNamePrefix + symbolDeclaredName;
+
+                std::string symbolRegisterResolvedName = symbolRegisterName;
+                
+                // avoid same symbol declaration name
+                unsigned duplicate_count = 0;
+                do{
+                    symbolRegisterResolvedName = symbolRegisterName + "_" + std::to_string(duplicate_count);
+                    duplicate_count++;
+                }while(m_declaredSymbolRegisterTable.hasRegisterName(symbolRegisterResolvedName));
+
+                m_declaredSymbolRegisterTable.insert(symbolRegisterResolvedName, declarationNode);
             }
-
-            std::string symbolDeclaredName = declarationNode->getName();
-            std::string symbolRegisterName = m_symbolNamePrefix + symbolDeclaredName;
-
-            std::string symbolRegisterResolvedName = symbolRegisterName;
-            
-            // avoid same symbol declaration name
-            unsigned duplicate_count = 0;
-            do{
-                symbolRegisterResolvedName = symbolRegisterName + "_" + std::to_string(duplicate_count);
-                duplicate_count++;
-            }while(m_declaredSymbolRegisterTable.hasRegisterName(symbolRegisterResolvedName));
-
-            m_declaredSymbolRegisterTable.insert(symbolRegisterResolvedName, declarationNode);
-        }
     };
 
     SymbolDeclVisitor symbolDeclVisitor;
@@ -525,7 +537,118 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
 
     m_resultRegName = m_assemblyDB.requestAutoTempRegister();
 
-    // wip
+    switch(binaryExpressionNode->getOperator()) {
+        case AND:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case OR:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MAX, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case PLUS:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::ADD, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case MINUS:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case TIMES:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MUL, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case SLASH: {
+            std::string rcpResult = m_assemblyDB.requestAutoTempRegister();
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::RCP, rcpResult, rhsRegName);
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MUL, m_resultRegName, lhsRegName, rcpResult);
+            break;
+        }
+        case EXP:
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::POW, m_resultRegName, lhsRegName, rhsRegName);
+            break;
+        case EQL: {
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            // represent their difference as negative number
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::ABS, tempReg, tempReg);
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, tempReg, "-" + tempReg);
+            
+            // component-wise eql comparison
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, tempReg, tempReg, falseReg, trueReg);
+
+            // and them up
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".y");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".z");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".w");
+
+            // store result
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, m_resultRegName, tempReg);
+
+            break;
+        }
+        case NEQ: { // negate of EQL
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            // represent their difference as negative number
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::ABS, tempReg, tempReg);
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, tempReg, "-" + tempReg);
+            
+            // component-wise eql comparison
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, tempReg, tempReg, falseReg, trueReg);
+
+            // and them up
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".y");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".z");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MIN, tempReg + ".x", tempReg + ".x", tempReg + ".w");
+
+            // store result, negate the EQL operation
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, m_resultRegName, "-" + tempReg);
+
+            break;
+        }
+        case LSS: {
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
+            // < 0 if lss
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, trueReg, falseReg);
+
+            break;
+        }
+        case GEQ: { // negate of LSS
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
+            // < 0 if lss
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, falseReg, trueReg);
+
+            break;
+        }
+        case GTR: {
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, rhsRegName, lhsRegName);
+            // < 0 if gtr
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, trueReg, falseReg);
+
+            break;
+        }
+        case LEQ: { // negate of GTR
+            std::string tempReg = m_assemblyDB.requestAutoTempRegister();
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, rhsRegName, lhsRegName);
+            // < 0 if gtr
+            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, falseReg, trueReg);
+
+            break;
+        }
+        default:
+            assert(0);
+    }
 }
 
 void ExpressionReducer::nodeVisit(AST::IntLiteralNode *intLiteralNode) {
@@ -592,6 +715,36 @@ std::string ExpressionReducer::reduce(const DeclaredSymbolRegisterTable &declare
     expr->visit(reducer);
     return reducer.m_resultRegName;
 }
+
+
+class AssignmentVisitor: public AST::Visitor {
+    private:
+        /* Disable traversal for expressions */
+        virtual void nodeVisit(AST::ExpressionNode *expressionNode) {}
+        virtual void nodeVisit(AST::ExpressionsNode *expressionsNode) {}
+        virtual void nodeVisit(AST::UnaryExpressionNode *unaryExpressionNode) {}
+        virtual void nodeVisit(AST::BinaryExpressionNode *binaryExpressionNode) {}
+        virtual void nodeVisit(AST::IntLiteralNode *intLiteralNode) {}
+        virtual void nodeVisit(AST::FloatLiteralNode *floatLiteralNode) {}
+        virtual void nodeVisit(AST::BooleanLiteralNode *booleanLiteralNode) {}
+        virtual void nodeVisit(AST::VariableNode *variableNode) {}
+        virtual void nodeVisit(AST::IdentifierNode *identifierNode) {}
+        virtual void nodeVisit(AST::IndexingNode *indexingNode) {}
+        virtual void nodeVisit(AST::FunctionNode *functionNode) {}
+        virtual void nodeVisit(AST::ConstructorNode *constructorNode) {}
+    
+        virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {
+
+        }
+
+        virtual void nodeVisit(AST::DeclarationNode *declarationNode) {
+
+        }
+
+        virtual void nodeVisit(AST::AssignmentNode *assignmentNode) {
+            
+        }
+};
 
 
 void DeclaredSymbolRegisterTable::sendToAssemblyDB(ARBAssemblyDatabase &assemblyDB) const {      
