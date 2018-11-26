@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iomanip>
 
 
 /*
@@ -56,6 +58,10 @@ std::string getRegisterIndexing(unsigned index) {
 }
 
 
+#define OP_FIELDWIDTH 7
+#define REG_FIELDWIDTH 24
+#define VALUE_FIELDWIDTH 36
+#define SYMBOL_FIELDWIDTH 3
 /* Stores the ARB Assembly */
 class ARBAssemblyDatabase {
     private:
@@ -69,7 +75,13 @@ class ARBAssemblyDatabase {
 
             public:
                 const std::string &getRegName() const { return m_regName; }
-                std::string generateCode() const { return "TEMP " + m_regName + ";"; }
+                std::string generateCode() const {
+                    std::stringstream ss;
+                    ss << std::left << std::setw(OP_FIELDWIDTH) << "TEMP";
+                    ss << std::left << std::setw(REG_FIELDWIDTH) << m_regName;
+                    ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                    return ss.str();
+                }
         };
 
         class ParamRegDeclaration {
@@ -84,7 +96,15 @@ class ARBAssemblyDatabase {
             public:
                 const std::string &getRegName() const { return m_regName; }
                 const std::string &getRegValue() const { return m_regValue; }
-                std::string generateCode() const { return "PARAM " + m_regName + " = " + m_regValue + ";"; }
+                std::string generateCode() const {
+                    std::stringstream ss;
+                    ss << std::left << std::setw(OP_FIELDWIDTH) << "PARAM";
+                    ss << std::left << std::setw(REG_FIELDWIDTH) << m_regName;
+                    ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << "=";
+                    ss << std::left << std::setw(VALUE_FIELDWIDTH) << m_regValue;
+                    ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                    return ss.str();
+                }
         };
 
     public:
@@ -132,41 +152,131 @@ class ARBAssemblyDatabase {
             
             public:
                 std::string generateCode() const {
-                    std::string operatorString;
+                    std::stringstream ss;
+
                     switch(m_OPCode) {
-                        case OPCode::ADD:
-                            return std::string("ADD") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        case OPCode::SUB:
-                            return std::string("SUB") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        case OPCode::MUL:
-                            return std::string("MUL") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        case OPCode::POW:
-                            return std::string("POW") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        
-                        case OPCode::RCP:
-                            return std::string("RCP") + " " + m_out + ", " + m_in0;
-
-                        case OPCode::MOV:
-                            return std::string("MOV") + " " + m_out + ", " + m_in0;
-
-                        case OPCode::CMP:
-                            return std::string("CMP") + " " + m_out + ", " + m_in0 + ", " + m_in1 + ", " + m_in2;
-
-                        case OPCode::DP3:
-                            return std::string("DP3") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        case OPCode::LIT:
-                            return std::string("LIT") + " " + m_out + ", " + m_in0;
-                        case OPCode::RSQ:
-                            return std::string("RSQ") + " " + m_out + ", " + m_in0;
-
-                        case OPCode::MAX:
-                            return std::string("MAX") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-                        case OPCode::MIN:
-                            return std::string("MIN") + " " + m_out + ", " + m_in0 + ", " + m_in1;
-
-                        case OPCode::ABS:
-                            return std::string("ABS") + " " + m_out + ", " + m_in0;
-
+                        case OPCode::ADD: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "ADD";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::SUB: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "SUB";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::MUL: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "MUL";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::POW: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "POW";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::RCP: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "RCP";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::MOV: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "MOV";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::CMP: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "CMP";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in2;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::DP3: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "DP3";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::LIT: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "LIT";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();                 
+                        }
+                        case OPCode::RSQ: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "RSQ";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();                 
+                        }
+                        case OPCode::MAX: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "MAX";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::MIN: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "MIN";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
+                        case OPCode::ABS: {
+                            ss << std::left << std::setw(OP_FIELDWIDTH) << "ABS";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
+                            ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
+                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            return ss.str();
+                        }
                         default:
                             assert(0);
                             return "";
@@ -185,7 +295,10 @@ class ARBAssemblyDatabase {
         /* For auto-generated long-live intermediate variables */
         std::vector<TempRegDeclaration> m_autoLongLiveTempRegDeclarations;
         /* For auto-generated immediate values */
-        std::vector<ParamRegDeclaration> m_autoParamRegDeclarations;
+        std::vector<ParamRegDeclaration> m_autoParamRegDeclarations = {
+            {"__$param_true", "{1.0,1.0,1.0,1.0}"},
+            {"__$param_false", "{-1.0,-1.0,-1.0,-1.0}"}
+        };
 
         /* For assembly instructions */
         std::vector<Instruction> m_instructions;
@@ -227,13 +340,16 @@ class ARBAssemblyDatabase {
             return m_autoParamRegDeclarations.back().getRegName();
         }
 
+        const std::string &getAutoTrueParamRegister() const { return m_autoParamRegDeclarations[0].getRegName(); }
+        const std::string &getAutoFalseParamRegister() const { return m_autoParamRegDeclarations[1].getRegName(); }
+
     public:
         void insertInstruction(OPCode opCode, const std::string &out, const std::string &in0, std::string in1 = "", std::string in2 = "") {
             m_instructions.emplace_back(opCode, out, in0, in1, in2);
         }
     
     public:
-        void print() const {
+        std::vector<std::string> generateCode() const {
             std::vector<std::string> assemblyCode;
 
 
@@ -283,6 +399,12 @@ class ARBAssemblyDatabase {
             }
             assemblyCode.emplace_back("");
 
+
+            return assemblyCode;
+        }
+
+        void dump() const {
+            std::vector<std::string> assemblyCode = generateCode();
 
             for(unsigned i = 0; i < assemblyCode.size(); i++) {
                 printf("%-12u %s\n", i + 1, assemblyCode[i].c_str());
@@ -574,8 +696,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, tempReg, "-" + tempReg);
             
             // component-wise eql comparison
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, tempReg, tempReg, falseReg, trueReg);
 
             // and them up
@@ -596,8 +718,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV, tempReg, "-" + tempReg);
             
             // component-wise eql comparison
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, tempReg, tempReg, falseReg, trueReg);
 
             // and them up
@@ -614,8 +736,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             std::string tempReg = m_assemblyDB.requestAutoTempRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
             // < 0 if lss
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, trueReg, falseReg);
 
             break;
@@ -624,8 +746,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             std::string tempReg = m_assemblyDB.requestAutoTempRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, lhsRegName, rhsRegName);
             // < 0 if lss
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, falseReg, trueReg);
 
             break;
@@ -634,8 +756,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             std::string tempReg = m_assemblyDB.requestAutoTempRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, rhsRegName, lhsRegName);
             // < 0 if gtr
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, trueReg, falseReg);
 
             break;
@@ -644,8 +766,8 @@ void ExpressionReducer::nodeVisit(AST::BinaryExpressionNode *binaryExpressionNod
             std::string tempReg = m_assemblyDB.requestAutoTempRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::SUB, tempReg, rhsRegName, lhsRegName);
             // < 0 if gtr
-            std::string trueReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
-            std::string falseReg = m_assemblyDB.requestAutoParamRegister("{-1.0,-1.0,-1.0,-1.0}");
+            std::string trueReg = m_assemblyDB.getAutoTrueParamRegister();
+            std::string falseReg = m_assemblyDB.getAutoFalseParamRegister();
             m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP, m_resultRegName, tempReg, falseReg, trueReg);
 
             break;
@@ -757,7 +879,7 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
             }
 
             virtual void preNodeVisit(AST::ScopeNode *scopeNode) {
-                m_currentConditionReg = m_assemblyDB.requestAutoParamRegister("{1.0,1.0,1.0,1.0}");
+                m_currentConditionReg = m_assemblyDB.getAutoTrueParamRegister();
             }
 
             virtual void nodeVisit(AST::IfStatementNode *ifStatementNode) {
@@ -888,7 +1010,7 @@ int genCode(node *ast) {
 
     printf("\n");
     printf("ARB Assembly Database\n");
-    assemblyDB.print();
+    assemblyDB.dump();
     
     return 0;
 }
