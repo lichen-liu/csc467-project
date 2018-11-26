@@ -23,7 +23,8 @@ python ./tests/test_semantic_*.py
 
 ### To Test CODE GENERATION
 ```bash
-./compiler467 -Dx
+./compiler467 -Dx ./tests/codegen/*.c
+python ./tests/test_codegen.py
 ```
 
 ### To Run DEMO
