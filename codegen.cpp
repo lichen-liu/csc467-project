@@ -449,6 +449,13 @@ class ARBAssemblyDatabase {
                 printf("%-12u %s\n", i + 1, assemblyCode[i].c_str());
             }
         }
+
+        void output(FILE *fd) const {
+            std::vector<std::string> assemblyCode = generateCode();
+            for(const auto &line: assemblyCode) {
+                fprintf(fd, "%s\n", line.c_str());
+            }
+        }
 };
 
 
@@ -1052,9 +1059,12 @@ int genCode(node *ast) {
     declaredSymbolRegisterTable.sendToAssemblyDB(assemblyDB);
     COGEN::sendInstructionToAssemblyDB(assemblyDB, declaredSymbolRegisterTable, ast);
 
-    printf("\n");
-    printf("ARB Assembly Database\n");
-    assemblyDB.dump();
+    // printf("\n");
+    // printf("ARB Assembly Database\n");
+    // assemblyDB.dump();
+    if(dumpInstructions) {
+        assemblyDB.output(dumpFile);
+    }
     
     return 0;
 }
