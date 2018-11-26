@@ -28,8 +28,11 @@ python ./tests/test_semantic_*.py
 
 ### To Run DEMO
 ```bash
-./compiler467 -Dx ../Demos/Demo1/shader.frag > ../Demos/Demo1/frag.txt
+./compiler467 -Dx -U ../Demos/Demo1/frag.txt ../Demos/Demo1/shader.frag
 ../Demos/Demo1/shader ../Demos/Demo1/frag.txt
+
+./compiler467 -Dx -U ../Demos/Demo2/frag.txt ../Demos/Demo2/phong.frag
+../Demos/Demo2/phong ../Demos/Demo2/frag.txt
 ```
 
 ### To Count Lines
