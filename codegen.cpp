@@ -80,7 +80,7 @@ class ARBAssemblyDatabase {
                     std::stringstream ss;
                     ss << std::left << std::setw(OP_FIELDWIDTH) << "TEMP";
                     ss << std::left << std::setw(REG_FIELDWIDTH) << m_regName;
-                    ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                    ss << std::left << ";";
                     return ss.str();
                 }
         };
@@ -103,7 +103,7 @@ class ARBAssemblyDatabase {
                     ss << std::left << std::setw(REG_FIELDWIDTH) << m_regName;
                     ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << "=";
                     ss << std::left << std::setw(VALUE_FIELDWIDTH) << m_regValue;
-                    ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                    ss << std::left << ";";
                     return ss.str();
                 }
         };
@@ -194,7 +194,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::SUB: {
@@ -204,7 +204,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::MUL: {
@@ -214,7 +214,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::POW: {
@@ -224,7 +224,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::RCP: {
@@ -232,7 +232,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::MOV: {
@@ -240,7 +240,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::CMP: {
@@ -252,7 +252,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in2;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::DP3: {
@@ -262,7 +262,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::LIT: {
@@ -270,7 +270,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();                 
                         }
                         case OPCode::RSQ: {
@@ -278,7 +278,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();                 
                         }
                         case OPCode::MAX: {
@@ -288,7 +288,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::MIN: {
@@ -298,7 +298,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in1;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         case OPCode::ABS: {
@@ -306,7 +306,7 @@ class ARBAssemblyDatabase {
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_out;
                             ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ",";
                             ss << std::left << std::setw(REG_FIELDWIDTH) << m_in0;
-                            ss << std::left << std::setw(SYMBOL_FIELDWIDTH) << ";";
+                            ss << std::left << ";";
                             return ss.str();
                         }
                         default:
@@ -936,6 +936,7 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
 
                 m_assemblyDB.newAutoTempRegisterAllocationSession();
                 m_assemblyDB.insertInstructionComment("");
+                m_assemblyDB.insertInstructionComment("Evaluate if statement condition");
 
                 std::string condReg = ExpressionReducer::reduce(m_declaredSymbolRegisterTable, m_assemblyDB,
                     ifStatementNode->getConditionExpression());
@@ -948,33 +949,40 @@ void sendInstructionToAssemblyDB(ARBAssemblyDatabase &assemblyDB, const Declared
 
                 m_currentConditionReg = m_assemblyDB.requestLongLiveAutoTempRegister();
 
+
                 if((m_ifScopeCount - 1) == 0) {
+                    m_assemblyDB.insertInstructionComment("Set the condition for outer-most if statement");
                     m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
                         m_currentConditionReg,
                         ownedCondReg);
                 } else {
                     // conditionally set the condition reg
+                    m_assemblyDB.insertInstructionComment("Conditionally set the condition for inner if statement");
                     m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
                         m_currentConditionReg,
                         previousConditionReg,
-                        previousConditionReg,       // if outer condition is false, propagate false
-                        ownedCondReg                // if outer condition is true, set new condition
+                        previousConditionReg,                   // if outer condition is false, propagate false
+                        ownedCondReg                            // if outer condition is true, set new condition
                         );
                 }
 
                 ifStatementNode->getThenStatement()->visit(*this);
 
                 if(ifStatementNode->getElseStatement() != nullptr) {
+                    m_assemblyDB.insertInstructionComment("");
+
                     if((m_ifScopeCount - 1) == 0) {
+                        m_assemblyDB.insertInstructionComment("Negate the condition for outer-most else statement");
                         m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::MOV,
                             m_currentConditionReg,
-                            "-" + ownedCondReg);
+                            "-" + m_currentConditionReg);
                     } else {
+                        m_assemblyDB.insertInstructionComment("Conditionally negate the condition for inner else statement");
                         m_assemblyDB.insertInstruction(ARBAssemblyDatabase::OPCode::CMP,
                             m_currentConditionReg,
                             previousConditionReg,
-                            previousConditionReg,   // if outer condition is false, propagate false
-                            "-" + ownedCondReg      // if outer condition is true, flip the new condition
+                            previousConditionReg,               // if outer condition is false, propagate false
+                            "-" + m_currentConditionReg         // if outer condition is true, flip the new condition
                             );
                     }
                     ifStatementNode->getElseStatement()->visit(*this);
