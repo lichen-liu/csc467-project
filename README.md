@@ -26,6 +26,12 @@ python ./tests/test_semantic_*.py
 ./compiler467 -Dx
 ```
 
+### To Run DEMO
+```bash
+./compiler467 -Dx ../Demos/Demo1/shader.frag > ../Demos/Demo1/frag.txt
+../Demos/Demo1/shader ../Demos/Demo1/frag.txt
+```
+
 ### To Count Lines
 ``` bash
 wc -l ast.cpp ast.h semantic.cpp semantic.h symbol.cpp symbol.h codegen.cpp codegen.h
