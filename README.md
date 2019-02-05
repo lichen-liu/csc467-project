@@ -1,6 +1,34 @@
 # csc467-project
 CSC467 Project
 
+## Introduction
+A toy compiler written in a mixture of C and C++ for a toy graphics language - MiniGLSL.
+
+## Architecture
+
+### Lexical Analyzer
+Using `flex`.
+
+### Parser
+Using `Bison` parser generator.
+
+### AST
+Hand written Abstract Syntax Tree in purely Object-Oriented fashion using C++.
+
+### Semantic Analysis
+Hand written semantic analyzer with very user-friendly error and warning messages.
+
+### Code Generation
+Hand written code generator into target language of ARB fragment shader assembly.
+
+## Running
+Compile the code:
+`make`
+See avaiable options:
+`make man`
+
+## Testing
+
 ### To Test LEXER
 uncomment phase 1 in compiler467.c
 ``` bash
