@@ -79,6 +79,3 @@ python ./tests/test_codegen.py
 ``` bash
 wc -l ast.cpp ast.h semantic.cpp semantic.h symbol.cpp symbol.h codegen.cpp codegen.h
 ```
-
-### To Commit
-'make clean' first!
