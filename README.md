@@ -22,6 +22,12 @@ Hand written semantic analyzer with very user-friendly error and warning message
 Hand written code generator into target language of ARB fragment shader assembly.
 
 ## Running
+Enable pretty printer:
+```
+// Uncomment the following in semantic.cpp
+#define NORMAL_MODE
+```
+
 Compile the code:
 `make`
 
